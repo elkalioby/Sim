@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة حسابات الموظفين والصلاحيات</title>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-light: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 20px; max-width: 700px; margin: 0 auto; }
+        .card { background: var(--card); padding: 20px; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); margin-bottom: 20px; border: 1px solid var(--border); }
+        h2 { color: var(--primary); font-size: 1.15rem; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: #374151; }
+        input, select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; outline: none; background: #fff; }
+        input:focus, select:focus { border-color: var(--primary-light); }
+        .btn { padding: 10px 16px; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+        .btn:active { opacity: 0.8; }
+        .btn-success { background-color: var(--success); color: white; width: 100%; margin-top: 5px; }
+        .btn-danger { background-color: #fee2e2; color: var(--danger); padding: 5px 10px; font-size: 0.78rem; }
+        .btn-warning { background-color: #fef3c7; color: var(--warning); padding: 5px 10px; font-size: 0.78rem; }
+        .btn-secondary { background-color: #e5e7eb; color: #374151; width: 100%; margin-top: 8px; display: none; }
+
+        .users-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        .users-table th, .users-table td { border: 1px solid var(--border); padding: 10px; text-align: center; }
+        .users-table th { background: #f1f5f9; color: var(--primary); }
+        .role-badge { padding: 3px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; }
+        .role-admin { background: #dbeafe; color: var(--primary); }
+        .role-employee { background: #f3f4f6; color: #4b5563; }
+    </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
+            authDomain: "ahmed-hassan-bb80b.firebaseapp.com",
+            projectId: "ahmed-hassan-bb80b",
+            storageBucket: "ahmed-hassan-bb80b.firebasestorage.app",
+            messagingSenderId: "503682153846",
+            appId: "1:503682153846:web:93b3a174ab31e351a04e57"
+        };
+        const app = initializeApp(firebaseConfig);
+        window.db = getFirestore(app);
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.getDocs = getDocs;
+        window.collection = collection;
+        window.deleteDoc = deleteDoc;
+
+        if(window.loadUsersList) { window.loadUsersList(); }
+    </script>
+</head>
+<body>
+
+    <div class="card">
+        <h2 id="formTitle">👤 إضافة موظف جديد وصلاحيات</h2>
+        <form id="userForm" onsubmit="saveUser(event)">
+            <input type="hidden" id="isEditing" value="false">
+            <div class="form-group">
+                <label>اسم المستخدم *</label>
+                <input type="text" id="newUsername" required placeholder="مثال: sales1">
+            </div>
+            <div class="form-group">
+                <label>كلمة المرور *</label>
+                <input type="password" id="newPassword" required placeholder="أدخل كلمة المرور">
+            </div>
+            <div class="form-group">
+                <label>الصلاحية *</label>
+                <select id="newRole">
+                    <option value="employee">موظف مبيعات (عادي)</option>
+                    <option value="admin">مدير النظام (كامل الصلاحيات)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success" id="submitBtn">حفظ وحفظ البيانات سحابياً ومحلياً</button>
+            <button type="button" class="btn btn-secondary" id="cancelBtn" onclick="resetForm()">إلغاء التعديل</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>📋 قائمة الموظفين والمستخدمين المسجلين</h2>
+        <div style="overflow-x: auto;">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>اسم المستخدم</th>
+                        <th>الصلاحية</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr><td colspan="3" style="color: #6b7280; padding: 15px;">جاري تحميل المستخدمين...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let usersData = {};
+
+        window.loadUsersList = async function() {
+            const localUsers = JSON.parse(localStorage.getItem('local_users')) || {};
+            usersData = { 'admin': { password: 'Aw20102001@', role: 'admin' }, ...localUsers };
+
+            try {
+                if (window.db) {
+                    const querySnapshot = await window.getDocs(window.collection(window.db, "users"));
+                    querySnapshot.forEach((docSnap) => {
+                        usersData[docSnap.id] = docSnap.data();
+                    });
+                    usersData['admin'] = { password: 'Aw20102001@', role: 'admin' };
+                    localStorage.setItem('local_users', JSON.stringify(usersData));
+                }
+            } catch (e) {
+                console.log("وضع الأوفلاين: عرض المستخدمين من التخزين المحلي.");
+            }
+
+            renderUsersTable();
+        };
+
+        function renderUsersTable() {
+            const tbody = document.getElementById('usersTableBody');
+            const entries = Object.entries(usersData);
+
+            if (entries.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="color: #6b7280; padding: 15px;">لا توجد حسابات مسجلة.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = entries.map(([username, data]) => {
+                const isAdminAccount = (username === 'admin');
+                return `
+                    <tr>
+                        <td><strong>${username}</strong></td>
+                        <td><span class="role-badge ${data.role === 'admin' ? 'role-admin' : 'role-employee'}">${data.role === 'admin' ? 'مدير النظام' : 'موظف مبيعات'}</span></td>
+                        <td>
+                            ${isAdminAccount ? 
+                                `<span style="color: #dc2626; font-size: 0.85rem; font-weight: bold;">محمي</span>` : 
+                                `<div style="display:flex; gap:5px; justify-content:center;">
+                                    <button class="btn btn-warning" onclick="editUser('${username}')">✏️ تعديل</button>
+                                    <button class="btn btn-danger" onclick="deleteUser('${username}')">🗑️ حذف</button>
+                                 </div>`
+                            }
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function saveUser(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('newUsername');
+            // تحويل اسم المستخدم إلى حروف صغيرة تلقائياً لتقبله بكلتا الحالتين
+            const username = usernameInput.value.trim().toLowerCase();
+            const password = document.getElementById('newPassword').value.trim();
+            const role = document.getElementById('newRole').value;
+
+            if (username === 'admin') {
+                alert('خطأ أمني! حساب الـ admin الأساسي محمي ولا يمكن التعديل عليه أو إنشاؤه من هنا.');
+                return;
+            }
+
+            const userData = { password, role };
+
+            let localUsers = JSON.parse(localStorage.getItem('local_users')) || {};
+            localUsers[username] = userData;
+            localStorage.setItem('local_users', JSON.stringify(localUsers));
+
+            try {
+                if(window.db) {
+                    await window.setDoc(window.doc(window.db, "users", username), userData);
+                    alert('تم حفظ بيانات المستخدم ومزامنته سحابياً بنجاح! 🚀');
+                } else {
+                    alert('تم الحفظ محلياً لعدم توفر الاتصال السحابي.');
+                }
+                resetForm();
+                loadUsersList();
+            } catch (err) {
+                console.error(err);
+                alert('تم الحفظ محلياً (وضع الأوفلاين)، وسيتم المزامنة عند عودة الإنترنت.');
+                resetForm();
+                loadUsersList();
+            }
+        }
+
+        function editUser(username) {
+            if (username === 'admin') {
+                alert('خطأ أمني! حساب الـ admin محمي تماماً ولا يمكن تعديله.');
+                return;
+            }
+            const data = usersData[username];
+            if (!data) return;
+
+            document.getElementById('newUsername').value = username;
+            document.getElementById('newUsername').readOnly = true;
+            document.getElementById('newPassword').value = data.password;
+            document.getElementById('newRole').value = data.role;
+
+            document.getElementById('formTitle').innerText = `✏️ تعديل بيانات المستخدم (${username})`;
+            document.getElementById('submitBtn').innerText = 'حفظ التعديلات';
+            document.getElementById('cancelBtn').style.display = 'block';
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function deleteUser(username) {
+            if (username === 'admin') {
+                alert('خطأ أمني! حساب الـ admin الأساسي محمي ولا يمكن حذفه.');
+                return;
+            }
+
+            if (confirm(`هل أنت متأكد من حذف المستخدم (${username})؟`)) {
+                let localUsers = JSON.parse(localStorage.getItem('local_users')) || {};
+                delete localUsers[username];
+                localStorage.setItem('local_users', JSON.stringify(localUsers));
+
+                try {
+                    if (window.db) {
+                        await window.deleteDoc(window.doc(window.db, "users", username));
+                    }
+                    alert('تم حذف المستخدم بنجاح.');
+                    loadUsersList();
+                } catch (e) {
+                    alert('تم الحذف محلياً وسيتم التحديث سحابياً لاحقاً.');
+                    loadUsersList();
+                }
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('userForm').reset();
+            document.getElementById('newUsername').readOnly = false;
+            document.getElementById('formTitle').innerText = '👤 إضافة موظف جديد وصلاحيات';
+            document.getElementById('submitBtn').innerText = 'حفظ وحفظ البيانات سحابياً ومحلياً';
+            document.getElementById('cancelBtn').style.display = 'none';
+        }
+
+        window.onload = function() {
+            loadUsersList();
+        };
+    </script>
+</body>
+</html>

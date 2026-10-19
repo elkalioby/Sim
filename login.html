@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - نظام إدارة المبيعات</title>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-light: #2563eb;
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --text: #1f2937;
+            --danger: #dc2626;
+            --success: #059669;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 15px; }
+        .login-card { background: var(--card); padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 400px; text-align: center; }
+        .login-card h2 { color: var(--primary); margin-bottom: 20px; font-size: 1.4rem; }
+        .form-group { margin-bottom: 15px; text-align: right; }
+        label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: #374151; }
+        
+        .password-wrapper { position: relative; display: flex; align-items: center; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 12px; padding-left: 45px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; outline: none; }
+        input:focus { border-color: var(--primary-light); }
+        
+        .toggle-password { position: absolute; left: 12px; background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #6b7280; padding: 4px; }
+        .toggle-password:hover { color: var(--primary); }
+
+        .options-container { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .remember-group { display: flex; align-items: center; gap: 8px; text-align: right; font-size: 0.9rem; color: #4b5563; cursor: pointer; font-weight: normal; margin-bottom: 0; }
+        .remember-group input { width: 18px; height: 18px; cursor: pointer; }
+
+        .btn-login { background-color: var(--primary-light); color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 5px; transition: 0.2s; }
+        .btn-login:active { opacity: 0.8; }
+
+        .btn-bio { background-color: #f8fafc; color: var(--primary); border: 2px solid var(--primary-light); width: 100%; padding: 11px; border-radius: 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; margin-top: 12px; display: none; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+        .btn-bio:hover { background-color: #eff6ff; }
+        .btn-bio:active { opacity: 0.8; }
+
+        .error-msg { color: var(--danger); font-size: 0.85rem; margin-top: 10px; display: none; }
+    </style>
+    <!-- ربط Firebase السحابي -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
+            authDomain: "ahmed-hassan-bb80b.firebaseapp.com",
+            projectId: "ahmed-hassan-bb80b",
+            storageBucket: "ahmed-hassan-bb80b.firebasestorage.app",
+            messagingSenderId: "503682153846",
+            appId: "1:503682153846:web:93b3a174ab31e351a04e57"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.db = db;
+        window.doc = doc;
+        window.getDoc = getDoc;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedSession = JSON.parse(localStorage.getItem('logged_user'));
+            const expiryTime = localStorage.getItem('session_expiry');
+            
+            if (savedSession && expiryTime) {
+                const now = new Date().getTime();
+                if (now < parseInt(expiryTime)) {
+                    window.location.href = 'index.html';
+                    return;
+                } else {
+                    localStorage.removeItem('logged_user');
+                    localStorage.removeItem('session_expiry');
+                }
+            }
+
+            // فحص وجود بصمة محفوظة مسبقاً على الجهاز لإظهار زر الدخول السريع
+            const savedCredId = localStorage.getItem('bio_cred_id');
+            const savedBioUser = JSON.parse(localStorage.getItem('bio_saved_user'));
+
+            if (savedCredId && savedBioUser) {
+                const bioBtn = document.getElementById('bioLoginBtn');
+                const bioBtnText = document.getElementById('bioBtnText');
+                bioBtnText.innerText = `الدخول بالبصمة (${savedBioUser.username})`;
+                bioBtn.style.display = 'flex';
+            }
+        });
+    </script>
+</head>
+<body>
+
+    <div class="login-card">
+        <h2>🔐 تسجيل الدخول للنظام</h2>
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label>اسم المستخدم</label>
+                <input type="text" id="username" required placeholder="أدخل اسم المستخدم">
+            </div>
+            <div class="form-group">
+                <label>كلمة المرور</label>
+                <div class="password-wrapper">
+                    <input type="password" id="password" required placeholder="أدخل كلمة المرور">
+                    <button type="button" class="toggle-password" id="toggleBtn" onclick="togglePasswordVisibility()">👁️</button>
+                </div>
+            </div>
+            
+            <div class="options-container">
+                <label class="remember-group">
+                    <input type="checkbox" id="rememberMe" checked> تذكرني
+                </label>
+
+                <label class="remember-group" id="bioOptionLabel">
+                    <input type="checkbox" id="enableBio"> 🫆 تفعيل الدخول بالبصمة للمرات القادمة
+                </label>
+            </div>
+
+            <button type="submit" class="btn-login" id="submitBtn">دخول</button>
+
+            <button type="button" class="btn-bio" id="bioLoginBtn" onclick="loginWithBiometrics()">
+                <span>🫆</span>
+                <span id="bioBtnText">الدخول السريع بالبصمة</span>
+            </button>
+
+            <div id="errorMsg" class="error-msg">اسم المستخدم أو كلمة المرور غير صحيحة!</div>
+        </form>
+    </div>
+
+    <script>
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const toggleBtn = document.getElementById('toggleBtn');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.innerText = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.innerText = '👁️';
+            }
+        }
+
+        function bufferToBase64(buffer) {
+            return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        }
+
+        function base64ToBuffer(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // تسجيل البصمة لأول مرة
+        async function registerBiometrics(username, role) {
+            // فحص ما إذا كان الملف مفتوحاً محلياً بدون HTTPS
+            if (window.location.protocol === 'file:' || window.location.protocol === 'content:' || !window.isSecureContext) {
+                alert("⚠️ تنبيه: مستشعر البصمة في الهاتف لا يعمل عند فتح الملف محلياً من مدير الملفات.\n\nارفع الملفات على رابط Netlify (https://elkalioby.netlify.app) وستعمل البصمة معك فوراً!");
+                return false;
+            }
+
+            if (!window.PublicKeyCredential) {
+                alert("⚠️ هذا المتصفح لا يدعم خاصية البصمة.");
+                return false;
+            }
+
+            try {
+                const challenge = new Uint8Array(32);
+                window.crypto.getRandomValues(challenge);
+
+                const userId = new Uint8Array(16);
+                window.crypto.getRandomValues(userId);
+
+                const publicKeyOptions = {
+                    challenge: challenge,
+                    rp: {
+                        name: "نظام إدارة المبيعات",
+                        id: window.location.hostname
+                    },
+                    user: {
+                        id: userId,
+                        name: username,
+                        displayName: username
+                    },
+                    pubKeyCredParams: [
+                        { type: "public-key", alg: -7 },
+                        { type: "public-key", alg: -257 }
+                    ],
+                    authenticatorSelection: {
+                        authenticatorAttachment: "platform",
+                        userVerification: "required"
+                    },
+                    timeout: 60000
+                };
+
+                const credential = await navigator.credentials.create({ publicKey: publicKeyOptions });
+
+                localStorage.setItem('bio_cred_id', bufferToBase64(credential.rawId));
+                localStorage.setItem('bio_saved_user', JSON.stringify({ username: username, role: role }));
+                alert("✅ تم تفعيل وحفظ البصمة بنجاح! يمكنك الدخول بها مباشرة في المرات القادمة.");
+                return true;
+            } catch (err) {
+                alert("⚠️ لم يتم تفعيل البصمة: تأكد من تفعيل قفل الشاشة/البصمة في هاتفك وفتح الرابط عبر متصفح Chrome على رابط HTTPS.");
+                console.warn("خطأ البصمة:", err);
+                return false;
+            }
+        }
+
+        // الدخول المباشر بالبصمة
+        async function loginWithBiometrics() {
+            const savedCredId = localStorage.getItem('bio_cred_id');
+            const savedBioUser = JSON.parse(localStorage.getItem('bio_saved_user'));
+            const rememberMe = document.getElementById('rememberMe').checked;
+
+            if (!savedCredId || !savedBioUser) return;
+
+            try {
+                const challenge = new Uint8Array(32);
+                window.crypto.getRandomValues(challenge);
+
+                await navigator.credentials.get({
+                    publicKey: {
+                        challenge: challenge,
+                        rpId: window.location.hostname,
+                        allowCredentials: [{
+                            id: base64ToBuffer(savedCredId),
+                            type: "public-key"
+                        }],
+                        userVerification: "required",
+                        timeout: 60000
+                    }
+                });
+
+                localStorage.setItem('logged_user', JSON.stringify(savedBioUser));
+
+                if (rememberMe) {
+                    const thirtyDaysInMillis = 30 * 24 * 60 * 60 * 1000;
+                    const expiryTime = new Date().getTime() + thirtyDaysInMillis;
+                    localStorage.setItem('session_expiry', expiryTime.toString());
+                } else {
+                    localStorage.removeItem('session_expiry');
+                }
+
+                window.location.href = 'index.html';
+            } catch (err) {
+                alert("❌ فشل التحقق من البصمة أو تم الإلغاء.");
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('username').value.trim().toLowerCase();
+            const p = document.getElementById('password').value.trim();
+            const rememberMe = document.getElementById('rememberMe').checked;
+            const enableBio = document.getElementById('enableBio').checked;
+            const errDiv = document.getElementById('errorMsg');
+
+            errDiv.style.display = 'none';
+
+            let isValidUser = false;
+            let userRole = 'employee';
+
+            if (u === 'admin' && p === 'Aw20102001@') {
+                isValidUser = true;
+                userRole = 'admin';
+            } else {
+                try {
+                    if(window.db) {
+                        const userDoc = await window.getDoc(window.doc(window.db, "users", u));
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data();
+                            if (userData.password === p) {
+                                isValidUser = true;
+                                userRole = userData.role;
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.log("العمل بدون إنترنت، التحقق محلياً...");
+                }
+
+                if (!isValidUser) {
+                    let localUsers = JSON.parse(localStorage.getItem('local_users')) || {};
+                    if (localUsers[u] && localUsers[u].password === p) {
+                        isValidUser = true;
+                        userRole = localUsers[u].role;
+                    }
+                }
+            }
+
+            if (isValidUser) {
+                if (enableBio) {
+                    await registerBiometrics(u, userRole);
+                }
+
+                localStorage.setItem('logged_user', JSON.stringify({ username: u, role: userRole }));
+                
+                if (rememberMe) {
+                    const thirtyDaysInMillis = 30 * 24 * 60 * 60 * 1000;
+                    const expiryTime = new Date().getTime() + thirtyDaysInMillis;
+                    localStorage.setItem('session_expiry', expiryTime.toString());
+                } else {
+                    localStorage.removeItem('session_expiry');
+                }
+
+                window.location.href = 'index.html';
+                return;
+            }
+
+            errDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
