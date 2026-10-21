@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إضافة شريحة للمخزون</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 850px; margin: 0 auto; padding: 12px; background: #f8fafc; color: #1e293b; }
+        .card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        label { display: block; margin-top: 8px; margin-bottom: 4px; font-weight: bold; font-size: 13px; color: #333; }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; font-size: 14px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; }
+        
+        .stats { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 8px; background: #f1f5f9; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 13px; }
+        .stat-badge { background: white; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; color: #1e3a8a; }
+
+        .cam-controls { display: flex; gap: 8px; margin-bottom: 8px; }
+        .btn-live { flex: 1; background: #2563eb; color: white; border: none; font-weight: bold; font-size: 15px; padding: 13px; cursor: pointer; margin: 0; border-radius: 8px; }
+        .btn-torch { flex: 0 0 52px; background: #f59e0b; color: white; border: none; font-weight: bold; font-size: 18px; padding: 0; cursor: pointer; margin: 0; display: none; align-items: center; justify-content: center; border-radius: 8px; }
+        
+        #reader { width: 100%; margin-bottom: 10px; border-radius: 8px; overflow: hidden; }
+        #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; display: none; margin-bottom: 10px; }
+
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        th, td { border: 1px solid #e2e8f0; padding: 9px 8px; text-align: center; white-space: nowrap; }
+        th { background: #1e293b; color: white; }
+        .barcode-cell { font-family: monospace; font-size: 13px; font-weight: bold; color: #0f172a; letter-spacing: 0.5px; }
+        .btn-del-row { background: #dc2626; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; width: auto; margin: 0; }
+        .company-badge { background: #dbeafe; color: #1e3a8a; padding: 3px 10px; border-radius: 8px; font-weight: bold; }
+        .user-badge { background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 10px; font-weight: bold; }
+    </style>
+
+    <!-- ربط Firebase السحابي بنفس قاعدة الفواتير (ahmed-hassan-bb80b) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
+            authDomain: "ahmed-hassan-bb80b.firebaseapp.com",
+            projectId: "ahmed-hassan-bb80b",
+            storageBucket: "ahmed-hassan-bb80b.firebasestorage.app",
+            messagingSenderId: "503682153846",
+            appId: "1:503682153846:web:93b3a174ab31e351a04e57"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.collection = collection;
+        window.getDocs = getDocs;
+        window.doc = doc;
+        window.deleteDoc = deleteDoc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+
+        if (window.initBarcodeApp) { window.initBarcodeApp(); }
+    </script>
+</head>
+<body>
+
+    <h3 style="text-align:center; margin-top:0; margin-bottom:12px; color:#1e3a8a;">📱 إضافة شريحة للمخزون</h3>
+
+    <!-- ملخص رصيد المخزون المربوط بالفواتير -->
+    <div class="card" style="padding: 10px; margin-bottom: 12px;">
+        <div class="stats">
+            <span class="stat-badge">إجمالي الممسوح: <span id="totalScannedCount">0</span></span>
+            <span class="stat-badge">Mobily: <span id="mobilyStockCount">0</span></span>
+            <span class="stat-badge">STC: <span id="stcStockCount">0</span></span>
+            <span class="stat-badge">Zain: <span id="zainStockCount">0</span></span>
+        </div>
+    </div>
+
+    <!-- الكاميرا والتاريخ فقط -->
+    <div class="card">
+        <div id="msg"></div>
+
+        <div class="cam-controls">
+            <button id="liveBtn" class="btn-live" onclick="toggleLiveCamera()">
+                🎥 تشغيل الكاميرا السريعة (مسح الباركود)
+            </button>
+            <button id="torchBtn" class="btn-torch" onclick="toggleTorch()" title="تشغيل/إيقاف الكشاف">
+                🔦
+            </button>
+        </div>
+
+        <div id="reader"></div>
+
+        <div>
+            <label>التاريخ:</label>
+            <input type="date" id="inDate">
+        </div>
+    </div>
+
+    <!-- جدول الشرائح المضافة -->
+    <div class="card">
+        <input type="text" id="searchInput" placeholder="🔍 البحث بالباركود أو الشركة أو التاريخ أو اسم اليوزر..." oninput="renderTable()">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>حذف</th>
+                        <th>الباركود الكامل</th>
+                        <th>الشركة</th>
+                        <th>التاريخ</th>
+                        <th>اسم اليوزر</th>
+                    </tr>
+                </thead>
+                <tbody id="simTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'مجهول', role: 'employee' };
+        let simsList = [];
+        let marketList = [];
+        let customItems = ['Mobily', 'STC', 'Zain'];
+        let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0 };
+
+        function getTodayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        document.getElementById('inDate').value = getTodayStr();
+
+        // إعداد الكاميرا والصوت
+        const scannerConfig = {
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+            verbose: false
+        };
+        if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
+            scannerConfig.formatsToSupport = [
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.ITF,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.CODABAR,
+                Html5QrcodeSupportedFormats.QR_CODE
+            ];
+        }
+
+        const html5QrCode = new Html5Qrcode("reader", scannerConfig);
+        let isLiveRunning = false;
+        let isTorchOn = false;
+        let lastScanned = "";
+        let lastScanTime = 0;
+        let audioCtx = null;
+
+        function unlockAudio() {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+            } catch (e) {}
+        }
+
+        function playBeep(success = true) {
+            try {
+                unlockAudio();
+                if (!audioCtx) return;
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (success) {
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(1400, now);
+                    osc.frequency.setValueAtTime(1800, now + 0.06);
+                    gain.gain.setValueAtTime(0.6, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+                    osc.start(now);
+                    osc.stop(now + 0.16);
+                    if (navigator.vibrate) navigator.vibrate(70);
+                } else {
+                    osc.type = "sawtooth";
+                    osc.frequency.setValueAtTime(220, now);
+                    gain.gain.setValueAtTime(0.5, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                    if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+                }
+            } catch (e) {}
+        }
+
+        function normalizeBarcodeDigits(str) {
+            return str.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).trim();
+        }
+
+        // التعرف التلقائي على الشركة بنفس مسميات ملف الفاتورة (Mobily, STC, Zain)
+        function detectCompany(code) {
+            if (code.startsWith('8996601') || code.includes('8996601')) return 'STC';
+            if (code.startsWith('8996603') || code.includes('8996603')) return 'Mobily';
+            if (code.startsWith('8996604') || code.includes('8996604')) return 'Zain';
+            return 'Mobily';
+        }
+
+        function showMessage(text, isError = false) {
+            const msg = document.getElementById('msg');
+            msg.style.display = 'block';
+            msg.style.background = isError ? '#fee2e2' : '#dcfce7';
+            msg.style.color = isError ? '#991b1b' : '#166534';
+            msg.innerText = text;
+        }
+
+        // تحميل البيانات ومزامنتها مع ملف الفواتير
+        window.initBarcodeApp = async function() {
+            const localConfig = JSON.parse(localStorage.getItem('app_config'));
+            if (localConfig) {
+                marketList = localConfig.marketList || [];
+                customItems = localConfig.customItems || customItems;
+                stockInventory = localConfig.stockInventory || stockInventory;
+            }
+
+            const localSims = JSON.parse(localStorage.getItem('scanned_sims_offline'));
+            if (localSims) {
+                simsList = localSims;
+            }
+
+            renderTable();
+
+            try {
+                if (window.db) {
+                    const configRef = window.doc(window.db, "settings", "app_config");
+                    const configSnap = await window.getDoc(configRef);
+                    if (configSnap.exists()) {
+                        const data = configSnap.data();
+                        marketList = data.marketList || marketList;
+                        customItems = data.customItems || customItems;
+                        stockInventory = data.stockInventory || stockInventory;
+                        localStorage.setItem('app_config', JSON.stringify({ marketList, customItems, stockInventory }));
+                    }
+
+                    const querySnapshot = await window.getDocs(window.collection(window.db, "scanned_sims"));
+                    simsList = [];
+                    querySnapshot.forEach((docSnap) => {
+                        simsList.push(docSnap.data());
+                    });
+                    localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
+                    renderTable();
+                }
+            } catch (e) {
+                console.log("وضع الأوفلاين مفعل.");
+            }
+        };
+
+        async function saveConfigAndSync() {
+            localStorage.setItem('app_config', JSON.stringify({ marketList, customItems, stockInventory }));
+            try {
+                if (window.db) {
+                    const configRef = window.doc(window.db, "settings", "app_config");
+                    await window.setDoc(configRef, { marketList, customItems, stockInventory });
+                }
+            } catch (e) {}
+        }
+
+        async function toggleLiveCamera() {
+            unlockAudio();
+            const btn = document.getElementById('liveBtn');
+            const torchBtn = document.getElementById('torchBtn');
+
+            if (isLiveRunning) {
+                await html5QrCode.stop();
+                isLiveRunning = false;
+                isTorchOn = false;
+                btn.innerText = "🎥 تشغيل الكاميرا السريعة (مسح الباركود)";
+                btn.style.background = "#2563eb";
+                torchBtn.style.display = "none";
+                torchBtn.style.background = "#f59e0b";
+                return;
+            }
+
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    {
+                        fps: 30,
+                        disableFlip: true,
+                        qrbox: function(viewfinderWidth, viewfinderHeight) {
+                            return {
+                                width: Math.floor(viewfinderWidth * 0.90),
+                                height: Math.floor(viewfinderHeight * 0.38)
+                            };
+                        }
+                    },
+                    (text) => handleInScan(text)
+                );
+                isLiveRunning = true;
+                btn.innerText = "⏹️ إيقاف الكاميرا";
+                btn.style.background = "#dc2626";
+                torchBtn.style.display = "flex";
+            } catch (err) {
+                showMessage("⚠️ تعذر تشغيل الكاميرا، تأكد من إعطاء الصلاحية للمتصفح.", true);
+            }
+        }
+
+        async function toggleTorch() {
+            if (!isLiveRunning) return;
+            try {
+                isTorchOn = !isTorchOn;
+                await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isTorchOn }] });
+                document.getElementById('torchBtn').style.background = isTorchOn ? "#16a34a" : "#f59e0b";
+            } catch (err) {
+                showMessage("⚠️ الفلاش غير مدعوم من المتصفح في هذا الجهاز", true);
+            }
+        }
+
+        async function handleInScan(scannedCode) {
+            const code = normalizeBarcodeDigits(String(scannedCode || ''));
+            if (!code) return;
+
+            const now = Date.now();
+            if (code === lastScanned && (now - lastScanTime) < 1500) return;
+            lastScanned = code;
+            lastScanTime = now;
+
+            // منع تكرار نفس الباركود
+            if (simsList.some(s => s.code === code)) {
+                playBeep(false);
+                showMessage(`⚠️ الشريحة (${code}) مضافة مسبقاً!`, true);
+                return;
+            }
+
+            const company = detectCompany(code);
+            const inDate = document.getElementById('inDate').value || getTodayStr();
+
+            const newSim = {
+                code: code,
+                company: company,
+                date: inDate,
+                addedBy: currentUser.username,
+                timestamp: now
+            };
+
+            // 1. إضافة الشريحة للقائمة
+            simsList.push(newSim);
+            localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
+
+            // 2. زيادة رصيد الشركة تلقائياً في مخزون الفواتير (invoice.html)
+            if (!customItems.includes(company)) {
+                customItems.push(company);
+            }
+            stockInventory[company] = (parseFloat(stockInventory[company]) || 0) + 1;
+
+            playBeep(true);
+            showMessage(`✅ تم إضافة شريحة (${company}) وتحديث رصيد الفواتير تلقائياً!`);
+            renderTable();
+
+            // 3. الحفظ السحابي
+            await saveConfigAndSync();
+            try {
+                if (window.db) {
+                    await window.setDoc(window.doc(window.db, "scanned_sims", code), newSim);
+                }
+            } catch (e) {}
+        }
+
+        window.deleteSim = async function(code) {
+            const target = simsList.find(s => s.code === code);
+            if (!target) return;
+
+            if (confirm(`هل أنت متأكد من حذف الشريحة (${code}) وخصمها من المخزون؟`)) {
+                simsList = simsList.filter(s => s.code !== code);
+                localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
+
+                // خصم 1 تلقائياً من رصيد الشركة في مخزون الفواتير
+                const company = target.company;
+                if (stockInventory[company] !== undefined && stockInventory[company] > 0) {
+                    stockInventory[company] = parseFloat(stockInventory[company]) - 1;
+                }
+
+                renderTable();
+                showMessage(`🗑️ تم حذف الشريحة (${code}) وتحديث الرصيد.`);
+
+                await saveConfigAndSync();
+                try {
+                    if (window.db) {
+                        await window.deleteDoc(window.doc(window.db, "scanned_sims", code));
+                    }
+                } catch (e) {}
+            }
+        };
+
+        window.renderTable = function() {
+            const tbody = document.getElementById('simTable');
+            const search = document.getElementById('searchInput').value.trim().toLowerCase();
+            
+            // تحديث عدادات الرصيد العلوية
+            document.getElementById('totalScannedCount').innerText = simsList.length;
+            document.getElementById('mobilyStockCount').innerText = stockInventory['Mobily'] || 0;
+            document.getElementById('stcStockCount').innerText = stockInventory['STC'] || 0;
+            document.getElementById('zainStockCount').innerText = stockInventory['Zain'] || 0;
+
+            const sorted = [...simsList].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            const filtered = sorted.filter(item => {
+                if (!search) return true;
+                return (item.code && item.code.toLowerCase().includes(search)) ||
+                       (item.company && item.company.toLowerCase().includes(search)) ||
+                       (item.date && item.date.toLowerCase().includes(search)) ||
+                       (item.addedBy && item.addedBy.toLowerCase().includes(search));
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="padding:15px; color:#64748b; font-weight:bold;">لا توجد شرائح مسجلة</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(item => `
+                <tr>
+                    <td><button class="btn-del-row" onclick="deleteSim('${item.code}')">❌</button></td>
+                    <td class="barcode-cell">${item.code}</td>
+                    <td><span class="company-badge">${item.company || '-'}</span></td>
+                    <td>${item.date || '-'}</td>
+                    <td><span class="user-badge">${item.addedBy || '-'}</span></td>
+                </tr>
+            `).join('');
+        };
+    </script>
+</body>
+</html>
