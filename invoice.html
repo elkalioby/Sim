@@ -327,7 +327,7 @@
 
         document.getElementById('reminderDate').valueAsDate = new Date();
 
-        // الاستماع لأي تحديث قادم من صفحة الباركود فوراً
+        // الاستماع الفوري لأي شريحة يتم مسحها في صفحة الباركود (barcode.html)
         window.addEventListener('storage', function(e) {
             if (e.key === 'app_config' && e.newValue) {
                 const updated = JSON.parse(e.newValue);
@@ -513,6 +513,7 @@
             document.getElementById('stockModal').style.display = 'none';
         }
 
+        // عرض الأصناف مع زر الإضافة (+) وزر القلم فقط (✏️)
         function renderModalStockList() {
             const container = document.getElementById('modalStockList');
             container.innerHTML = customItems.map(item => {
@@ -520,15 +521,35 @@
                 return `
                     <div class="stock-row">
                         <div class="stock-info">📦 ${item} : <strong>${qty} وحدة</strong></div>
-                        <button type="button" class="btn btn-warning" onclick="editModalStock('${item}')" style="padding:5px 10px; font-size:0.85rem;" title="تعديل الرصيد">✏️</button>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="btn btn-success" onclick="addModalStock('${item}')" style="padding:5px 10px; font-size:0.9rem;" title="إضافة كمية على الرصيد">+</button>
+                            <button type="button" class="btn btn-warning" onclick="editModalStock('${item}')" style="padding:5px 10px; font-size:0.85rem;" title="تعديل الرصيد الكلي">✏️</button>
+                        </div>
                     </div>
                 `;
             }).join('');
         }
 
+        // دالة زر (+) لجمع الكمية المضافة تلقائياً على الرصيد الحالي
+        async function addModalStock(item) {
+            const currentQty = stockInventory[item] !== undefined ? parseFloat(stockInventory[item]) : 0;
+            const addQtyStr = prompt(`الرصيد الحالي للصنف (${item}) هو: ${currentQty}\nأدخل الكمية الإضافية ليتم جمعها تلقائياً:`, '');
+            if (addQtyStr === null || addQtyStr.trim() === '') return;
+            const addQty = parseFloat(addQtyStr);
+            if (isNaN(addQty)) {
+                alert('يرجى إدخال رقم صحيح.');
+                return;
+            }
+            stockInventory[item] = currentQty + addQty;
+            await saveConfig();
+            updateItemSelects();
+            renderModalStockList();
+        }
+
+        // دالة زر (✏️) لتعديل الرصيد الكلي مباشرة
         async function editModalStock(item) {
             const currentQty = stockInventory[item] !== undefined ? stockInventory[item] : 0;
-            const newQtyStr = prompt(`أدخل الرصيد الجديد للصنف (${item}):`, currentQty);
+            const newQtyStr = prompt(`أدخل الرصيد الجديد الكلي للصنف (${item}):`, currentQty);
             if (newQtyStr === null) return;
             const newQty = parseFloat(newQtyStr);
             if (isNaN(newQty)) return;
