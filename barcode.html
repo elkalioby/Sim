@@ -126,7 +126,6 @@
         }
         document.getElementById('inDate').value = getTodayStr();
 
-        // إعداد الكاميرا والصوت
         const scannerConfig = {
             experimentalFeatures: { useBarCodeDetectorIfSupported: true },
             verbose: false
@@ -191,7 +190,6 @@
             return str.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).trim();
         }
 
-        // التعرف التلقائي على الشركة بنفس مسميات ملف الفاتورة (Mobily, STC, Zain)
         function detectCompany(code) {
             if (code.startsWith('8996601') || code.includes('8996601')) return 'STC';
             if (code.startsWith('8996603') || code.includes('8996603')) return 'Mobily';
@@ -207,7 +205,6 @@
             msg.innerText = text;
         }
 
-        // تحميل البيانات ومزامنتها مع ملف الفواتير
         window.initBarcodeApp = async function() {
             const localConfig = JSON.parse(localStorage.getItem('app_config'));
             if (localConfig) {
@@ -278,7 +275,7 @@
                 await html5QrCode.start(
                     { facingMode: "environment" },
                     {
-                        fps: 30,
+                        fps: 15,
                         disableFlip: true,
                         qrbox: function(viewfinderWidth, viewfinderHeight) {
                             return {
@@ -310,15 +307,25 @@
         }
 
         async function handleInScan(scannedCode) {
-            const code = normalizeBarcodeDigits(String(scannedCode || ''));
+            let code = normalizeBarcodeDigits(String(scannedCode || ''));
             if (!code) return;
 
+            // تجاهل أي رابط أو كيو آر كود يحتوي على حروف أو روابط ويب لتجنب مشاكل روابط موبايلي
+            if (code.includes('http://') || code.includes('https://') || code.includes('www.') || code.includes('/')) {
+                return; 
+            }
+
+            // التأكد من أن النص المدخل عبارة عن أرقام باركود صحيحة (طولها أكثر من 5 أرقام)
+            if (/[^0-9]/.test(code) || code.length < 5) {
+                return;
+            }
+
             const now = Date.now();
-            if (code === lastScanned && (now - lastScanTime) < 1500) return;
+            // فترة سماح 2.5 ثانية لمنع تكرار مسح نفس الباركود وراء بعضه
+            if (code === lastScanned && (now - lastScanTime) < 2500) return;
             lastScanned = code;
             lastScanTime = now;
 
-            // منع تكرار نفس الباركود
             if (simsList.some(s => s.code === code)) {
                 playBeep(false);
                 showMessage(`⚠️ الشريحة (${code}) مضافة مسبقاً!`, true);
@@ -336,11 +343,9 @@
                 timestamp: now
             };
 
-            // 1. إضافة الشريحة للقائمة
             simsList.push(newSim);
             localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-            // 2. زيادة رصيد الشركة تلقائياً في مخزون الفواتير (invoice.html)
             if (!customItems.includes(company)) {
                 customItems.push(company);
             }
@@ -350,7 +355,6 @@
             showMessage(`✅ تم إضافة شريحة (${company}) وتحديث رصيد الفواتير تلقائياً!`);
             renderTable();
 
-            // 3. الحفظ السحابي
             await saveConfigAndSync();
             try {
                 if (window.db) {
@@ -367,7 +371,6 @@
                 simsList = simsList.filter(s => s.code !== code);
                 localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-                // خصم 1 تلقائياً من رصيد الشركة في مخزون الفواتير
                 const company = target.company;
                 if (stockInventory[company] !== undefined && stockInventory[company] > 0) {
                     stockInventory[company] = parseFloat(stockInventory[company]) - 1;
@@ -389,7 +392,6 @@
             const tbody = document.getElementById('simTable');
             const search = document.getElementById('searchInput').value.trim().toLowerCase();
             
-            // تحديث عدادات الرصيد العلوية
             document.getElementById('totalScannedCount').innerText = simsList.length;
             document.getElementById('mobilyStockCount').innerText = stockInventory['Mobily'] || 0;
             document.getElementById('stcStockCount').innerText = stockInventory['STC'] || 0;
