@@ -80,14 +80,14 @@
             <button class="tab-btn active" id="homeTabBtn" onclick="switchTab('home', this)">
                 <span class="tab-icon">🏠</span> الرئيسية
             </button>
-            <button class="tab-btn" id="barcodeTabBtn" onclick="switchTab('barcode.html', this)">
-                <span class="tab-icon">📱</span> إضافة شريحة
-            </button>
             <button class="tab-btn" id="invoiceTabBtn" onclick="switchTab('invoice.html', this)">
                 <span class="tab-icon">📄</span> الفواتير
             </button>
             <button class="tab-btn" id="customersTabBtn" onclick="switchTab('customers.html', this)">
                 <span class="tab-icon">🏪</span> العملاء
+            </button>
+            <button class="tab-btn" id="barcodeTabBtn" onclick="switchTab('barcode.html', this)">
+                <span class="tab-icon">📱</span> إضافة شريحة
             </button>
             <button class="tab-btn" id="usersTabBtn" onclick="switchTab('users.html', this)" style="display: none;">
                 <span class="tab-icon">👥</span> الموظفين
@@ -100,9 +100,9 @@
                 <h2>أهلاً بك في متجر سيم</h2>
                 <p>يمكنك إدارة المبيعات، المخزون، العملاء، ومتابعة المديونيات بكل سهولة عبر الأقسام المتاحة بالأعلى.</p>
                 <div class="hero-actions">
-                    <button class="hero-btn" style="background: #16a34a;" onclick="switchTab('barcode.html', document.getElementById('barcodeTabBtn'))">إضافة شريحة 📱</button>
                     <button class="hero-btn" onclick="switchTab('invoice.html', document.getElementById('invoiceTabBtn'))">ابدأ العمل على الفواتير 🚀</button>
                     <button class="hero-btn" style="background: #0f172a;" onclick="switchTab('customers.html', document.getElementById('customersTabBtn'))">إدارة العملاء 🏪</button>
+                    <button class="hero-btn" style="background: #16a34a;" onclick="switchTab('barcode.html', document.getElementById('barcodeTabBtn'))">إضافة شريحة 📱</button>
                 </div>
             </div>
             <iframe id="contentFrame" style="display: none;" src=""></iframe>
