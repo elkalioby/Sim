@@ -108,7 +108,7 @@
         </div>
     </div>
 
-    <!-- نموذج إضافة / تعديل عميل (يظهر مباشرة بدون زر) -->
+    <!-- نموذج إضافة / تعديل عميل -->
     <div class="card" id="customerFormCard">
         <h2 id="formTitle">+ إضافة عميل جديد</h2>
         <form id="customerForm" onsubmit="saveCustomer(event)" novalidate>
@@ -180,23 +180,23 @@
     <script>
         let customers = [];
         let tempImageBase64 = '';
-        let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'مجهول', role: 'employee' };
+        let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
 
         window.initCustomersApp = async function() {
             const localData = JSON.parse(localStorage.getItem('customers_records_offline'));
-            if (localData) {
+            if (Array.isArray(localData)) {
                 customers = localData;
-                renderCustomers();
             }
+            renderCustomers();
             await loadCloudCustomers();
         };
 
         window.addEventListener('DOMContentLoaded', () => {
             const localData = JSON.parse(localStorage.getItem('customers_records_offline'));
-            if (localData) {
+            if (Array.isArray(localData)) {
                 customers = localData;
-                renderCustomers();
             }
+            renderCustomers();
         });
 
         function handleImageUpload(event) {
@@ -268,7 +268,7 @@
                 },
                 (err) => {
                     locInput.value = '';
-                    alert('تعذر جلب الموقع تلقائياً.');
+                    alert('تعذر جلب الموقع تلقائياً. تأكد من تفعيل الموقع (GPS) وإعطاء الصلاحية للمتصفح.');
                 },
                 { enableHighAccuracy: true, timeout: 10000 }
             );
@@ -276,4 +276,219 @@
 
         async function loadCloudCustomers() {
             try {
-                if (!window.db)
+                if (!window.db) {
+                    renderCustomers();
+                    return;
+                }
+                const querySnapshot = await window.getDocs(window.collection(window.db, "customers"));
+                const cloudList = [];
+                querySnapshot.forEach((docSnap) => {
+                    cloudList.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                cloudList.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                customers = cloudList;
+                localStorage.setItem('customers_records_offline', JSON.stringify(customers));
+            } catch (error) {
+                console.error("خطأ أثناء جلب العملاء من السحابة:", error);
+            } finally {
+                renderCustomers();
+            }
+        }
+
+        async function saveCustomer(event) {
+            event.preventDefault();
+
+            const editId = document.getElementById('editCustomerId').value;
+            const clientName = document.getElementById('clientName').value.trim();
+            const shopName = document.getElementById('shopName').value.trim();
+            const marketName = document.getElementById('marketName').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const location = document.getElementById('locationInput').value.trim();
+
+            if (!clientName && !shopName && !phone) {
+                alert('يرجى إدخال اسم العميل أو اسم المحل أو رقم الهاتف على الأقل.');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ جاري الحفظ...';
+
+            const customerData = {
+                clientName: clientName || 'بدون اسم',
+                shopName: shopName || '',
+                marketName: marketName || '',
+                phone: phone || '',
+                location: location || '',
+                shopImage: tempImageBase64 || '',
+                addedBy: currentUser.username || 'admin',
+                updatedAt: Date.now()
+            };
+
+            try {
+                if (editId) {
+                    const index = customers.findIndex(c => c.id === editId);
+                    if (index !== -1) {
+                        customerData.createdAt = customers[index].createdAt || Date.now();
+                        customers[index] = { id: editId, ...customerData };
+                    }
+                    if (window.db && !editId.startsWith('local_')) {
+                        const docRef = window.doc(window.db, "customers", editId);
+                        await window.updateDoc(docRef, customerData);
+                    }
+                } else {
+                    customerData.createdAt = Date.now();
+                    if (window.db) {
+                        const docRef = await window.addDoc(window.collection(window.db, "customers"), customerData);
+                        customers.unshift({ id: docRef.id, ...customerData });
+                    } else {
+                        customers.unshift({ id: 'local_' + Date.now(), ...customerData });
+                    }
+                }
+
+                localStorage.setItem('customers_records_offline', JSON.stringify(customers));
+                resetForm();
+                renderCustomers();
+            } catch (error) {
+                console.error("خطأ أثناء حفظ العميل:", error);
+                if (!editId) {
+                    customerData.createdAt = Date.now();
+                    customers.unshift({ id: 'local_' + Date.now(), ...customerData });
+                    localStorage.setItem('customers_records_offline', JSON.stringify(customers));
+                    resetForm();
+                    renderCustomers();
+                    alert('تم حفظ العميل محلياً على الجهاز (تعذر الاتصال بالسحابة حالياً).');
+                } else {
+                    alert('حدث خطأ أثناء تحديث بيانات العميل.');
+                }
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '💾 حفظ بيانات العميل';
+            }
+        }
+
+        function renderCustomers() {
+            const listEl = document.getElementById('customersList');
+            const countEl = document.getElementById('topCustomersCount');
+            const searchQuery = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+
+            if (countEl) {
+                countEl.textContent = customers.length;
+            }
+
+            const filtered = customers.filter(c => {
+                return (
+                    (c.clientName && c.clientName.toLowerCase().includes(searchQuery)) ||
+                    (c.shopName && c.shopName.toLowerCase().includes(searchQuery)) ||
+                    (c.marketName && c.marketName.toLowerCase().includes(searchQuery)) ||
+                    (c.phone && c.phone.includes(searchQuery))
+                );
+            });
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<p style="text-align:center; color:#6b7280; padding:20px;">${
+                    customers.length === 0 ? 'لا يوجد عملاء مسجلين حالياً. ابدأ بإضافة عميل جديد من الأعلى.' : 'لا توجد نتائج مطابقة للبحث.'
+                }</p>`;
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(c => {
+                const isUrl = c.location && (c.location.startsWith('http://') || c.location.startsWith('https://'));
+                const locHtml = c.location
+                    ? (isUrl
+                        ? `<a href="${c.location}" target="_blank" class="loc-link">📍 فتح الموقع</a>`
+                        : `<span class="loc-link">📍 ${c.location}</span>`)
+                    : '';
+
+                const phoneHtml = c.phone
+                    ? `<a href="tel:${c.phone}" class="phone-link">📞 ${c.phone}</a>`
+                    : '';
+
+                const thumbHtml = c.shopImage
+                    ? `<img src="${c.shopImage}" class="shop-thumb" alt="صورة المحل" onclick="openImageModal('${c.shopImage}')">`
+                    : '';
+
+                return `
+                    <div class="customer-card">
+                        <div class="customer-details">
+                            <div class="customer-title">
+                                <span class="client-name">👤 ${c.clientName || 'بدون اسم'}</span>
+                                ${c.shopName ? `<span class="badge shop-badge">🏪 ${c.shopName}</span>` : ''}
+                                ${c.marketName ? `<span class="badge market-badge">📍 ${c.marketName}</span>` : ''}
+                            </div>
+                            <div class="info-row">
+                                ${phoneHtml}
+                                ${locHtml}
+                            </div>
+                        </div>
+                        ${thumbHtml}
+                        <div class="card-actions">
+                            <span class="badge emp-badge">بواسطة: ${c.addedBy || 'admin'}</span>
+                            <div style="display:flex; gap:6px;">
+                                <button type="button" class="btn btn-warning" onclick="editCustomer('${c.id}')">✏️ تعديل</button>
+                                <button type="button" class="btn btn-danger" onclick="deleteCustomer('${c.id}')">🗑️ حذف</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function editCustomer(id) {
+            const c = customers.find(item => item.id === id);
+            if (!c) return;
+
+            document.getElementById('editCustomerId').value = c.id;
+            document.getElementById('clientName').value = c.clientName || '';
+            document.getElementById('shopName').value = c.shopName || '';
+            document.getElementById('marketName').value = c.marketName || '';
+            document.getElementById('phone').value = c.phone || '';
+            document.getElementById('locationInput').value = c.location || '';
+
+            tempImageBase64 = c.shopImage || '';
+            showImagePreview(tempImageBase64);
+
+            document.getElementById('formTitle').textContent = '✏️ تعديل بيانات العميل';
+            document.getElementById('submitBtn').textContent = '💾 تحديث بيانات العميل';
+            document.getElementById('cancelEditBtn').style.display = 'inline-flex';
+
+            document.getElementById('customerFormCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function deleteCustomer(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا العميل؟')) return;
+
+            customers = customers.filter(c => c.id !== id);
+            localStorage.setItem('customers_records_offline', JSON.stringify(customers));
+            renderCustomers();
+
+            try {
+                if (window.db && !id.startsWith('local_')) {
+                    await window.deleteDoc(window.doc(window.db, "customers", id));
+                }
+            } catch (error) {
+                console.error("خطأ أثناء حذف العميل من السحابة:", error);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('customerForm').reset();
+            document.getElementById('editCustomerId').value = '';
+            clearImage();
+            document.getElementById('formTitle').textContent = '+ إضافة عميل جديد';
+            document.getElementById('submitBtn').textContent = '💾 حفظ بيانات العميل';
+            document.getElementById('cancelEditBtn').style.display = 'none';
+        }
+
+        function openImageModal(src) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalFullImage');
+            if (modal && modalImg) {
+                modalImg.src = src;
+                modal.style.display = 'flex';
+            }
+        }
+    </script>
+</body>
+</html>
