@@ -44,7 +44,6 @@
         .user-badge { background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 10px; font-weight: bold; }
     </style>
 
-    <!-- ربط Firebase السحابي بنفس قاعدة البيانات[span_0](start_span)[span_0](end_span) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -76,12 +75,10 @@
 
     <h3 style="text-align:center; margin-top:0; margin-bottom:12px; color:#1e3a8a;">📱 إضافة شريحة للمخزون</h3>
 
-    <!-- ملخص رصيد المخزون الديناميكي -->
     <div class="card" style="padding: 10px; margin-bottom: 12px;">
         <div class="stats" id="dynamicStats"></div>
     </div>
 
-    <!-- الكاميرا والخيارات والتاريخ -->
     <div class="card">
         <div id="msg"></div>
 
@@ -103,14 +100,12 @@
         <div id="reader"></div>
         <div id="scanMonitor">في انتظار توجيه الكاميرا نحو الباركود...</div>
 
-        <!-- إدخال يدوي للباركود -->
         <label>إدخال يدوي للباركود:</label>
         <div class="row-group">
             <input type="text" id="manualCodeInput" inputmode="numeric" placeholder="✍️ اكتب أو الصق رقم الباركود هنا..." onkeydown="if(event.key==='Enter') submitManualCode()">
             <button class="btn-action btn-green" onclick="submitManualCode()" title="مسح يدوي">➕</button>
         </div>
 
-        <!-- 1. مربع التصنيف منفصل -->
         <label>التصنيف (الشركة):</label>
         <div class="row-group">
             <select id="categorySelect" onchange="onCategoryChange()"></select>
@@ -121,7 +116,6 @@
             <button class="btn-action btn-blue" onclick="addNewCategory()" title="إضافة تصنيف">➕</button>
         </div>
 
-        <!-- 2. مربع المدة منفصل تماماً (مثبت أثناء المسح المتعدد) -->
         <label>المدة (تثبت أثناء المسح المتعدد):</label>
         <div class="row-group">
             <select id="durationSelect"></select>
@@ -138,7 +132,6 @@
         </div>
     </div>
 
-    <!-- جدول الشرائح المضافة -->
     <div class="card">
         <input type="text" id="searchInput" placeholder="🔍 البحث بالباركود، التصنيف، المدة، التاريخ، أو اسم اليوزر..." oninput="renderTable()">
         <div class="table-wrap">
@@ -163,7 +156,7 @@
         let simsList = [];
         let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
         let durationsList = ['30', '60'];
-        let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0, 'Redbull': 0 };
+        let stockInventory = {};
 
         function getTodayStr() {
             const d = new Date();
@@ -241,12 +234,11 @@
             return categoriesList[0] || 'Mobily';
         }
 
-        // اقتراح المدة تلقائياً عند تغيير التصنيف فقط، دون إجبار تثبيتها لمن أراد تغييرها يدوياً
         function onCategoryChange() {
             const catSelect = document.getElementById('categorySelect').value;
             const durSelect = document.getElementById('durationSelect');
             
-            if (catSelect === 'STC' || catSelect === 'Mobily') {
+            if (catSelect === 'STC' || catSelect === 'Mobily' || catSelect === 'Zain') {
                 if (!durationsList.includes('60')) durationsList.push('60');
                 durSelect.value = '60';
             } else if (catSelect === 'Redbull' || catSelect === 'Red Bull') {
@@ -286,9 +278,6 @@
             }
             if (!categoriesList.includes(newName)) {
                 categoriesList.push(newName);
-            }
-            if (stockInventory[newName] === undefined) {
-                stockInventory[newName] = 0;
             }
             input.value = '';
             renderDropdowns(newName, document.getElementById('durationSelect').value);
@@ -359,25 +348,13 @@
             if (localConfig) {
                 categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
                 durationsList = localConfig.durationsList || ['30', '60'];
-                stockInventory = localConfig.stockInventory || stockInventory;
+                stockInventory = localConfig.stockInventory || {};
             }
 
             const localSims = JSON.parse(localStorage.getItem('scanned_sims_offline'));
             if (localSims) {
                 simsList = localSims;
             }
-
-            // تحديث الشرائح السابقة لتأخذ المدة 60 أو 30 تلقائياً بناءً على التصنيف القديم
-            simsList.forEach(item => {
-                const cat = item.category || item.company || '';
-                if (!item.duration || item.duration === '-' || item.duration === 'غير محدد') {
-                    if (cat === 'STC' || cat === 'Mobily') item.duration = '60';
-                    else if (cat === 'Redbull') item.duration = '30';
-                }
-            });
-
-            renderDropdowns();
-            renderTable();
 
             try {
                 if (window.db) {
@@ -387,8 +364,7 @@
                         const data = configSnap.data();
                         categoriesList = data.categoriesList || data.customItems || categoriesList;
                         durationsList = data.durationsList || durationsList;
-                        stockInventory = data.stockInventory || stockInventory;
-                        localStorage.setItem('app_config', JSON.stringify({ categoriesList, durationsList, stockInventory }));
+                        stockInventory = data.stockInventory || {};
                     }
 
                     const querySnapshot = await window.getDocs(window.collection(window.db, "scanned_sims"));
@@ -396,30 +372,40 @@
                     querySnapshot.forEach((docSnap) => {
                         const data = docSnap.data();
                         if (!data.category && data.company) data.category = data.company;
-                        
-                        // تحديث الشرائح السابقة سحابياً أيضاً لتظهر مدتها الصحيحة
-                        const cat = data.category || data.company || '';
-                        if (!data.duration || data.duration === '-' || data.duration === 'غير محدد') {
-                            if (cat === 'STC' || cat === 'Mobily') data.duration = '60';
-                            else if (cat === 'Redbull') data.duration = '30';
-                        }
                         simsList.push(data);
                     });
-                    localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
-                    renderDropdowns();
-                    renderTable();
                 }
             } catch (e) {
                 console.log("وضع الأوفلاين مفعل.");
             }
+
+            // إعادة حساب رصيد المخزون بناءً على (التصنيف + المدة معاً)
+            stockInventory = {};
+            simsList.forEach(item => {
+                const cat = item.category || item.company || 'Mobily';
+                let dur = item.duration;
+                if (!dur || dur === '-' || dur === 'غير محدد' || dur === '') {
+                    dur = (cat === 'Redbull') ? '30' : '60';
+                    item.duration = dur;
+                }
+                const itemKey = `${cat} (${dur})`;
+                stockInventory[itemKey] = (stockInventory[itemKey] || 0) + 1;
+            });
+
+            localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
+            saveConfigAndSync();
+            renderDropdowns();
+            renderTable();
         };
 
         async function saveConfigAndSync() {
-            localStorage.setItem('app_config', JSON.stringify({ categoriesList, durationsList, stockInventory }));
+            // حفظ قائمة الأصناف المركبة (الشركة + المدة) في stockInventory ليتم قراءتها في الفواتير
+            const dataToSave = { categoriesList, durationsList, stockInventory };
+            localStorage.setItem('app_config', JSON.stringify(dataToSave));
             try {
                 if (window.db) {
                     const configRef = window.doc(window.db, "settings", "app_config");
-                    await window.setDoc(configRef, { categoriesList, durationsList, stockInventory });
+                    await window.setDoc(configRef, dataToSave);
                 }
             } catch (e) {}
         }
@@ -571,12 +557,9 @@
             const selectedCatInput = document.getElementById('categorySelect').value;
             const category = (selectedCatInput && selectedCatInput !== 'AUTO') ? selectedCatInput : detectCategoryByCode(code);
             
-            // استخدام المدة المحددة في القائمة حالياً وثباتها أثناء المسح المتعدد
             let duration = document.getElementById('durationSelect').value;
             if (!duration) {
-                if (category === 'STC' || category === 'Mobily') duration = '60';
-                else if (category === 'Redbull') duration = '30';
-                else duration = '60';
+                duration = (category === 'Redbull') ? '30' : '60';
             }
 
             const inDate = document.getElementById('inDate').value || getTodayStr();
@@ -594,10 +577,11 @@
             simsList.push(newSim);
             localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-            stockInventory[category] = (parseFloat(stockInventory[category]) || 0) + 1;
+            const itemKey = `${category} (${duration})`;
+            stockInventory[itemKey] = (parseFloat(stockInventory[itemKey]) || 0) + 1;
 
             playBeep(true);
-            showMessage(`✅ تم إضافة الشريحة (تصنيف: ${category} | مدة: ${duration}) بنجاح!`);
+            showMessage(`✅ تم إضافة الشريحة (${itemKey}) بنجاح!`);
             renderTable();
 
             await saveConfigAndSync();
@@ -616,9 +600,12 @@
                 simsList = simsList.filter(s => s.code !== code);
                 localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-                const category = target.category || target.company;
-                if (category && stockInventory[category] !== undefined && stockInventory[category] > 0) {
-                    stockInventory[category] = parseFloat(stockInventory[category]) - 1;
+                const cat = target.category || target.company || 'Mobily';
+                const dur = target.duration || '60';
+                const itemKey = `${cat} (${dur})`;
+
+                if (stockInventory[itemKey] !== undefined && stockInventory[itemKey] > 0) {
+                    stockInventory[itemKey] = parseFloat(stockInventory[itemKey]) - 1;
                 }
 
                 renderTable();
@@ -633,22 +620,30 @@
             }
         };
 
+        function getFixedDuration(item) {
+            let dur = item.duration;
+            const cat = item.category || item.company || '';
+            if (!dur || dur === '-' || dur === 'غير محدد' || dur === '') {
+                return (cat === 'Redbull') ? '30' : '60';
+            }
+            return dur;
+        }
+
         window.renderTable = function() {
             const tbody = document.getElementById('simTable');
             const search = document.getElementById('searchInput').value.trim().toLowerCase();
             
             const statsDiv = document.getElementById('dynamicStats');
             let statsHtml = `<span class="stat-badge total">إجمالي الممسوح: ${simsList.length}</span>`;
-            categoriesList.forEach(item => {
-                const count = stockInventory[item] || 0;
-                statsHtml += `<span class="stat-badge">${item}: ${count}</span>`;
+            Object.keys(stockInventory).forEach(key => {
+                statsHtml += `<span class="stat-badge">${key}: ${stockInventory[key]}</span>`;
             });
             statsDiv.innerHTML = statsHtml;
 
             const sorted = [...simsList].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             const filtered = sorted.filter(item => {
                 const cat = item.category || item.company || '';
-                const dur = item.duration || '';
+                const dur = getFixedDuration(item);
                 if (!search) return true;
                 return (item.code && item.code.toLowerCase().includes(search)) ||
                        (cat.toLowerCase().includes(search)) ||
@@ -664,7 +659,7 @@
 
             tbody.innerHTML = filtered.map(item => {
                 const cat = item.category || item.company || '-';
-                const dur = item.duration || '-';
+                const dur = getFixedDuration(item);
                 return `
                     <tr>
                         <td><button class="btn-del-row" onclick="deleteSim('${item.code}')">❌</button></td>
