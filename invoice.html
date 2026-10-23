@@ -294,10 +294,14 @@
             loadSavedCustomers();
 
             const localConfig = JSON.parse(localStorage.getItem('app_config'));
-            if (localConfig) {
+            if (localConfig && localConfig.stockInventory) {
                 marketList = localConfig.marketList || [];
                 stockInventory = localConfig.stockInventory || {};
+            } else {
+                // دالة ذكية لإعادة حساب المخزون من scanned_sims تلقائياً لو كانت البيانات القديمة بسيطة
+                await calculateStockFromSims();
             }
+
             const localRecords = JSON.parse(localStorage.getItem('sales_records_offline'));
             if (localRecords) {
                 records = localRecords;
@@ -314,8 +318,12 @@
                     if (configSnap.exists()) {
                         const data = configSnap.data();
                         marketList = data.marketList || marketList;
-                        stockInventory = data.stockInventory || {};
-                        localStorage.setItem('app_config', JSON.stringify(data));
+                        if (data.stockInventory && Object.keys(data.stockInventory).length > 0) {
+                            stockInventory = data.stockInventory;
+                        } else {
+                            await calculateStockFromSims();
+                        }
+                        localStorage.setItem('app_config', JSON.stringify({ marketList, stockInventory }));
                         updateMarketSelect();
                         updateItemSelects();
                         renderModalStockList();
@@ -326,6 +334,44 @@
                 console.log("وضع الأوفلاين مفعل.");
             }
         };
+
+        // دالة لحساب المخزون ديناميكياً من الشرائح الممسوحة مع المدة
+        async function calculateStockFromSims() {
+            let sims = JSON.parse(localStorage.getItem('scanned_sims_offline')) || [];
+            if (window.db) {
+                try {
+                    const simsSnap = await window.getDocs(window.collection(window.db, "scanned_sims"));
+                    if (!simsSnap.empty) {
+                        sims = [];
+                        simsSnap.forEach(d => sims.push(d.data()));
+                        localStorage.setItem('scanned_sims_offline', JSON.stringify(sims));
+                    }
+                } catch(err) {}
+            }
+
+            stockInventory = {};
+            sims.forEach(item => {
+                const cat = item.category || item.company || 'Mobily';
+                let dur = item.duration;
+                if (!dur || dur === '-' || dur === 'غير محدد' || dur === '') {
+                    dur = (cat === 'Redbull') ? '30' : '60';
+                }
+                const itemKey = `${cat} (${dur})`;
+                stockInventory[itemKey] = (stockInventory[itemKey] || 0) + 1;
+            });
+
+            // طرح الكميات المباعة في الفواتير السابقة ليكون المخزون دقيقاً 100%
+            records.forEach(r => {
+                if (r.cartItems && Array.isArray(r.cartItems)) {
+                    r.cartItems.forEach(ci => {
+                        if (stockInventory[ci.item] !== undefined) {
+                            stockInventory[ci.item] -= ci.qty;
+                            if (stockInventory[ci.item] < 0) stockInventory[ci.item] = 0;
+                        }
+                    });
+                }
+            });
+        }
 
         function loadSavedCustomers() {
             const localCust = JSON.parse(localStorage.getItem('customers_records_offline')) || [];
@@ -456,10 +502,6 @@
         }
 
         function openStockModal() {
-            const localConfig = JSON.parse(localStorage.getItem('app_config'));
-            if (localConfig && localConfig.stockInventory) {
-                stockInventory = localConfig.stockInventory;
-            }
             updateItemSelects();
             renderModalStockList();
             document.getElementById('stockModal').style.display = 'flex';
@@ -593,6 +635,8 @@
                     records.push({ firebaseId: docSnap.id, ...docSnap.data() });
                 });
                 localStorage.setItem('sales_records_offline', JSON.stringify(records));
+                await calculateStockFromSims();
+                updateItemSelects();
                 renderRecords();
             } catch (e) {}
         };
