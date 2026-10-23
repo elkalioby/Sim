@@ -43,7 +43,7 @@
         .user-badge { background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 10px; font-weight: bold; }
     </style>
 
-    <!-- ربط Firebase السحابي بنفس قاعدة الفواتير (ahmed-hassan-bb80b) -->
+    <!-- ربط Firebase السحابي بنفس قاعدة الفواتير (ahmed-hassan-bb80b)[span_0](start_span)[span_0](end_span) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -75,7 +75,7 @@
 
     <h3 style="text-align:center; margin-top:0; margin-bottom:12px; color:#1e3a8a;">📱 إضافة شريحة للمخزون</h3>
 
-    <!-- ملخص رصيد المخزون الديناميكي (يتحدث مع أي خيار جديد) -->
+    <!-- ملخص رصيد المخزون الديناميكي -->
     <div class="card" style="padding: 10px; margin-bottom: 12px;">
         <div class="stats" id="dynamicStats"></div>
     </div>
@@ -109,14 +109,14 @@
             <button class="btn-action btn-green" onclick="submitManualCode()">➕ مسح يدوي</button>
         </div>
 
-        <!-- القائمة المنسدلة وزر إضافة خيار جديد فوق التاريخ مباشرة -->
-        <label>نوع الشريحة / الصنف (يظهر في الجدول وفي خيارات الفواتير):</label>
+        <!-- القائمة المنسدلة وزر إضافة خيار جديد مسماة باسم "المدة" -->
+        <label>المدة (أو التصنيف):</label>
         <div class="row-group">
             <select id="itemSelect"></select>
         </div>
         <div class="row-group">
-            <input type="text" id="newOptionInput" placeholder="✨ اكتب اسم خيار/صنف جديد لإضافته للقائمة..." onkeydown="if(event.key==='Enter') addNewItemOption()">
-            <button class="btn-action btn-blue" onclick="addNewItemOption()">➕ إضافة خيار</button>
+            <input type="text" id="newOptionInput" placeholder="✨ اكتب مدة / صنف جديد لإضافته للقائمة..." onkeydown="if(event.key==='Enter') addNewItemOption()">
+            <button class="btn-action btn-blue" onclick="addNewItemOption()">➕ إضافة المدة</button>
         </div>
 
         <div>
@@ -127,14 +127,14 @@
 
     <!-- جدول الشرائح المضافة -->
     <div class="card">
-        <input type="text" id="searchInput" placeholder="🔍 البحث بالباركود أو الخيار/الشركة أو التاريخ أو اسم اليوزر..." oninput="renderTable()">
+        <input type="text" id="searchInput" placeholder="🔍 البحث بالباركود أو المدة أو التاريخ أو اسم اليوزر..." oninput="renderTable()">
         <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
                         <th>حذف</th>
                         <th>الباركود الكامل</th>
-                        <th>الخيار / الصنف</th>
+                        <th>المدة</th>
                         <th>التاريخ</th>
                         <th>اسم اليوزر</th>
                     </tr>
@@ -253,7 +253,7 @@
             const input = document.getElementById('newOptionInput');
             const newName = input.value.trim();
             if (!newName) {
-                showMessage("⚠️ يرجى كتابة اسم الخيار الجديد أولاً.", true);
+                showMessage("⚠️ يرجى كتابة اسم المدة الجديدة أولاً.", true);
                 return;
             }
 
@@ -265,9 +265,9 @@
             }
 
             input.value = '';
-            renderItemDropdown(newName); // اختيار الصنف الجديد تلقائياً بعد إضافته
+            renderItemDropdown(newName);
             renderTable();
-            showMessage(`✅ تم إضافة الخيار (${newName}) وتحديث قائمة الفواتير والمبيعات!`);
+            showMessage(`✅ تم إضافة المدة (${newName}) وتحديث القوائم بنجاح!`);
             await saveConfigAndSync();
         };
 
@@ -475,7 +475,6 @@
                 return;
             }
 
-            // اعتماد الخيار المحدد من القائمة المنسدلة أو الاكتشاف التلقائي
             const chosenOption = resolveSelectedCompany(code);
             const inDate = document.getElementById('inDate').value || getTodayStr();
 
@@ -497,7 +496,7 @@
             stockInventory[chosenOption] = (parseFloat(stockInventory[chosenOption]) || 0) + 1;
 
             playBeep(true);
-            showMessage(`✅ تم إضافة الشريحة تحت خيار (${chosenOption}) وتحديث الرصيد!`);
+            showMessage(`✅ تم إضافة الشريحة تحت المدة (${chosenOption}) وتحديث الرصيد!`);
             renderTable();
 
             await saveConfigAndSync();
@@ -537,7 +536,6 @@
             const tbody = document.getElementById('simTable');
             const search = document.getElementById('searchInput').value.trim().toLowerCase();
             
-            // عرض الإحصائيات ديناميكياً لجميع الخيارات المضافة
             const statsDiv = document.getElementById('dynamicStats');
             let statsHtml = `<span class="stat-badge total">إجمالي الممسوح: ${simsList.length}</span>`;
             customItems.forEach(item => {
