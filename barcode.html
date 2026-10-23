@@ -22,11 +22,12 @@
         .zoom-bar span { font-size: 13px; font-weight: bold; color: #1e3a8a; white-space: nowrap; }
         .zoom-bar input[type="range"] { margin: 0; padding: 0; flex: 1; accent-color: #2563eb; cursor: pointer; }
 
-        .manual-box { display: flex; gap: 8px; margin-top: 8px; margin-bottom: 6px; }
+        .manual-box { display: flex; gap: 8px; margin-top: 4px; margin-bottom: 6px; }
         .manual-box input { margin: 0; flex: 1; font-family: monospace; font-size: 14px; }
         .btn-manual { margin: 0; width: auto; padding: 0 18px; background: #16a34a; color: white; font-weight: bold; border: none; cursor: pointer; border-radius: 8px; white-space: nowrap; }
 
-        #reader { width: 100%; margin-bottom: 10px; border-radius: 8px; overflow: hidden; }
+        #reader { width: 100%; margin-bottom: 8px; border-radius: 8px; overflow: hidden; }
+        #scanMonitor { display: none; font-size: 12px; background: #f8fafc; color: #475569; padding: 6px 10px; border-radius: 6px; border: 1px dashed #cbd5e1; margin-bottom: 8px; text-align: center; font-family: monospace; }
         #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; display: none; margin-bottom: 10px; }
 
         .table-wrap { overflow-x: auto; }
@@ -102,9 +103,10 @@
         </div>
 
         <div id="reader"></div>
+        <div id="scanMonitor">في انتظار توجيه الكاميرا نحو الباركود...</div>
 
-        <!-- خانة إدخال يدوي احتياطية للشرائح المخدوشة أو الباهتة -->
-        <label>إدخال يدوي (في حال تلف الباركود):</label>
+        <!-- خانة إدخال يدوي احتياطية -->
+        <label>إدخال يدوي (أو لصق الباركود مباشرة):</label>
         <div class="manual-box">
             <input type="text" id="manualCodeInput" inputmode="numeric" placeholder="✍️ اكتب أو الصق رقم الباركود هنا..." onkeydown="if(event.key==='Enter') submitManualCode()">
             <button class="btn-manual" onclick="submitManualCode()">➕ إضافة</button>
@@ -148,6 +150,7 @@
         }
         document.getElementById('inDate').value = getTodayStr();
 
+        // إيقاف الصيغ الفرعية (مثل ITF و CODABAR) لأنها تقرأ أجزاء صغيرة من الباركود الطويل وتسبب رعشة المربع الأخضر بدون مسح
         const scannerConfig = {
             experimentalFeatures: { useBarCodeDetectorIfSupported: true },
             verbose: false
@@ -156,12 +159,7 @@
             scannerConfig.formatsToSupport = [
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.CODE_39,
-                Html5QrcodeSupportedFormats.ITF,
-                Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.CODABAR,
-                Html5QrcodeSupportedFormats.UPC_A,
-                Html5QrcodeSupportedFormats.UPC_E,
-                Html5QrcodeSupportedFormats.QR_CODE
+                Html5QrcodeSupportedFormats.EAN_13
             ];
         }
 
@@ -210,12 +208,11 @@
             } catch (e) {}
         }
 
-        function normalizeBarcodeDigits(str) {
-            // تحويل الأرقام العربية إلى إنجليزية وإزالة المسافات والشرطات مع إبقاء الحروف لفلترة الروابط
+        function cleanAndExtractDigits(str) {
+            // تحويل الأرقام العربية إلى إنجليزية ثم استخراج الأرقام الصافية وحذف أي رموز تحكم مخفية
             return str
                 .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
-                .replace(/[\s\-]/g, '')
-                .trim();
+                .replace(/[^0-9]/g, '');
         }
 
         function detectCompany(code) {
@@ -307,6 +304,7 @@
             const btn = document.getElementById('liveBtn');
             const torchBtn = document.getElementById('torchBtn');
             const zoomWrap = document.getElementById('zoomWrap');
+            const monitor = document.getElementById('scanMonitor');
 
             if (isLiveRunning) {
                 await html5QrCode.stop();
@@ -317,19 +315,19 @@
                 torchBtn.style.display = "none";
                 torchBtn.style.background = "#f59e0b";
                 zoomWrap.style.display = "none";
+                monitor.style.display = "none";
                 return;
             }
 
             const qrBoxConfig = function(viewfinderWidth, viewfinderHeight) {
                 return {
-                    width: Math.floor(viewfinderWidth * 0.92),
-                    height: Math.floor(viewfinderHeight * 0.34)
+                    width: Math.floor(viewfinderWidth * 0.94),
+                    height: Math.floor(viewfinderHeight * 0.35)
                 };
             };
 
             try {
                 try {
-                    // تشغيل الكاميرا بدقة عالية Full HD مع تركيز مستمر لقراءة الباركود الدقيق
                     await html5QrCode.start(
                         { facingMode: "environment" },
                         {
@@ -346,7 +344,6 @@
                         (text) => handleInScan(text, false)
                     );
                 } catch (hdErr) {
-                    // وضع احتياطي للأجهزة التي لا تدعم قيود الدقة المخصصة
                     await html5QrCode.start(
                         { facingMode: "environment" },
                         {
@@ -363,8 +360,9 @@
                 btn.style.background = "#dc2626";
                 torchBtn.style.display = "flex";
                 zoomWrap.style.display = "flex";
+                monitor.style.display = "block";
+                monitor.innerText = "الكاميرا جاهزة.. وجه المستطيل على الباركود";
 
-                // تفعيل تقريب مبدئي 1.5x تلقائياً لمنع غبش العدسة عند الاقتراب من الشريحة
                 document.getElementById('zoomSlider').value = "1.5";
                 setTimeout(() => applyZoom(1.5), 400);
             } catch (err) {
@@ -384,23 +382,41 @@
         }
 
         async function handleInScan(scannedCode, isManual = false) {
-            let code = normalizeBarcodeDigits(String(scannedCode || ''));
-            if (!code) return;
+            const rawStr = String(scannedCode || '').trim();
+            if (!rawStr) return;
 
-            // تجاهل أي رابط أو كيو آر كود يحتوي على حروف أو روابط ويب لتجنب مشاكل روابط موبايلي
-            if (code.includes('http://') || code.includes('https://') || code.includes('www.') || code.includes('/')) {
+            const monitor = document.getElementById('scanMonitor');
+
+            // 1. تجاهل روابط الويب تماماً قبل تنظيف الحروف
+            const lowerRaw = rawStr.toLowerCase();
+            if (lowerRaw.includes('http://') || lowerRaw.includes('https://') || lowerRaw.includes('www.') || lowerRaw.includes('.com') || lowerRaw.includes('.sa') || lowerRaw.includes('/')) {
+                if (monitor) monitor.innerText = "تم تجاهل رابط ويب غير صالح";
                 if (isManual) showMessage("⚠️ لا يمكن إضافة روابط ويب كباركود شريحة!", true);
                 return; 
             }
 
-            // التأكد من أن النص المدخل عبارة عن أرقام باركود صحيحة (طولها أكثر من 5 أرقام)
-            if (/[^0-9]/.test(code) || code.length < 5) {
+            // 2. استخراج الأرقام الصافية فقط (يتخلص من رموز FNC1 المخفية أو الحروف الطرفية التي كانت تمنع المسح)
+            let code = cleanAndExtractDigits(rawStr);
+
+            // إذا كان الكود الممسوح يحتوي على رقم شريحة سعودية بداخله (89966)، نستخلص الرقم بدءاً من 89966
+            const iccidIdx = code.indexOf('89966');
+            if (iccidIdx > 0) {
+                code = code.substring(iccidIdx);
+            }
+
+            // 3. تجاهل القراءات الجزئية القصيرة جداً (أقل من 8 أرقام) التي قد تحدث أثناء تحريك الكاميرا
+            if (code.length < 8) {
+                if (monitor && code.length > 0) {
+                    monitor.innerText = `قراءة غير مكتملة (${code}).. اثبت قليلاً على الباركود كامل`;
+                }
                 if (isManual) {
                     playBeep(false);
-                    showMessage("⚠️ رقم الباركود يجب أن يتكون من أرقام فقط (5 أرقام فأكثر).", true);
+                    showMessage("⚠️ رقم الباركود قصير جداً! يجب أن يكون 8 أرقام فأكثر.", true);
                 }
                 return;
             }
+
+            if (monitor) monitor.innerText = `تم التقاط الكود: ${code}`;
 
             const now = Date.now();
             // فترة سماح 2.5 ثانية لمنع تكرار مسح نفس الباركود وراء بعضه
@@ -434,7 +450,7 @@
             stockInventory[company] = (parseFloat(stockInventory[company]) || 0) + 1;
 
             playBeep(true);
-            showMessage(`✅ تم إضافة شريحة (${company}) وتحديث رصيد الفواتير تلقائياً!`);
+            showMessage(`✅ تم إضافة شريحة (${company}) بالرقم (${code}) بنجاح!`);
             renderTable();
 
             await saveConfigAndSync();
