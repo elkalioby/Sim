@@ -79,7 +79,6 @@
         @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } .full-width { grid-column: span 1; } }
     </style>
 
-    <!-- ربط Firebase السحابي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -111,7 +110,6 @@
 </head>
 <body>
 
-    <!-- نموذج إضافة حركة بيع -->
     <div class="card">
         <h2 id="formTitle">+ تسجيل فاتورة / حركة بيع جديدة</h2>
         <form id="saleForm">
@@ -160,8 +158,8 @@
                         <button type="button" class="btn-gear" onclick="openStockModal()" title="إدارة الأصناف والمخزون">⚙️</button>
                     </div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
-                        <div style="flex:2; min-width:130px;">
-                            <label style="font-size:0.75rem;">الصنف</label>
+                        <div style="flex:2; min-width:150px;">
+                            <label style="font-size:0.75rem;">الصنف (الشركة والمدة)</label>
                             <select id="currentItem"></select>
                         </div>
                         <div style="flex:1; min-width:70px;">
@@ -229,7 +227,6 @@
         </form>
     </div>
 
-    <!-- نافذة إدارة المخزون -->
     <div class="modal-overlay" id="stockModal">
         <div class="modal-box">
             <div class="modal-header">
@@ -237,11 +234,9 @@
                 <button type="button" class="btn" onclick="closeStockModal()" style="background:#e5e7eb; padding:4px 8px; font-size:0.8rem;">✕ إغلاق</button>
             </div>
             <div id="modalStockList" style="max-height:250px; overflow-y:auto; margin-bottom:12px;"></div>
-            <button type="button" class="btn btn-success" onclick="addNewProductModal()" style="width:100%; font-size:0.85rem;">+ إضافة صنف جديد</button>
         </div>
     </div>
 
-    <!-- نافذة إدارة العناوين -->
     <div class="modal-overlay" id="marketManagerModal">
         <div class="modal-box">
             <div class="modal-header">
@@ -252,7 +247,6 @@
         </div>
     </div>
 
-    <!-- سجل العملاء والعمليات -->
     <div class="card">
         <h2 style="margin-bottom:12px;">سجل العملاء والمديونيات</h2>
 
@@ -274,8 +268,7 @@
     <script>
         let records = [];
         let currentCart = [];
-        let customItems = ['Mobily', 'STC', 'Zain', 'Redbull'];
-        let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0, 'Redbull': 0 };
+        let stockInventory = {};
         let marketList = [];
         let savedCustomersList = [];
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'مجهول', role: 'employee' };
@@ -291,8 +284,7 @@
             if (e.key === 'app_config' && e.newValue) {
                 const updated = JSON.parse(e.newValue);
                 marketList = updated.marketList || marketList;
-                customItems = updated.categoriesList || updated.customItems || customItems;
-                stockInventory = updated.stockInventory || stockInventory;
+                stockInventory = updated.stockInventory || {};
                 updateItemSelects();
                 renderModalStockList();
             }
@@ -304,8 +296,7 @@
             const localConfig = JSON.parse(localStorage.getItem('app_config'));
             if (localConfig) {
                 marketList = localConfig.marketList || [];
-                customItems = localConfig.categoriesList || localConfig.customItems || customItems;
-                stockInventory = localConfig.stockInventory || stockInventory;
+                stockInventory = localConfig.stockInventory || {};
             }
             const localRecords = JSON.parse(localStorage.getItem('sales_records_offline'));
             if (localRecords) {
@@ -323,9 +314,8 @@
                     if (configSnap.exists()) {
                         const data = configSnap.data();
                         marketList = data.marketList || marketList;
-                        customItems = data.categoriesList || data.customItems || customItems;
-                        stockInventory = data.stockInventory || stockInventory;
-                        localStorage.setItem('app_config', JSON.stringify({ marketList, categoriesList: customItems, stockInventory }));
+                        stockInventory = data.stockInventory || {};
+                        localStorage.setItem('app_config', JSON.stringify(data));
                         updateMarketSelect();
                         updateItemSelects();
                         renderModalStockList();
@@ -367,19 +357,26 @@
         }
 
         async function saveConfig() {
-            localStorage.setItem('app_config', JSON.stringify({ marketList, categoriesList: customItems, stockInventory }));
+            const dataToSave = { marketList, stockInventory };
+            localStorage.setItem('app_config', JSON.stringify(dataToSave));
             try {
                 if (window.db) {
                     const configRef = window.doc(window.db, "settings", "app_config");
-                    await window.setDoc(configRef, { marketList, categoriesList: customItems, stockInventory });
+                    await window.setDoc(configRef, dataToSave, { merge: true });
                 }
             } catch (e) {}
         }
 
-        // تحديث القائمة المنسدلة لعرض اسم الصنف بجانبه الكمية المتاحة (المتاحة: العدد)
         function updateItemSelects() {
             const select = document.getElementById('currentItem');
-            select.innerHTML = customItems.map(item => {
+            const itemKeys = Object.keys(stockInventory);
+            
+            if (itemKeys.length === 0) {
+                select.innerHTML = `<option value="">-- لا توجد أصناف متاحة في المخزون --</option>`;
+                return;
+            }
+
+            select.innerHTML = itemKeys.map(item => {
                 const currentStock = stockInventory[item] !== undefined ? stockInventory[item] : 0;
                 return `<option value="${item}">${item} (المتاحة: ${currentStock})</option>`;
             }).join('');
@@ -462,7 +459,6 @@
             const localConfig = JSON.parse(localStorage.getItem('app_config'));
             if (localConfig && localConfig.stockInventory) {
                 stockInventory = localConfig.stockInventory;
-                customItems = localConfig.categoriesList || localConfig.customItems || customItems;
             }
             updateItemSelects();
             renderModalStockList();
@@ -475,38 +471,27 @@
 
         function renderModalStockList() {
             const container = document.getElementById('modalStockList');
-            container.innerHTML = customItems.map(item => {
+            const keys = Object.keys(stockInventory);
+            if (keys.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#6b7280;">لا توجد أصناف في المخزون حالياً.</p>';
+                return;
+            }
+            container.innerHTML = keys.map(item => {
                 const qty = stockInventory[item] !== undefined ? stockInventory[item] : 0;
                 return `
                     <div class="stock-row">
                         <div class="stock-info">📦 ${item} : <strong>${qty} وحدة</strong></div>
                         <div style="display:flex; gap:6px;">
-                            <button type="button" class="btn btn-success" onclick="addModalStock('${item}')" style="padding:5px 10px; font-size:0.9rem;" title="إضافة كمية على الرصيد">+</button>
-                            <button type="button" class="btn btn-warning" onclick="editModalStock('${item}')" style="padding:5px 10px; font-size:0.85rem;" title="تعديل الرصيد الكلي">✏️</button>
+                            <button type="button" class="btn btn-warning" onclick="editModalStock('${item}')" style="padding:5px 10px; font-size:0.85rem;" title="تعديل الرصيد">✏️</button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        async function addModalStock(item) {
-            const currentQty = stockInventory[item] !== undefined ? parseFloat(stockInventory[item]) : 0;
-            const addQtyStr = prompt(`الرصيد الحالي للصنف (${item}) هو: ${currentQty}\nأدخل الكمية الإضافية ليتم جمعها تلقائياً:`, '');
-            if (addQtyStr === null || addQtyStr.trim() === '') return;
-            const addQty = parseFloat(addQtyStr);
-            if (isNaN(addQty)) {
-                alert('يرجى إدخال رقم صحيح.');
-                return;
-            }
-            stockInventory[item] = currentQty + addQty;
-            await saveConfig();
-            updateItemSelects();
-            renderModalStockList();
-        }
-
         async function editModalStock(item) {
             const currentQty = stockInventory[item] !== undefined ? stockInventory[item] : 0;
-            const newQtyStr = prompt(`أدخل الرصيد الجديد الكلي للصنف (${item}):`, currentQty);
+            const newQtyStr = prompt(`أدخل الرصيد الجديد للصنف (${item}):`, currentQty);
             if (newQtyStr === null) return;
             const newQty = parseFloat(newQtyStr);
             if (isNaN(newQty)) return;
@@ -514,21 +499,6 @@
             await saveConfig();
             updateItemSelects();
             renderModalStockList();
-        }
-
-        async function addNewProductModal() {
-            const newItem = prompt('أدخل اسم الصنف الجديد:');
-            if (newItem && newItem.trim() !== '') {
-                const trimmed = newItem.trim();
-                if (!customItems.includes(trimmed)) {
-                    customItems.push(trimmed);
-                    const initQty = prompt(`أدخل رصيد أول المدة للصنف (${trimmed}):`, '0');
-                    stockInventory[trimmed] = initQty ? parseFloat(initQty) || 0 : 0;
-                    await saveConfig();
-                    updateItemSelects();
-                    renderModalStockList();
-                }
-            }
         }
 
         function handleImageUpload(event) {
@@ -545,8 +515,19 @@
             const qty = parseFloat(document.getElementById('currentQty').value);
             const price = parseFloat(document.getElementById('currentPrice').value);
 
+            if (!item) {
+                alert('يرجى اختيار الصنف.');
+                return;
+            }
+
             if (isNaN(qty) || qty <= 0 || isNaN(price) || price < 0) {
                 alert('يرجى إدخال عدد وسعر صحيحين.');
+                return;
+            }
+
+            const currentAvailable = stockInventory[item] || 0;
+            if (qty > currentAvailable) {
+                alert(`⚠️ الكمية المطلوبة (${qty}) أكبر من المخزون المتاح (${currentAvailable}) لهذا الصنف!`);
                 return;
             }
 
