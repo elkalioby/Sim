@@ -25,7 +25,7 @@
 
         .row-group { display: flex; gap: 8px; align-items: center; margin-top: 4px; margin-bottom: 6px; }
         .row-group input, .row-group select { margin: 0; flex: 1; }
-        .btn-action { margin: 0; width: auto; padding: 10px 16px; color: white; font-weight: bold; border: none; cursor: pointer; border-radius: 8px; white-space: nowrap; }
+        .btn-action { margin: 0; width: auto; padding: 10px 16px; color: white; font-weight: bold; border: none; cursor: pointer; border-radius: 8px; white-space: nowrap; font-size: 16px; display: flex; align-items: center; justify-content: center; }
         .btn-green { background: #16a34a; }
         .btn-blue { background: #0284c7; }
         .btn-red { background: #dc2626; }
@@ -107,29 +107,29 @@
         <label>إدخال يدوي للباركود:</label>
         <div class="row-group">
             <input type="text" id="manualCodeInput" inputmode="numeric" placeholder="✍️ اكتب أو الصق رقم الباركود هنا..." onkeydown="if(event.key==='Enter') submitManualCode()">
-            <button class="btn-action btn-green" onclick="submitManualCode()">➕ مسح يدوي</button>
+            <button class="btn-action btn-green" onclick="submitManualCode()" title="مسح يدوي">➕</button>
         </div>
 
         <!-- 1. مربع التصنيف منفصل -->
         <label>التصنيف (الشركة):</label>
         <div class="row-group">
             <select id="categorySelect"></select>
-            <button class="btn-action btn-red" onclick="deleteSelectedCategory()" title="حذف التصنيف المحدد">🗑️ حذف</button>
+            <button class="btn-action btn-red" onclick="deleteSelectedCategory()" title="حذف التصنيف المحدد">🗑️</button>
         </div>
         <div class="row-group">
             <input type="text" id="newCategoryInput" placeholder="✨ إضافة تصنيف جديد..." onkeydown="if(event.key==='Enter') addNewCategory()">
-            <button class="btn-action btn-blue" onclick="addNewCategory()">➕ إضافة تصنيف</button>
+            <button class="btn-action btn-blue" onclick="addNewCategory()" title="إضافة تصنيف">➕</button>
         </div>
 
         <!-- 2. مربع المدة منفصل تماماً -->
         <label>المدة:</label>
         <div class="row-group">
             <select id="durationSelect"></select>
-            <button class="btn-action btn-red" onclick="deleteSelectedDuration()" title="حذف المدة المحددة">🗑️ حذف</button>
+            <button class="btn-action btn-red" onclick="deleteSelectedDuration()" title="حذف المدة المحددة">🗑️</button>
         </div>
         <div class="row-group">
             <input type="text" id="newDurationInput" placeholder="✨ إضافة مدة جديدة (مثال: شهر، شهرين)..." onkeydown="if(event.key==='Enter') addNewDuration()">
-            <button class="btn-action btn-green" onclick="addNewDuration()">➕ إضافة مدة</button>
+            <button class="btn-action btn-green" onclick="addNewDuration()" title="إضافة مدة">➕</button>
         </div>
 
         <div>
@@ -162,7 +162,7 @@
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'مجهول', role: 'employee' };
         let simsList = [];
         let categoriesList = ['Mobily', 'STC', 'Zain'];
-        let durationsList = []; // تم إفراغها لتتمكن من إضافة ما تريد وإزالة "شهر" و"شهرين" القديمة
+        let durationsList = [];
         let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0 };
 
         function getTodayStr() {
@@ -242,7 +242,6 @@
         }
 
         function renderDropdowns(selectedCat = null, selectedDur = null) {
-            // تحديث قائمة التصنيفات
             const catSelect = document.getElementById('categorySelect');
             let catHtml = `<option value="AUTO">🔄 تحديد تلقائي حسب الباركود</option>`;
             categoriesList.forEach(c => {
@@ -253,7 +252,6 @@
                 catSelect.value = selectedCat;
             }
 
-            // تحديث قائمة المدد
             const durSelect = document.getElementById('durationSelect');
             let durHtml = `<option value="">-- اختر المدة --</option>`;
             durationsList.forEach(d => {
@@ -538,7 +536,6 @@
                 return;
             }
 
-            // تحديد التصنيف والمدة المختارة
             const selectedCatInput = document.getElementById('categorySelect').value;
             const category = (selectedCatInput && selectedCatInput !== 'AUTO') ? selectedCatInput : detectCategoryByCode(code);
             const duration = document.getElementById('durationSelect').value || 'غير محدد';
