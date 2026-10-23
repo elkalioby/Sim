@@ -18,6 +18,14 @@
         .btn-live { flex: 1; background: #2563eb; color: white; border: none; font-weight: bold; font-size: 15px; padding: 13px; cursor: pointer; margin: 0; border-radius: 8px; }
         .btn-torch { flex: 0 0 52px; background: #f59e0b; color: white; border: none; font-weight: bold; font-size: 18px; padding: 0; cursor: pointer; margin: 0; display: none; align-items: center; justify-content: center; border-radius: 8px; }
         
+        .zoom-bar { display: none; align-items: center; gap: 8px; margin-bottom: 8px; background: #f1f5f9; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .zoom-bar span { font-size: 13px; font-weight: bold; color: #1e3a8a; white-space: nowrap; }
+        .zoom-bar input[type="range"] { margin: 0; padding: 0; flex: 1; accent-color: #2563eb; cursor: pointer; }
+
+        .manual-box { display: flex; gap: 8px; margin-top: 8px; margin-bottom: 6px; }
+        .manual-box input { margin: 0; flex: 1; font-family: monospace; font-size: 14px; }
+        .btn-manual { margin: 0; width: auto; padding: 0 18px; background: #16a34a; color: white; font-weight: bold; border: none; cursor: pointer; border-radius: 8px; white-space: nowrap; }
+
         #reader { width: 100%; margin-bottom: 10px; border-radius: 8px; overflow: hidden; }
         #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; display: none; margin-bottom: 10px; }
 
@@ -73,7 +81,7 @@
         </div>
     </div>
 
-    <!-- الكاميرا والتاريخ فقط -->
+    <!-- الكاميرا والإدخال اليدوي والتاريخ -->
     <div class="card">
         <div id="msg"></div>
 
@@ -86,7 +94,21 @@
             </button>
         </div>
 
+        <!-- شريط تقريب (Zoom) لحل مشكلة الفوكس مع الباركود الطويل -->
+        <div id="zoomWrap" class="zoom-bar">
+            <span>🔍 تقريب العدسة:</span>
+            <input type="range" id="zoomSlider" min="1" max="3.5" step="0.1" value="1.5" oninput="applyZoom(this.value)">
+            <span id="zoomVal" style="min-width: 35px; text-align: left;">1.5x</span>
+        </div>
+
         <div id="reader"></div>
+
+        <!-- خانة إدخال يدوي احتياطية للشرائح المخدوشة أو الباهتة -->
+        <label>إدخال يدوي (في حال تلف الباركود):</label>
+        <div class="manual-box">
+            <input type="text" id="manualCodeInput" inputmode="numeric" placeholder="✍️ اكتب أو الصق رقم الباركود هنا..." onkeydown="if(event.key==='Enter') submitManualCode()">
+            <button class="btn-manual" onclick="submitManualCode()">➕ إضافة</button>
+        </div>
 
         <div>
             <label>التاريخ:</label>
@@ -137,6 +159,8 @@
                 Html5QrcodeSupportedFormats.ITF,
                 Html5QrcodeSupportedFormats.EAN_13,
                 Html5QrcodeSupportedFormats.CODABAR,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
                 Html5QrcodeSupportedFormats.QR_CODE
             ];
         }
@@ -187,7 +211,11 @@
         }
 
         function normalizeBarcodeDigits(str) {
-            return str.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).trim();
+            // تحويل الأرقام العربية إلى إنجليزية وإزالة المسافات والشرطات مع إبقاء الحروف لفلترة الروابط
+            return str
+                .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+                .replace(/[\s\-]/g, '')
+                .trim();
         }
 
         function detectCompany(code) {
@@ -255,10 +283,30 @@
             } catch (e) {}
         }
 
+        async function applyZoom(val) {
+            document.getElementById('zoomVal').innerText = val + 'x';
+            if (!isLiveRunning) return;
+            try {
+                await html5QrCode.applyVideoConstraints({
+                    advanced: [{ zoom: parseFloat(val) }]
+                });
+            } catch (e) {}
+        }
+
+        function submitManualCode() {
+            unlockAudio();
+            const input = document.getElementById('manualCodeInput');
+            const val = input.value.trim();
+            if (!val) return;
+            handleInScan(val, true);
+            input.value = '';
+        }
+
         async function toggleLiveCamera() {
             unlockAudio();
             const btn = document.getElementById('liveBtn');
             const torchBtn = document.getElementById('torchBtn');
+            const zoomWrap = document.getElementById('zoomWrap');
 
             if (isLiveRunning) {
                 await html5QrCode.stop();
@@ -268,28 +316,57 @@
                 btn.style.background = "#2563eb";
                 torchBtn.style.display = "none";
                 torchBtn.style.background = "#f59e0b";
+                zoomWrap.style.display = "none";
                 return;
             }
 
+            const qrBoxConfig = function(viewfinderWidth, viewfinderHeight) {
+                return {
+                    width: Math.floor(viewfinderWidth * 0.92),
+                    height: Math.floor(viewfinderHeight * 0.34)
+                };
+            };
+
             try {
-                await html5QrCode.start(
-                    { facingMode: "environment" },
-                    {
-                        fps: 15,
-                        disableFlip: true,
-                        qrbox: function(viewfinderWidth, viewfinderHeight) {
-                            return {
-                                width: Math.floor(viewfinderWidth * 0.90),
-                                height: Math.floor(viewfinderHeight * 0.38)
-                            };
-                        }
-                    },
-                    (text) => handleInScan(text)
-                );
+                try {
+                    // تشغيل الكاميرا بدقة عالية Full HD مع تركيز مستمر لقراءة الباركود الدقيق
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        {
+                            fps: 20,
+                            disableFlip: false,
+                            qrbox: qrBoxConfig,
+                            videoConstraints: {
+                                facingMode: "environment",
+                                width: { ideal: 1920 },
+                                height: { ideal: 1080 },
+                                focusMode: "continuous"
+                            }
+                        },
+                        (text) => handleInScan(text, false)
+                    );
+                } catch (hdErr) {
+                    // وضع احتياطي للأجهزة التي لا تدعم قيود الدقة المخصصة
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        {
+                            fps: 15,
+                            disableFlip: false,
+                            qrbox: qrBoxConfig
+                        },
+                        (text) => handleInScan(text, false)
+                    );
+                }
+
                 isLiveRunning = true;
                 btn.innerText = "⏹️ إيقاف الكاميرا";
                 btn.style.background = "#dc2626";
                 torchBtn.style.display = "flex";
+                zoomWrap.style.display = "flex";
+
+                // تفعيل تقريب مبدئي 1.5x تلقائياً لمنع غبش العدسة عند الاقتراب من الشريحة
+                document.getElementById('zoomSlider').value = "1.5";
+                setTimeout(() => applyZoom(1.5), 400);
             } catch (err) {
                 showMessage("⚠️ تعذر تشغيل الكاميرا، تأكد من إعطاء الصلاحية للمتصفح.", true);
             }
@@ -306,17 +383,22 @@
             }
         }
 
-        async function handleInScan(scannedCode) {
+        async function handleInScan(scannedCode, isManual = false) {
             let code = normalizeBarcodeDigits(String(scannedCode || ''));
             if (!code) return;
 
             // تجاهل أي رابط أو كيو آر كود يحتوي على حروف أو روابط ويب لتجنب مشاكل روابط موبايلي
             if (code.includes('http://') || code.includes('https://') || code.includes('www.') || code.includes('/')) {
+                if (isManual) showMessage("⚠️ لا يمكن إضافة روابط ويب كباركود شريحة!", true);
                 return; 
             }
 
             // التأكد من أن النص المدخل عبارة عن أرقام باركود صحيحة (طولها أكثر من 5 أرقام)
             if (/[^0-9]/.test(code) || code.length < 5) {
+                if (isManual) {
+                    playBeep(false);
+                    showMessage("⚠️ رقم الباركود يجب أن يتكون من أرقام فقط (5 أرقام فأكثر).", true);
+                }
                 return;
             }
 
