@@ -113,7 +113,7 @@
         <!-- 1. مربع التصنيف منفصل -->
         <label>التصنيف (الشركة):</label>
         <div class="row-group">
-            <select id="categorySelect"></select>
+            <select id="categorySelect" onchange="onCategoryChange()"></select>
             <button class="btn-action btn-red" onclick="deleteSelectedCategory()" title="حذف التصنيف المحدد">🗑️</button>
         </div>
         <div class="row-group">
@@ -121,14 +121,14 @@
             <button class="btn-action btn-blue" onclick="addNewCategory()" title="إضافة تصنيف">➕</button>
         </div>
 
-        <!-- 2. مربع المدة منفصل تماماً -->
-        <label>المدة:</label>
+        <!-- 2. مربع المدة منفصل تماماً (مثبت أثناء المسح المتعدد) -->
+        <label>المدة (تثبت أثناء المسح المتعدد):</label>
         <div class="row-group">
             <select id="durationSelect"></select>
             <button class="btn-action btn-red" onclick="deleteSelectedDuration()" title="حذف المدة المحددة">🗑️</button>
         </div>
         <div class="row-group">
-            <input type="text" id="newDurationInput" placeholder="✨ إضافة مدة جديدة (مثال: شهر، شهرين)..." onkeydown="if(event.key==='Enter') addNewDuration()">
+            <input type="text" id="newDurationInput" placeholder="✨ إضافة مدة جديدة (مثال: 30، 60)..." onkeydown="if(event.key==='Enter') addNewDuration()">
             <button class="btn-action btn-green" onclick="addNewDuration()" title="إضافة مدة">➕</button>
         </div>
 
@@ -161,9 +161,9 @@
     <script>
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'مجهول', role: 'employee' };
         let simsList = [];
-        let categoriesList = ['Mobily', 'STC', 'Zain'];
-        let durationsList = [];
-        let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0 };
+        let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
+        let durationsList = ['30', '60'];
+        let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0, 'Redbull': 0 };
 
         function getTodayStr() {
             const d = new Date();
@@ -239,6 +239,20 @@
             if (code.startsWith('8996603') || code.includes('8996603')) return 'Mobily';
             if (code.startsWith('8996604') || code.includes('8996604')) return 'Zain';
             return categoriesList[0] || 'Mobily';
+        }
+
+        // اقتراح المدة تلقائياً عند تغيير التصنيف فقط، دون إجبار تثبيتها لمن أراد تغييرها يدوياً
+        function onCategoryChange() {
+            const catSelect = document.getElementById('categorySelect').value;
+            const durSelect = document.getElementById('durationSelect');
+            
+            if (catSelect === 'STC' || catSelect === 'Mobily') {
+                if (!durationsList.includes('60')) durationsList.push('60');
+                durSelect.value = '60';
+            } else if (catSelect === 'Redbull' || catSelect === 'Red Bull') {
+                if (!durationsList.includes('30')) durationsList.push('30');
+                durSelect.value = '30';
+            }
         }
 
         function renderDropdowns(selectedCat = null, selectedDur = null) {
@@ -344,7 +358,7 @@
             const localConfig = JSON.parse(localStorage.getItem('app_config'));
             if (localConfig) {
                 categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
-                durationsList = localConfig.durationsList || [];
+                durationsList = localConfig.durationsList || ['30', '60'];
                 stockInventory = localConfig.stockInventory || stockInventory;
             }
 
@@ -352,6 +366,15 @@
             if (localSims) {
                 simsList = localSims;
             }
+
+            // تحديث الشرائح السابقة لتأخذ المدة 60 أو 30 تلقائياً بناءً على التصنيف القديم
+            simsList.forEach(item => {
+                const cat = item.category || item.company || '';
+                if (!item.duration || item.duration === '-' || item.duration === 'غير محدد') {
+                    if (cat === 'STC' || cat === 'Mobily') item.duration = '60';
+                    else if (cat === 'Redbull') item.duration = '30';
+                }
+            });
 
             renderDropdowns();
             renderTable();
@@ -366,19 +389,19 @@
                         durationsList = data.durationsList || durationsList;
                         stockInventory = data.stockInventory || stockInventory;
                         localStorage.setItem('app_config', JSON.stringify({ categoriesList, durationsList, stockInventory }));
-                    } else {
-                        // دعم التوافق مع المفتاح القديم customItems لو موجود سحابياً
-                        const oldCustom = localConfig ? localConfig.customItems : null;
-                        if (oldCustom) categoriesList = oldCustom;
                     }
 
                     const querySnapshot = await window.getDocs(window.collection(window.db, "scanned_sims"));
                     simsList = [];
                     querySnapshot.forEach((docSnap) => {
                         const data = docSnap.data();
-                        // دعم التوافق مع البيانات القديمة التي كانت تسجل تحت اسم "company"
-                        if (!data.category && data.company) {
-                            data.category = data.company;
+                        if (!data.category && data.company) data.category = data.company;
+                        
+                        // تحديث الشرائح السابقة سحابياً أيضاً لتظهر مدتها الصحيحة
+                        const cat = data.category || data.company || '';
+                        if (!data.duration || data.duration === '-' || data.duration === 'غير محدد') {
+                            if (cat === 'STC' || cat === 'Mobily') data.duration = '60';
+                            else if (cat === 'Redbull') data.duration = '30';
                         }
                         simsList.push(data);
                     });
@@ -547,13 +570,21 @@
 
             const selectedCatInput = document.getElementById('categorySelect').value;
             const category = (selectedCatInput && selectedCatInput !== 'AUTO') ? selectedCatInput : detectCategoryByCode(code);
-            const duration = document.getElementById('durationSelect').value || 'غير محدد';
+            
+            // استخدام المدة المحددة في القائمة حالياً وثباتها أثناء المسح المتعدد
+            let duration = document.getElementById('durationSelect').value;
+            if (!duration) {
+                if (category === 'STC' || category === 'Mobily') duration = '60';
+                else if (category === 'Redbull') duration = '30';
+                else duration = '60';
+            }
+
             const inDate = document.getElementById('inDate').value || getTodayStr();
 
             const newSim = {
                 code: code,
                 category: category,
-                company: category, // لدعم التوافق مع الفلاتر القديمة
+                company: category,
                 duration: duration,
                 date: inDate,
                 addedBy: currentUser.username,
