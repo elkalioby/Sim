@@ -274,8 +274,8 @@
     <script>
         let records = [];
         let currentCart = [];
-        let customItems = ['Mobily', 'STC', 'Zain'];
-        let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0 };
+        let customItems = ['Mobily', 'STC', 'Zain', 'Redbull'];
+        let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0, 'Redbull': 0 };
         let marketList = [];
         let savedCustomersList = [];
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'مجهول', role: 'employee' };
@@ -291,7 +291,7 @@
             if (e.key === 'app_config' && e.newValue) {
                 const updated = JSON.parse(e.newValue);
                 marketList = updated.marketList || marketList;
-                customItems = updated.customItems || customItems;
+                customItems = updated.categoriesList || updated.customItems || customItems;
                 stockInventory = updated.stockInventory || stockInventory;
                 updateItemSelects();
                 renderModalStockList();
@@ -304,7 +304,7 @@
             const localConfig = JSON.parse(localStorage.getItem('app_config'));
             if (localConfig) {
                 marketList = localConfig.marketList || [];
-                customItems = localConfig.customItems || customItems;
+                customItems = localConfig.categoriesList || localConfig.customItems || customItems;
                 stockInventory = localConfig.stockInventory || stockInventory;
             }
             const localRecords = JSON.parse(localStorage.getItem('sales_records_offline'));
@@ -323,9 +323,9 @@
                     if (configSnap.exists()) {
                         const data = configSnap.data();
                         marketList = data.marketList || marketList;
-                        customItems = data.customItems || customItems;
+                        customItems = data.categoriesList || data.customItems || customItems;
                         stockInventory = data.stockInventory || stockInventory;
-                        localStorage.setItem('app_config', JSON.stringify({ marketList, customItems, stockInventory }));
+                        localStorage.setItem('app_config', JSON.stringify({ marketList, categoriesList: customItems, stockInventory }));
                         updateMarketSelect();
                         updateItemSelects();
                         renderModalStockList();
@@ -367,15 +367,16 @@
         }
 
         async function saveConfig() {
-            localStorage.setItem('app_config', JSON.stringify({ marketList, customItems, stockInventory }));
+            localStorage.setItem('app_config', JSON.stringify({ marketList, categoriesList: customItems, stockInventory }));
             try {
                 if (window.db) {
                     const configRef = window.doc(window.db, "settings", "app_config");
-                    await window.setDoc(configRef, { marketList, customItems, stockInventory });
+                    await window.setDoc(configRef, { marketList, categoriesList: customItems, stockInventory });
                 }
             } catch (e) {}
         }
 
+        // تحديث القائمة المنسدلة لعرض اسم الصنف بجانبه الكمية المتاحة (المتاحة: العدد)
         function updateItemSelects() {
             const select = document.getElementById('currentItem');
             select.innerHTML = customItems.map(item => {
@@ -461,7 +462,7 @@
             const localConfig = JSON.parse(localStorage.getItem('app_config'));
             if (localConfig && localConfig.stockInventory) {
                 stockInventory = localConfig.stockInventory;
-                customItems = localConfig.customItems || customItems;
+                customItems = localConfig.categoriesList || localConfig.customItems || customItems;
             }
             updateItemSelects();
             renderModalStockList();
