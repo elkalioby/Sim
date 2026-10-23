@@ -39,7 +39,7 @@
         .badge { background: #dbeafe; color: #1e3a8a; padding: 3px 10px; border-radius: 8px; font-weight: bold; }
     </style>
 
-    <!-- ربط Firebase السحابي بنفس قاعدة البيانات[span_0](start_span)[span_0](end_span) -->
+    <!-- ربط Firebase السحابي بنفس قاعدة البيانات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -69,14 +69,14 @@
 
     <h3 style="text-align:center; margin-bottom:14px;">📊 لوحة المبيعات وإحصائيات المخزون</h3>
 
-    <!-- فلاتر الإحصائيات -->
+    <!-- فلاتر الإحصائيات (مربع الشهر فقط) -->
     <div class="card">
         <div class="filters">
             <select id="filterItem" onchange="renderDashboard()">
                 <option value="ALL">📦 كل الأصناف / الخيارات</option>
             </select>
+            <!-- مربع الشهر فقط -->
             <input type="month" id="filterMonth" onchange="renderDashboard()" title="فلترة بالشهر">
-            <input type="date" id="filterDate" onchange="renderDashboard()" title="فلترة بيوم محدد">
             <button onclick="resetFilters()" style="padding:9px 14px; background:#64748b; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">🔄 عرض الكل</button>
         </div>
 
@@ -141,7 +141,6 @@
         let invoicesList = [];
 
         window.initSalesApp = async function() {
-            // 1. قراءة مبدئية سريعة من LocalStorage
             const localConfig = JSON.parse(localStorage.getItem('app_config'));
             if (localConfig) {
                 categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
@@ -153,7 +152,6 @@
             populateFilterDropdown();
             renderDashboard();
 
-            // 2. مزامنة حديثة من Firebase
             try {
                 if (window.db) {
                     const configSnap = await window.getDoc(window.doc(window.db, "settings", "app_config"));
@@ -169,7 +167,6 @@
                     simsSnap.forEach(d => simsList.push(d.data()));
                     localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-                    // قراءة الفواتير من مجموعة sales_records الصحيحة
                     const invSnap = await window.getDocs(window.collection(window.db, "sales_records"));
                     if (!invSnap.empty) {
                         invoicesList = [];
@@ -199,28 +196,24 @@
         function resetFilters() {
             document.getElementById('filterItem').value = 'ALL';
             document.getElementById('filterMonth').value = '';
-            document.getElementById('filterDate').value = '';
             renderDashboard();
         }
 
         window.renderDashboard = function() {
             const selectedItem = document.getElementById('filterItem').value;
             const selectedMonth = document.getElementById('filterMonth').value;
-            const selectedDate = document.getElementById('filterDate').value;
 
-            // فلترة الشرائح الممسوحة
+            // فلترة الشرائح الممسوحة حسب الشهر فقط
             const filteredSims = simsList.filter(s => {
                 const cat = s.category || s.company || '';
                 if (selectedItem !== 'ALL' && cat !== selectedItem) return false;
-                if (selectedDate && s.date !== selectedDate) return false;
                 if (selectedMonth && (!s.date || !s.date.startsWith(selectedMonth))) return false;
                 return true;
             });
 
-            // فلترة الفواتير (من خلال تفحص أصناف السلة cartItems داخل كل فاتورة)
+            // فلترة الفواتير حسب الشهر فقط
             const filteredInvoices = invoicesList.filter(inv => {
                 const invDate = inv.date || '';
-                if (selectedDate && invDate !== selectedDate) return false;
                 if (selectedMonth && (!invDate || !invDate.startsWith(selectedMonth))) return false;
                 
                 if (selectedItem !== 'ALL') {
@@ -261,7 +254,6 @@
             document.getElementById('kpiTotalSales').innerText = totalSales.toLocaleString();
             document.getElementById('kpiTotalDebt').innerText = totalDebt.toLocaleString();
 
-            // رسم بطاقات الأصناف والجدول التفصيلي
             const cardsGrid = document.getElementById('itemsCardsGrid');
             const tbody = document.getElementById('summaryTableBody');
 
