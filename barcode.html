@@ -366,12 +366,21 @@
                         durationsList = data.durationsList || durationsList;
                         stockInventory = data.stockInventory || stockInventory;
                         localStorage.setItem('app_config', JSON.stringify({ categoriesList, durationsList, stockInventory }));
+                    } else {
+                        // دعم التوافق مع المفتاح القديم customItems لو موجود سحابياً
+                        const oldCustom = localConfig ? localConfig.customItems : null;
+                        if (oldCustom) categoriesList = oldCustom;
                     }
 
                     const querySnapshot = await window.getDocs(window.collection(window.db, "scanned_sims"));
                     simsList = [];
                     querySnapshot.forEach((docSnap) => {
-                        simsList.push(docSnap.data());
+                        const data = docSnap.data();
+                        // دعم التوافق مع البيانات القديمة التي كانت تسجل تحت اسم "company"
+                        if (!data.category && data.company) {
+                            data.category = data.company;
+                        }
+                        simsList.push(data);
                     });
                     localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
                     renderDropdowns();
@@ -544,6 +553,7 @@
             const newSim = {
                 code: code,
                 category: category,
+                company: category, // لدعم التوافق مع الفلاتر القديمة
                 duration: duration,
                 date: inDate,
                 addedBy: currentUser.username,
@@ -575,8 +585,8 @@
                 simsList = simsList.filter(s => s.code !== code);
                 localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-                const category = target.category;
-                if (stockInventory[category] !== undefined && stockInventory[category] > 0) {
+                const category = target.category || target.company;
+                if (category && stockInventory[category] !== undefined && stockInventory[category] > 0) {
                     stockInventory[category] = parseFloat(stockInventory[category]) - 1;
                 }
 
@@ -606,10 +616,12 @@
 
             const sorted = [...simsList].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             const filtered = sorted.filter(item => {
+                const cat = item.category || item.company || '';
+                const dur = item.duration || '';
                 if (!search) return true;
                 return (item.code && item.code.toLowerCase().includes(search)) ||
-                       (item.category && item.category.toLowerCase().includes(search)) ||
-                       (item.duration && item.duration.toLowerCase().includes(search)) ||
+                       (cat.toLowerCase().includes(search)) ||
+                       (dur.toLowerCase().includes(search)) ||
                        (item.date && item.date.toLowerCase().includes(search)) ||
                        (item.addedBy && item.addedBy.toLowerCase().includes(search));
             });
@@ -619,16 +631,20 @@
                 return;
             }
 
-            tbody.innerHTML = filtered.map(item => `
-                <tr>
-                    <td><button class="btn-del-row" onclick="deleteSim('${item.code}')">❌</button></td>
-                    <td class="barcode-cell">${item.code}</td>
-                    <td><span class="badge">${item.category || '-'}</span></td>
-                    <td><span class="badge" style="background:#fef3c7; color:#b45309;">${item.duration || '-'}</span></td>
-                    <td>${item.date || '-'}</td>
-                    <td><span class="user-badge">${item.addedBy || '-'}</span></td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = filtered.map(item => {
+                const cat = item.category || item.company || '-';
+                const dur = item.duration || '-';
+                return `
+                    <tr>
+                        <td><button class="btn-del-row" onclick="deleteSim('${item.code}')">❌</button></td>
+                        <td class="barcode-cell">${item.code}</td>
+                        <td><span class="badge">${cat}</span></td>
+                        <td><span class="badge" style="background:#fef3c7; color:#b45309;">${dur}</span></td>
+                        <td>${item.date || '-'}</td>
+                        <td><span class="user-badge">${item.addedBy || '-'}</span></td>
+                    </tr>
+                `;
+            }).join('');
         };
     </script>
 </body>
