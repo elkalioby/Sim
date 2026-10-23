@@ -71,6 +71,13 @@
         .debt-amount { color: var(--danger); }
         .paid-amount { color: var(--success); }
         .notes-box { font-size: 0.82rem; color: #4b5563; background: #f3f4f6; padding: 8px; border-radius: 6px; margin-bottom: 10px; white-space: pre-line; }
+        
+        /* تنسيق سجل الدفعات الجزئية */
+        .payments-log { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 10px; margin-top: 10px; font-size: 0.8rem; }
+        .payments-log-title { font-weight: bold; color: #15803d; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+        .payment-row { display: flex; justify-content: space-between; color: #166534; padding: 3px 0; border-bottom: 1px dashed #dcfce7; }
+        .payment-row:last-child { border-bottom: none; }
+
         .card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; flex-wrap: wrap; gap: 8px; }
         .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 15px; flex-wrap: wrap; }
         .page-btn { background: #e5e7eb; color: var(--text); border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
@@ -159,7 +166,7 @@
                     </div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
                         <div style="flex:2; min-width:150px;">
-                            <label style="font-size:0.75rem;">الصنف (الشركة والمدة)</label>
+                            <label style="font-size:0.75rem;">الصنف</label>
                             <select id="currentItem"></select>
                         </div>
                         <div style="flex:1; min-width:70px;">
@@ -280,11 +287,9 @@
 
         document.getElementById('reminderDate').valueAsDate = new Date();
 
-        window.addEventListener('storage', function(e) {
-            if (e.key === 'app_config' && e.newValue) {
-                const updated = JSON.parse(e.newValue);
-                marketList = updated.marketList || marketList;
-                stockInventory = updated.stockInventory || {};
+        window.addEventListener('storage', async function(e) {
+            if (e.key === 'app_config' || e.key === 'scanned_sims_offline' || e.key === 'sales_records_offline') {
+                await calculateStockFromSims();
                 updateItemSelects();
                 renderModalStockList();
             }
@@ -294,20 +299,16 @@
             loadSavedCustomers();
 
             const localConfig = JSON.parse(localStorage.getItem('app_config'));
-            if (localConfig && localConfig.stockInventory) {
+            if (localConfig) {
                 marketList = localConfig.marketList || [];
-                stockInventory = localConfig.stockInventory || {};
-            } else {
-                // دالة ذكية لإعادة حساب المخزون من scanned_sims تلقائياً لو كانت البيانات القديمة بسيطة
-                await calculateStockFromSims();
             }
-
+            
             const localRecords = JSON.parse(localStorage.getItem('sales_records_offline'));
             if (localRecords) {
                 records = localRecords;
-                renderRecords();
             }
 
+            await calculateStockFromSims();
             updateMarketSelect();
             updateItemSelects();
 
@@ -318,15 +319,6 @@
                     if (configSnap.exists()) {
                         const data = configSnap.data();
                         marketList = data.marketList || marketList;
-                        if (data.stockInventory && Object.keys(data.stockInventory).length > 0) {
-                            stockInventory = data.stockInventory;
-                        } else {
-                            await calculateStockFromSims();
-                        }
-                        localStorage.setItem('app_config', JSON.stringify({ marketList, stockInventory }));
-                        updateMarketSelect();
-                        updateItemSelects();
-                        renderModalStockList();
                     }
                     await loadCloudRecords();
                 }
@@ -335,7 +327,6 @@
             }
         };
 
-        // دالة لحساب المخزون ديناميكياً من الشرائح الممسوحة مع المدة
         async function calculateStockFromSims() {
             let sims = JSON.parse(localStorage.getItem('scanned_sims_offline')) || [];
             if (window.db) {
@@ -360,7 +351,6 @@
                 stockInventory[itemKey] = (stockInventory[itemKey] || 0) + 1;
             });
 
-            // طرح الكميات المباعة في الفواتير السابقة ليكون المخزون دقيقاً 100%
             records.forEach(r => {
                 if (r.cartItems && Array.isArray(r.cartItems)) {
                     r.cartItems.forEach(ci => {
@@ -369,6 +359,13 @@
                             if (stockInventory[ci.item] < 0) stockInventory[ci.item] = 0;
                         }
                     });
+                }
+            });
+
+            sims.forEach(item => {
+                const cat = item.category || item.company;
+                if (cat && stockInventory[cat] === undefined && stockInventory[`${cat} (60)`] === undefined) {
+                    stockInventory[cat] = 1;
                 }
             });
         }
@@ -656,6 +653,24 @@
 
             const editId = document.getElementById('editRecordId').value;
             const remaining = parseFloat(document.getElementById('remaining').value) || 0;
+            const paidNow = parseFloat(document.getElementById('paid').value) || 0;
+            const totalVal = parseFloat(document.getElementById('total').value) || 0;
+
+            let paymentsHistory = [];
+            if (editId) {
+                const oldRec = records.find(r => r.firebaseId === editId);
+                if (oldRec && oldRec.paymentsHistory) {
+                    paymentsHistory = [...oldRec.paymentsHistory];
+                }
+            }
+
+            if (paidNow > 0 && (!editId || paymentsHistory.length === 0)) {
+                paymentsHistory.push({
+                    date: new Date().toISOString().split('T')[0],
+                    amount: paidNow,
+                    employee: currentUser.username
+                });
+            }
 
             const recordData = {
                 date: new Date().toISOString().split('T')[0],
@@ -667,9 +682,10 @@
                 employee: currentUser.username,
                 cartItems: currentCart,
                 itemsSummary: currentCart.map(c => `${c.item} (عدد: ${c.qty}، سعر: ${c.price})`).join(' | '),
-                total: parseFloat(document.getElementById('total').value) || 0,
+                total: totalVal,
                 paid: parseFloat(document.getElementById('paid').value) || 0,
                 remaining: remaining,
+                paymentsHistory: paymentsHistory,
                 reminderDate: remaining > 0 ? document.getElementById('reminderDate').value : '',
                 reminderTime: remaining > 0 ? document.getElementById('reminderTime').value : '',
                 notes: document.getElementById('notes').value,
@@ -776,6 +792,14 @@
 
             r.paid = (r.paid || 0) + addPay;
             r.remaining = (r.remaining || 0) - addPay;
+            
+            if (!r.paymentsHistory) r.paymentsHistory = [];
+            r.paymentsHistory.push({
+                date: new Date().toISOString().split('T')[0],
+                amount: addPay,
+                employee: currentUser.username
+            });
+
             r.notes = (r.notes || '') + `\n[سداد دفعة بقيمة ${addPay} بواسطة ${currentUser.username}]`;
 
             try {
@@ -783,6 +807,7 @@
                     await window.updateDoc(window.doc(window.db, "sales_records", firebaseId), {
                         paid: r.paid,
                         remaining: r.remaining,
+                        paymentsHistory: r.paymentsHistory,
                         notes: r.notes
                     });
                 }
@@ -837,34 +862,52 @@
 
             const paginatedItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-            list.innerHTML = paginatedItems.map(r => `
-                <div class="customer-item ${r.remaining > 0 ? 'has-debt' : 'no-debt'}">
-                    <div class="item-header">
-                        <div class="client-info">
-                            <span class="client-name">${r.clientName}</span>
-                            <span class="shop-badge">🏪 ${r.shopName}</span>
-                            ${r.marketName ? `<span class="market-badge">📍 ${r.marketName}</span>` : ''}
-                            ${r.employee ? `<span class="emp-badge">👤 ${r.employee}</span>` : ''}
-                            <span>📞 <strong class="phone-link" onclick="window.location.href='tel:${r.phone}'">${r.phone}</strong></span>
+            list.innerHTML = paginatedItems.map(r => {
+                let paymentsHtml = '';
+                if (r.paymentsHistory && r.paymentsHistory.length > 0) {
+                    paymentsHtml = `
+                        <div class="payments-log">
+                            <div class="payments-log-title">📜 سجل المدفوعات والدفعات:</div>
+                            ${r.paymentsHistory.map(p => `
+                                <div class="payment-row">
+                                    <span>📅 ${p.date} (بواسطة: ${p.employee || 'admin'})</span>
+                                    <strong style="color:#15803d;">+${p.amount}</strong>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="customer-item ${r.remaining > 0 ? 'has-debt' : 'no-debt'}">
+                        <div class="item-header">
+                            <div class="client-info">
+                                <span class="client-name">${r.clientName}</span>
+                                <span class="shop-badge">🏪 ${r.shopName}</span>
+                                ${r.marketName ? `<span class="market-badge">📍 ${r.marketName}</span>` : ''}
+                                ${r.employee ? `<span class="emp-badge">👤 ${r.employee}</span>` : ''}
+                                <span>📞 <strong class="phone-link" onclick="window.location.href='tel:${r.phone}'">${r.phone}</strong></span>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.85rem; color:#4b5563; margin-bottom:6px;">الأصناف: ${r.itemsSummary || 'غير محدد'}</div>
+                        <div class="item-details">
+                            <div class="detail-box"><span>إجمالي الفاتورة</span><strong>${r.total}</strong></div>
+                            <div class="detail-box"><span>المدفوع</span><strong class="paid-amount">${r.paid}</strong></div>
+                            <div class="detail-box"><span>المتبقي</span><strong class="debt-amount">${r.remaining}</strong></div>
+                        </div>
+                        ${paymentsHtml}
+                        ${r.notes ? `<div class="notes-box" style="margin-top:8px;">💬 <strong>ملاحظات:</strong> ${r.notes}</div>` : ''}
+                        <div class="card-footer">
+                            <span style="font-size: 0.78rem; color:#6b7280;">📅 ${r.date}</span>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                ${r.remaining > 0 ? `<button class="btn btn-success" onclick="makePartialPayment('${r.firebaseId}')" style="padding:6px 10px; font-size:0.78rem;">💵 تسديد دفعة</button>` : ''}
+                                <button class="btn btn-warning" onclick="editRecord('${r.firebaseId}')">✏️ تعديل</button>
+                                <button class="btn btn-danger" onclick="deleteRecord('${r.firebaseId}')">🗑️ حذف</button>
+                            </div>
                         </div>
                     </div>
-                    <div style="font-size: 0.85rem; color:#4b5563; margin-bottom:6px;">الأصناف: ${r.itemsSummary || 'غير محدد'}</div>
-                    <div class="item-details">
-                        <div class="detail-box"><span>إجمالي الفاتورة</span><strong>${r.total}</strong></div>
-                        <div class="detail-box"><span>المدفوع</span><strong class="paid-amount">${r.paid}</strong></div>
-                        <div class="detail-box"><span>المتبقي</span><strong class="debt-amount">${r.remaining}</strong></div>
-                    </div>
-                    ${r.notes ? `<div class="notes-box">💬 <strong>ملاحظات:</strong> ${r.notes}</div>` : ''}
-                    <div class="card-footer">
-                        <span style="font-size: 0.78rem; color:#6b7280;">📅 ${r.date}</span>
-                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                            ${r.remaining > 0 ? `<button class="btn btn-success" onclick="makePartialPayment('${r.firebaseId}')" style="padding:6px 10px; font-size:0.78rem;">💵 تسديد دفعة</button>` : ''}
-                            <button class="btn btn-warning" onclick="editRecord('${r.firebaseId}')">✏️ تعديل</button>
-                            <button class="btn btn-danger" onclick="deleteRecord('${r.firebaseId}')">🗑️ حذف</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             let pagesHtml = `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})">السابق</button>`;
             for (let i = 1; i <= totalPages; i++) {
