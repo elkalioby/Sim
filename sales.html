@@ -39,7 +39,7 @@
         .badge { background: #dbeafe; color: #1e3a8a; padding: 3px 10px; border-radius: 8px; font-weight: bold; }
     </style>
 
-    <!-- ربط Firebase السحابي بنفس قاعدة البيانات -->
+    <!-- ربط Firebase السحابي بنفس قاعدة البيانات[span_0](start_span)[span_0](end_span) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -135,8 +135,8 @@
     </div>
 
     <script>
-        let customItems = ['Mobily', 'STC', 'Zain'];
-        let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0 };
+        let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
+        let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0, 'Redbull': 0 };
         let simsList = [];
         let invoicesList = [];
 
@@ -144,11 +144,11 @@
             // 1. قراءة مبدئية سريعة من LocalStorage
             const localConfig = JSON.parse(localStorage.getItem('app_config'));
             if (localConfig) {
-                customItems = localConfig.customItems || customItems;
+                categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
                 stockInventory = localConfig.stockInventory || stockInventory;
             }
             simsList = JSON.parse(localStorage.getItem('scanned_sims_offline')) || [];
-            invoicesList = JSON.parse(localStorage.getItem('invoices_offline')) || JSON.parse(localStorage.getItem('invoices')) || [];
+            invoicesList = JSON.parse(localStorage.getItem('sales_records_offline')) || [];
 
             populateFilterDropdown();
             renderDashboard();
@@ -159,7 +159,7 @@
                     const configSnap = await window.getDoc(window.doc(window.db, "settings", "app_config"));
                     if (configSnap.exists()) {
                         const data = configSnap.data();
-                        customItems = data.customItems || customItems;
+                        categoriesList = data.categoriesList || data.customItems || categoriesList;
                         stockInventory = data.stockInventory || stockInventory;
                         localStorage.setItem('app_config', JSON.stringify(data));
                     }
@@ -169,11 +169,12 @@
                     simsSnap.forEach(d => simsList.push(d.data()));
                     localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-                    const invSnap = await window.getDocs(window.collection(window.db, "invoices"));
+                    // قراءة الفواتير من مجموعة sales_records الصحيحة
+                    const invSnap = await window.getDocs(window.collection(window.db, "sales_records"));
                     if (!invSnap.empty) {
                         invoicesList = [];
                         invSnap.forEach(d => invoicesList.push(d.data()));
-                        localStorage.setItem('invoices_offline', JSON.stringify(invoicesList));
+                        localStorage.setItem('sales_records_offline', JSON.stringify(invoicesList));
                     }
 
                     populateFilterDropdown();
@@ -188,7 +189,7 @@
             const select = document.getElementById('filterItem');
             const current = select.value || 'ALL';
             let html = `<option value="ALL">📦 كل الأصناف / الخيارات</option>`;
-            customItems.forEach(item => {
+            categoriesList.forEach(item => {
                 html += `<option value="${item}">${item}</option>`;
             });
             select.innerHTML = html;
@@ -209,25 +210,29 @@
 
             // فلترة الشرائح الممسوحة
             const filteredSims = simsList.filter(s => {
-                if (selectedItem !== 'ALL' && s.company !== selectedItem) return false;
+                const cat = s.category || s.company || '';
+                if (selectedItem !== 'ALL' && cat !== selectedItem) return false;
                 if (selectedDate && s.date !== selectedDate) return false;
                 if (selectedMonth && (!s.date || !s.date.startsWith(selectedMonth))) return false;
                 return true;
             });
 
-            // فلترة الفواتير
+            // فلترة الفواتير (من خلال تفحص أصناف السلة cartItems داخل كل فاتورة)
             const filteredInvoices = invoicesList.filter(inv => {
-                const invItem = inv.item || inv.company || inv.type || '';
                 const invDate = inv.date || '';
-                if (selectedItem !== 'ALL' && invItem !== selectedItem) return false;
                 if (selectedDate && invDate !== selectedDate) return false;
                 if (selectedMonth && (!invDate || !invDate.startsWith(selectedMonth))) return false;
+                
+                if (selectedItem !== 'ALL') {
+                    const hasItem = inv.cartItems && inv.cartItems.some(ci => ci.item === selectedItem);
+                    return hasItem;
+                }
                 return true;
             });
 
             // حساب الأرقام الإجمالية
             let totalStock = 0;
-            const itemsToShow = selectedItem === 'ALL' ? customItems : [selectedItem];
+            const itemsToShow = selectedItem === 'ALL' ? categoriesList : [selectedItem];
             itemsToShow.forEach(item => {
                 totalStock += parseFloat(stockInventory[item]) || 0;
             });
@@ -237,12 +242,16 @@
             let totalDebt = 0;
 
             filteredInvoices.forEach(inv => {
-                const qty = parseFloat(inv.qty || inv.quantity || inv.count || 0);
-                const total = parseFloat(inv.total || inv.amount || inv.price || 0);
-                const remaining = parseFloat(inv.remaining !== undefined ? inv.remaining : (inv.debt || 0));
-                soldQty += qty;
-                totalSales += total;
-                totalDebt += remaining;
+                totalSales += parseFloat(inv.total || 0);
+                totalDebt += parseFloat(inv.remaining || 0);
+
+                if (inv.cartItems && Array.isArray(inv.cartItems)) {
+                    inv.cartItems.forEach(ci => {
+                        if (selectedItem === 'ALL' || ci.item === selectedItem) {
+                            soldQty += parseFloat(ci.qty || 0);
+                        }
+                    });
+                }
             });
 
             document.getElementById('kpiTotalStock').innerText = totalStock;
@@ -261,14 +270,20 @@
 
             itemsToShow.forEach(item => {
                 const stock = parseFloat(stockInventory[item]) || 0;
-                const scannedCount = filteredSims.filter(s => s.company === item).length;
-                const itemInvoices = filteredInvoices.filter(inv => (inv.item || inv.company || inv.type) === item);
+                const scannedCount = filteredSims.filter(s => (s.category || s.company) === item).length;
                 
                 let itemSoldQty = 0;
                 let itemSalesSum = 0;
-                itemInvoices.forEach(inv => {
-                    itemSoldQty += parseFloat(inv.qty || inv.quantity || inv.count || 0);
-                    itemSalesSum += parseFloat(inv.total || inv.amount || inv.price || 0);
+
+                filteredInvoices.forEach(inv => {
+                    if (inv.cartItems && Array.isArray(inv.cartItems)) {
+                        inv.cartItems.forEach(ci => {
+                            if (ci.item === item) {
+                                itemSoldQty += parseFloat(ci.qty || 0);
+                                itemSalesSum += parseFloat(ci.total || 0);
+                            }
+                        });
+                    }
                 });
 
                 cardsHtml += `
