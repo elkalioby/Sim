@@ -18,18 +18,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--bg); color: var(--text); padding: 15px; max-width: 900px; margin: 0 auto; }
         
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-        .stat-card { background: var(--card); padding: 14px 10px; border-radius: 12px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border-top: 4px solid var(--primary); }
-        .stat-card.paid { border-top-color: var(--success); }
-        .stat-card.debt { border-top-color: var(--danger); }
-        .stat-title { font-size: 0.8rem; color: #6b7280; margin-bottom: 6px; }
-        .stat-value { font-size: 1.15rem; font-weight: bold; }
-        
-        .reports-bar { background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; padding: 10px 12px; border-radius: 10px; margin-bottom: 20px; font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px; }
-        .reports-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; border-bottom: 1px dashed #bae6fd; padding-bottom: 4px; }
-        .reports-row:last-child { border-bottom: none; padding-bottom: 0; }
-        .reports-content { font-size: 0.75rem; font-weight: 600; color: #0284c7; }
-
         .card { background: var(--card); padding: 18px; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; }
         .card h2 { font-size: 1.1rem; margin-bottom: 15px; color: var(--primary); border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
         .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
@@ -122,34 +110,6 @@
     </script>
 </head>
 <body>
-
-    <!-- ملخص الحسابات -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-title">إجمالي المبيعات</div>
-            <div class="stat-value" id="totalSales">0</div>
-        </div>
-        <div class="stat-card paid">
-            <div class="stat-title">إجمالي المحصل</div>
-            <div class="stat-value" id="totalPaid" style="color: var(--success);">0</div>
-        </div>
-        <div class="stat-card debt">
-            <div class="stat-title">المديونية المتبقية</div>
-            <div class="stat-value" id="totalDebt" style="color: var(--danger);">0</div>
-        </div>
-    </div>
-
-    <!-- لوحة التقارير الذكية -->
-    <div class="reports-bar">
-        <div class="reports-row">
-            <span>📊 <strong>مبيعات اليوم:</strong></span>
-            <span id="todayProducts" class="reports-content">لا توجد مبيعات</span>
-        </div>
-        <div class="reports-row">
-            <span>📅 <strong>مبيعات هذا الشهر:</strong></span>
-            <span id="monthProducts" class="reports-content">لا توجد مبيعات</span>
-        </div>
-    </div>
 
     <!-- نموذج إضافة حركة بيع -->
     <div class="card">
@@ -327,7 +287,6 @@
 
         document.getElementById('reminderDate').valueAsDate = new Date();
 
-        // الاستماع الفوري لأي شريحة يتم مسحها في صفحة الباركود (barcode.html)
         window.addEventListener('storage', function(e) {
             if (e.key === 'app_config' && e.newValue) {
                 const updated = JSON.parse(e.newValue);
@@ -513,7 +472,6 @@
             document.getElementById('stockModal').style.display = 'none';
         }
 
-        // عرض الأصناف مع زر الإضافة (+) وزر القلم فقط (✏️)
         function renderModalStockList() {
             const container = document.getElementById('modalStockList');
             container.innerHTML = customItems.map(item => {
@@ -530,7 +488,6 @@
             }).join('');
         }
 
-        // دالة زر (+) لجمع الكمية المضافة تلقائياً على الرصيد الحالي
         async function addModalStock(item) {
             const currentQty = stockInventory[item] !== undefined ? parseFloat(stockInventory[item]) : 0;
             const addQtyStr = prompt(`الرصيد الحالي للصنف (${item}) هو: ${currentQty}\nأدخل الكمية الإضافية ليتم جمعها تلقائياً:`, '');
@@ -546,7 +503,6 @@
             renderModalStockList();
         }
 
-        // دالة زر (✏️) لتعديل الرصيد الكلي مباشرة
         async function editModalStock(item) {
             const currentQty = stockInventory[item] !== undefined ? stockInventory[item] : 0;
             const newQtyStr = prompt(`أدخل الرصيد الجديد الكلي للصنف (${item}):`, currentQty);
@@ -842,28 +798,6 @@
 
             if (showDebtOnly) filtered = filtered.filter(r => r.remaining > 0);
             filtered.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-            let totalS = 0, totalP = 0, totalD = 0;
-            let todayProductsMap = {}, monthProductsMap = {};
-
-            records.forEach(r => {
-                totalS += (r.total || 0);
-                totalP += (r.paid || 0);
-                totalD += (r.remaining || 0);
-
-                if (r.cartItems && Array.isArray(r.cartItems)) {
-                    r.cartItems.forEach(ci => {
-                        if (r.date === todayStr) todayProductsMap[ci.item] = (todayProductsMap[ci.item] || 0) + ci.qty;
-                        if (r.date && r.date.startsWith(currentMonthStr)) monthProductsMap[ci.item] = (monthProductsMap[ci.item] || 0) + ci.qty;
-                    });
-                }
-            });
-
-            document.getElementById('totalSales').innerText = totalS;
-            document.getElementById('totalPaid').innerText = totalP;
-            document.getElementById('totalDebt').innerText = totalD;
-            document.getElementById('todayProducts').innerText = Object.keys(todayProductsMap).length ? Object.entries(todayProductsMap).map(([i, q]) => `${i}: ${q}`).join(' | ') : 'لا توجد مبيعات اليوم';
-            document.getElementById('monthProducts').innerText = Object.keys(monthProductsMap).length ? Object.entries(monthProductsMap).map(([i, q]) => `${i}: ${q}`).join(' | ') : 'لا توجد مبيعات هذا الشهر';
 
             if (filtered.length === 0) {
                 list.innerHTML = '<p style="text-align:center; color:#6b7280; padding:20px;">لا توجد سجلات مطابقة.</p>';

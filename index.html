@@ -60,7 +60,7 @@
 </head>
 <body>
 
-    <!-- شريط التنقل العلوي الاحترافي -->
+    <!-- شريط التنقل العلوي الاحترافي[span_1](start_span)[span_1](end_span) -->
     <header class="navbar">
         <div class="logo-area">
             <img src="logo.jpg" class="logo-img" alt="شعار سيم" onerror="this.src='https://via.placeholder.com/45?text=SIM'">
@@ -74,7 +74,7 @@
         </div>
     </header>
 
-    <!-- المحتوى الرئيسي والتبويبات المصغرة -->
+    <!-- المحتوى الرئيسي والتبويبات المصغرة[span_2](start_span)[span_2](end_span) -->
     <main class="main-container">
         <div class="tabs-wrapper">
             <button class="tab-btn active" id="homeTabBtn" onclick="switchTab('home', this)">
@@ -89,13 +89,17 @@
             <button class="tab-btn" id="barcodeTabBtn" onclick="switchTab('barcode.html', this)">
                 <span class="tab-icon">📱</span> إضافة شريحة
             </button>
+            <!-- تبويب المبيعات الجديد -->
+            <button class="tab-btn" id="salesTabBtn" onclick="switchTab('sales.html', this)">
+                <span class="tab-icon">📊</span> المبيعات
+            </button>
             <button class="tab-btn" id="usersTabBtn" onclick="switchTab('users.html', this)" style="display: none;">
                 <span class="tab-icon">👥</span> الموظفين
             </button>
         </div>
 
         <div class="frame-wrapper" id="frameContainer">
-            <!-- شاشة ترحيبية احترافية -->
+            <!-- شاشة ترحيبية احترافية[span_3](start_span)[span_3](end_span) -->
             <div class="welcome-hero" id="welcomeScreen">
                 <h2>أهلاً بك في متجر سيم</h2>
                 <p>يمكنك إدارة المبيعات، المخزون، العملاء، ومتابعة المديونيات بكل سهولة عبر الأقسام المتاحة بالأعلى.</p>
@@ -103,6 +107,7 @@
                     <button class="hero-btn" onclick="switchTab('invoice.html', document.getElementById('invoiceTabBtn'))">ابدأ العمل على الفواتير 🚀</button>
                     <button class="hero-btn" style="background: #0f172a;" onclick="switchTab('customers.html', document.getElementById('customersTabBtn'))">إدارة العملاء 🏪</button>
                     <button class="hero-btn" style="background: #16a34a;" onclick="switchTab('barcode.html', document.getElementById('barcodeTabBtn'))">إضافة شريحة 📱</button>
+                    <button class="hero-btn" style="background: #0284c7;" onclick="switchTab('sales.html', document.getElementById('salesTabBtn'))">لوحة المبيعات 📊</button>
                 </div>
             </div>
             <iframe id="contentFrame" style="display: none;" src=""></iframe>

@@ -8,11 +8,12 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 850px; margin: 0 auto; padding: 12px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid #e2e8f0; }
-        label { display: block; margin-top: 8px; margin-bottom: 4px; font-weight: bold; font-size: 13px; color: #333; }
-        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; font-size: 14px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; }
+        label { display: block; margin-top: 10px; margin-bottom: 4px; font-weight: bold; font-size: 13px; color: #333; }
+        input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; font-size: 14px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; }
         
-        .stats { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 8px; background: #f1f5f9; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 13px; }
-        .stat-badge { background: white; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; color: #1e3a8a; }
+        .stats { display: flex; justify-content: flex-start; flex-wrap: wrap; gap: 8px; background: #f1f5f9; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 13px; }
+        .stat-badge { background: white; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; color: #1e3a8a; flex: 1 1 auto; text-align: center; }
+        .stat-badge.total { background: #1e3a8a; color: white; border-color: #1e3a8a; }
 
         .cam-controls { display: flex; gap: 8px; margin-bottom: 8px; }
         .btn-live { flex: 1; background: #2563eb; color: white; border: none; font-weight: bold; font-size: 15px; padding: 13px; cursor: pointer; margin: 0; border-radius: 8px; }
@@ -22,9 +23,11 @@
         .zoom-bar span { font-size: 13px; font-weight: bold; color: #1e3a8a; white-space: nowrap; }
         .zoom-bar input[type="range"] { margin: 0; padding: 0; flex: 1; accent-color: #2563eb; cursor: pointer; }
 
-        .manual-box { display: flex; gap: 8px; margin-top: 4px; margin-bottom: 6px; }
-        .manual-box input { margin: 0; flex: 1; font-family: monospace; font-size: 14px; }
-        .btn-manual { margin: 0; width: auto; padding: 0 18px; background: #16a34a; color: white; font-weight: bold; border: none; cursor: pointer; border-radius: 8px; white-space: nowrap; }
+        .row-group { display: flex; gap: 8px; align-items: center; margin-top: 4px; margin-bottom: 6px; }
+        .row-group input, .row-group select { margin: 0; flex: 1; }
+        .btn-action { margin: 0; width: auto; padding: 10px 16px; color: white; font-weight: bold; border: none; cursor: pointer; border-radius: 8px; white-space: nowrap; }
+        .btn-green { background: #16a34a; }
+        .btn-blue { background: #0284c7; }
 
         #reader { width: 100%; margin-bottom: 8px; border-radius: 8px; overflow: hidden; }
         #scanMonitor { display: none; font-size: 12px; background: #f8fafc; color: #475569; padding: 6px 10px; border-radius: 6px; border: 1px dashed #cbd5e1; margin-bottom: 8px; text-align: center; font-family: monospace; }
@@ -72,17 +75,12 @@
 
     <h3 style="text-align:center; margin-top:0; margin-bottom:12px; color:#1e3a8a;">📱 إضافة شريحة للمخزون</h3>
 
-    <!-- ملخص رصيد المخزون المربوط بالفواتير -->
+    <!-- ملخص رصيد المخزون الديناميكي (يتحدث مع أي خيار جديد) -->
     <div class="card" style="padding: 10px; margin-bottom: 12px;">
-        <div class="stats">
-            <span class="stat-badge">إجمالي الممسوح: <span id="totalScannedCount">0</span></span>
-            <span class="stat-badge">Mobily: <span id="mobilyStockCount">0</span></span>
-            <span class="stat-badge">STC: <span id="stcStockCount">0</span></span>
-            <span class="stat-badge">Zain: <span id="zainStockCount">0</span></span>
-        </div>
+        <div class="stats" id="dynamicStats"></div>
     </div>
 
-    <!-- الكاميرا والإدخال اليدوي والتاريخ -->
+    <!-- الكاميرا والخيارات والتاريخ -->
     <div class="card">
         <div id="msg"></div>
 
@@ -95,7 +93,6 @@
             </button>
         </div>
 
-        <!-- شريط تقريب (Zoom) لحل مشكلة الفوكس مع الباركود الطويل -->
         <div id="zoomWrap" class="zoom-bar">
             <span>🔍 تقريب العدسة:</span>
             <input type="range" id="zoomSlider" min="1" max="3.5" step="0.1" value="1.5" oninput="applyZoom(this.value)">
@@ -105,11 +102,21 @@
         <div id="reader"></div>
         <div id="scanMonitor">في انتظار توجيه الكاميرا نحو الباركود...</div>
 
-        <!-- خانة إدخال يدوي احتياطية -->
-        <label>إدخال يدوي (أو لصق الباركود مباشرة):</label>
-        <div class="manual-box">
+        <!-- إدخال يدوي للباركود -->
+        <label>إدخال يدوي للباركود:</label>
+        <div class="row-group">
             <input type="text" id="manualCodeInput" inputmode="numeric" placeholder="✍️ اكتب أو الصق رقم الباركود هنا..." onkeydown="if(event.key==='Enter') submitManualCode()">
-            <button class="btn-manual" onclick="submitManualCode()">➕ إضافة</button>
+            <button class="btn-action btn-green" onclick="submitManualCode()">➕ مسح يدوي</button>
+        </div>
+
+        <!-- القائمة المنسدلة وزر إضافة خيار جديد فوق التاريخ مباشرة -->
+        <label>نوع الشريحة / الصنف (يظهر في الجدول وفي خيارات الفواتير):</label>
+        <div class="row-group">
+            <select id="itemSelect"></select>
+        </div>
+        <div class="row-group">
+            <input type="text" id="newOptionInput" placeholder="✨ اكتب اسم خيار/صنف جديد لإضافته للقائمة..." onkeydown="if(event.key==='Enter') addNewItemOption()">
+            <button class="btn-action btn-blue" onclick="addNewItemOption()">➕ إضافة خيار</button>
         </div>
 
         <div>
@@ -120,14 +127,14 @@
 
     <!-- جدول الشرائح المضافة -->
     <div class="card">
-        <input type="text" id="searchInput" placeholder="🔍 البحث بالباركود أو الشركة أو التاريخ أو اسم اليوزر..." oninput="renderTable()">
+        <input type="text" id="searchInput" placeholder="🔍 البحث بالباركود أو الخيار/الشركة أو التاريخ أو اسم اليوزر..." oninput="renderTable()">
         <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
                         <th>حذف</th>
                         <th>الباركود الكامل</th>
-                        <th>الشركة</th>
+                        <th>الخيار / الصنف</th>
                         <th>التاريخ</th>
                         <th>اسم اليوزر</th>
                     </tr>
@@ -150,7 +157,6 @@
         }
         document.getElementById('inDate').value = getTodayStr();
 
-        // إيقاف الصيغ الفرعية (مثل ITF و CODABAR) لأنها تقرأ أجزاء صغيرة من الباركود الطويل وتسبب رعشة المربع الأخضر بدون مسح
         const scannerConfig = {
             experimentalFeatures: { useBarCodeDetectorIfSupported: true },
             verbose: false
@@ -209,18 +215,61 @@
         }
 
         function cleanAndExtractDigits(str) {
-            // تحويل الأرقام العربية إلى إنجليزية ثم استخراج الأرقام الصافية وحذف أي رموز تحكم مخفية
             return str
                 .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
                 .replace(/[^0-9]/g, '');
         }
 
-        function detectCompany(code) {
+        function detectCompanyByCode(code) {
             if (code.startsWith('8996601') || code.includes('8996601')) return 'STC';
             if (code.startsWith('8996603') || code.includes('8996603')) return 'Mobily';
             if (code.startsWith('8996604') || code.includes('8996604')) return 'Zain';
-            return 'Mobily';
+            return customItems[0] || 'Mobily';
         }
+
+        function resolveSelectedCompany(code) {
+            const selected = document.getElementById('itemSelect').value;
+            if (selected && selected !== 'AUTO') {
+                return selected;
+            }
+            return detectCompanyByCode(code);
+        }
+
+        function renderItemDropdown(selectedVal = null) {
+            const select = document.getElementById('itemSelect');
+            const currentVal = selectedVal || select.value || 'AUTO';
+            
+            let html = `<option value="AUTO">🔄 تحديد تلقائي حسب الباركود (STC / Mobily / Zain)</option>`;
+            customItems.forEach(item => {
+                html += `<option value="${item}">${item}</option>`;
+            });
+            select.innerHTML = html;
+            if ([...select.options].some(o => o.value === currentVal)) {
+                select.value = currentVal;
+            }
+        }
+
+        window.addNewItemOption = async function() {
+            const input = document.getElementById('newOptionInput');
+            const newName = input.value.trim();
+            if (!newName) {
+                showMessage("⚠️ يرجى كتابة اسم الخيار الجديد أولاً.", true);
+                return;
+            }
+
+            if (!customItems.includes(newName)) {
+                customItems.push(newName);
+            }
+            if (stockInventory[newName] === undefined) {
+                stockInventory[newName] = 0;
+            }
+
+            input.value = '';
+            renderItemDropdown(newName); // اختيار الصنف الجديد تلقائياً بعد إضافته
+            renderTable();
+            showMessage(`✅ تم إضافة الخيار (${newName}) وتحديث قائمة الفواتير والمبيعات!`);
+            await saveConfigAndSync();
+        };
 
         function showMessage(text, isError = false) {
             const msg = document.getElementById('msg');
@@ -243,6 +292,7 @@
                 simsList = localSims;
             }
 
+            renderItemDropdown();
             renderTable();
 
             try {
@@ -263,6 +313,7 @@
                         simsList.push(docSnap.data());
                     });
                     localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
+                    renderItemDropdown();
                     renderTable();
                 }
             } catch (e) {
@@ -387,7 +438,6 @@
 
             const monitor = document.getElementById('scanMonitor');
 
-            // 1. تجاهل روابط الويب تماماً قبل تنظيف الحروف
             const lowerRaw = rawStr.toLowerCase();
             if (lowerRaw.includes('http://') || lowerRaw.includes('https://') || lowerRaw.includes('www.') || lowerRaw.includes('.com') || lowerRaw.includes('.sa') || lowerRaw.includes('/')) {
                 if (monitor) monitor.innerText = "تم تجاهل رابط ويب غير صالح";
@@ -395,16 +445,12 @@
                 return; 
             }
 
-            // 2. استخراج الأرقام الصافية فقط (يتخلص من رموز FNC1 المخفية أو الحروف الطرفية التي كانت تمنع المسح)
             let code = cleanAndExtractDigits(rawStr);
-
-            // إذا كان الكود الممسوح يحتوي على رقم شريحة سعودية بداخله (89966)، نستخلص الرقم بدءاً من 89966
             const iccidIdx = code.indexOf('89966');
             if (iccidIdx > 0) {
                 code = code.substring(iccidIdx);
             }
 
-            // 3. تجاهل القراءات الجزئية القصيرة جداً (أقل من 8 أرقام) التي قد تحدث أثناء تحريك الكاميرا
             if (code.length < 8) {
                 if (monitor && code.length > 0) {
                     monitor.innerText = `قراءة غير مكتملة (${code}).. اثبت قليلاً على الباركود كامل`;
@@ -419,7 +465,6 @@
             if (monitor) monitor.innerText = `تم التقاط الكود: ${code}`;
 
             const now = Date.now();
-            // فترة سماح 2.5 ثانية لمنع تكرار مسح نفس الباركود وراء بعضه
             if (code === lastScanned && (now - lastScanTime) < 2500) return;
             lastScanned = code;
             lastScanTime = now;
@@ -430,12 +475,13 @@
                 return;
             }
 
-            const company = detectCompany(code);
+            // اعتماد الخيار المحدد من القائمة المنسدلة أو الاكتشاف التلقائي
+            const chosenOption = resolveSelectedCompany(code);
             const inDate = document.getElementById('inDate').value || getTodayStr();
 
             const newSim = {
                 code: code,
-                company: company,
+                company: chosenOption,
                 date: inDate,
                 addedBy: currentUser.username,
                 timestamp: now
@@ -444,13 +490,14 @@
             simsList.push(newSim);
             localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-            if (!customItems.includes(company)) {
-                customItems.push(company);
+            if (!customItems.includes(chosenOption)) {
+                customItems.push(chosenOption);
+                renderItemDropdown(chosenOption);
             }
-            stockInventory[company] = (parseFloat(stockInventory[company]) || 0) + 1;
+            stockInventory[chosenOption] = (parseFloat(stockInventory[chosenOption]) || 0) + 1;
 
             playBeep(true);
-            showMessage(`✅ تم إضافة شريحة (${company}) بالرقم (${code}) بنجاح!`);
+            showMessage(`✅ تم إضافة الشريحة تحت خيار (${chosenOption}) وتحديث الرصيد!`);
             renderTable();
 
             await saveConfigAndSync();
@@ -490,10 +537,14 @@
             const tbody = document.getElementById('simTable');
             const search = document.getElementById('searchInput').value.trim().toLowerCase();
             
-            document.getElementById('totalScannedCount').innerText = simsList.length;
-            document.getElementById('mobilyStockCount').innerText = stockInventory['Mobily'] || 0;
-            document.getElementById('stcStockCount').innerText = stockInventory['STC'] || 0;
-            document.getElementById('zainStockCount').innerText = stockInventory['Zain'] || 0;
+            // عرض الإحصائيات ديناميكياً لجميع الخيارات المضافة
+            const statsDiv = document.getElementById('dynamicStats');
+            let statsHtml = `<span class="stat-badge total">إجمالي الممسوح: ${simsList.length}</span>`;
+            customItems.forEach(item => {
+                const count = stockInventory[item] || 0;
+                statsHtml += `<span class="stat-badge">${item}: ${count}</span>`;
+            });
+            statsDiv.innerHTML = statsHtml;
 
             const sorted = [...simsList].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             const filtered = sorted.filter(item => {
