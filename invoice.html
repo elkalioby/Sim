@@ -276,6 +276,7 @@
         let records = [];
         let currentCart = [];
         let stockInventory = {};
+        let deletedStockItems = [];
         let marketList = [];
         let savedCustomersList = [];
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'مجهول', role: 'employee' };
@@ -301,6 +302,7 @@
             const localConfig = JSON.parse(localStorage.getItem('app_config'));
             if (localConfig) {
                 marketList = localConfig.marketList || [];
+                deletedStockItems = localConfig.deletedStockItems || [];
             }
             
             const localRecords = JSON.parse(localStorage.getItem('sales_records_offline'));
@@ -319,6 +321,7 @@
                     if (configSnap.exists()) {
                         const data = configSnap.data();
                         marketList = data.marketList || marketList;
+                        deletedStockItems = data.deletedStockItems || deletedStockItems;
                     }
                     await loadCloudRecords();
                 }
@@ -368,6 +371,11 @@
                     stockInventory[cat] = 1;
                 }
             });
+
+            // استبعاد الأصناف التي تم حذفها يدوياً
+            deletedStockItems.forEach(delItem => {
+                delete stockInventory[delItem];
+            });
         }
 
         function loadSavedCustomers() {
@@ -400,7 +408,7 @@
         }
 
         async function saveConfig() {
-            const dataToSave = { marketList, stockInventory };
+            const dataToSave = { marketList, stockInventory, deletedStockItems };
             localStorage.setItem('app_config', JSON.stringify(dataToSave));
             try {
                 if (window.db) {
@@ -522,6 +530,7 @@
                         <div class="stock-info">📦 ${item} : <strong>${qty} وحدة</strong></div>
                         <div style="display:flex; gap:6px;">
                             <button type="button" class="btn btn-warning" onclick="editModalStock('${item}')" style="padding:5px 10px; font-size:0.85rem;" title="تعديل الرصيد">✏️</button>
+                            <button type="button" class="btn btn-danger" onclick="deleteModalStock('${item}')" style="padding:5px 10px; font-size:0.85rem;" title="حذف الصنف">✕</button>
                         </div>
                     </div>
                 `;
@@ -538,6 +547,18 @@
             await saveConfig();
             updateItemSelects();
             renderModalStockList();
+        }
+
+        async function deleteModalStock(item) {
+            if (confirm(`هل أنت متأكد من حذف الصنف (${item}) من المخزون؟`)) {
+                delete stockInventory[item];
+                if (!deletedStockItems.includes(item)) {
+                    deletedStockItems.push(item);
+                }
+                await saveConfig();
+                updateItemSelects();
+                renderModalStockList();
+            }
         }
 
         function handleImageUpload(event) {
