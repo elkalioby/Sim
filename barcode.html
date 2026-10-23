@@ -28,6 +28,7 @@
         .btn-action { margin: 0; width: auto; padding: 10px 16px; color: white; font-weight: bold; border: none; cursor: pointer; border-radius: 8px; white-space: nowrap; }
         .btn-green { background: #16a34a; }
         .btn-blue { background: #0284c7; }
+        .btn-red { background: #dc2626; }
 
         #reader { width: 100%; margin-bottom: 8px; border-radius: 8px; overflow: hidden; }
         #scanMonitor { display: none; font-size: 12px; background: #f8fafc; color: #475569; padding: 6px 10px; border-radius: 6px; border: 1px dashed #cbd5e1; margin-bottom: 8px; text-align: center; font-family: monospace; }
@@ -39,11 +40,11 @@
         th { background: #1e293b; color: white; }
         .barcode-cell { font-family: monospace; font-size: 13px; font-weight: bold; color: #0f172a; letter-spacing: 0.5px; }
         .btn-del-row { background: #dc2626; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; width: auto; margin: 0; }
-        .company-badge { background: #dbeafe; color: #1e3a8a; padding: 3px 10px; border-radius: 8px; font-weight: bold; }
+        .badge { background: #dbeafe; color: #1e3a8a; padding: 3px 10px; border-radius: 8px; font-weight: bold; }
         .user-badge { background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 10px; font-weight: bold; }
     </style>
 
-    <!-- ربط Firebase السحابي بنفس قاعدة الفواتير (ahmed-hassan-bb80b)[span_0](start_span)[span_0](end_span) -->
+    <!-- ربط Firebase السحابي بنفس قاعدة البيانات[span_0](start_span)[span_0](end_span) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -109,14 +110,26 @@
             <button class="btn-action btn-green" onclick="submitManualCode()">➕ مسح يدوي</button>
         </div>
 
-        <!-- القائمة المنسدلة وزر إضافة خيار جديد مسماة باسم "المدة" -->
-        <label>المدة (أو التصنيف):</label>
+        <!-- 1. مربع التصنيف منفصل -->
+        <label>التصنيف (الشركة):</label>
         <div class="row-group">
-            <select id="itemSelect"></select>
+            <select id="categorySelect"></select>
+            <button class="btn-action btn-red" onclick="deleteSelectedCategory()" title="حذف التصنيف المحدد">🗑️ حذف</button>
         </div>
         <div class="row-group">
-            <input type="text" id="newOptionInput" placeholder="✨ اكتب مدة / صنف جديد لإضافته للقائمة..." onkeydown="if(event.key==='Enter') addNewItemOption()">
-            <button class="btn-action btn-blue" onclick="addNewItemOption()">➕ إضافة المدة</button>
+            <input type="text" id="newCategoryInput" placeholder="✨ إضافة تصنيف جديد..." onkeydown="if(event.key==='Enter') addNewCategory()">
+            <button class="btn-action btn-blue" onclick="addNewCategory()">➕ إضافة تصنيف</button>
+        </div>
+
+        <!-- 2. مربع المدة منفصل تماماً -->
+        <label>المدة:</label>
+        <div class="row-group">
+            <select id="durationSelect"></select>
+            <button class="btn-action btn-red" onclick="deleteSelectedDuration()" title="حذف المدة المحددة">🗑️ حذف</button>
+        </div>
+        <div class="row-group">
+            <input type="text" id="newDurationInput" placeholder="✨ إضافة مدة جديدة (مثال: شهر، شهرين)..." onkeydown="if(event.key==='Enter') addNewDuration()">
+            <button class="btn-action btn-green" onclick="addNewDuration()">➕ إضافة مدة</button>
         </div>
 
         <div>
@@ -127,13 +140,14 @@
 
     <!-- جدول الشرائح المضافة -->
     <div class="card">
-        <input type="text" id="searchInput" placeholder="🔍 البحث بالباركود أو المدة أو التاريخ أو اسم اليوزر..." oninput="renderTable()">
+        <input type="text" id="searchInput" placeholder="🔍 البحث بالباركود، التصنيف، المدة، التاريخ، أو اسم اليوزر..." oninput="renderTable()">
         <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
                         <th>حذف</th>
                         <th>الباركود الكامل</th>
+                        <th>التصنيف</th>
                         <th>المدة</th>
                         <th>التاريخ</th>
                         <th>اسم اليوزر</th>
@@ -147,8 +161,8 @@
     <script>
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'مجهول', role: 'employee' };
         let simsList = [];
-        let marketList = [];
-        let customItems = ['Mobily', 'STC', 'Zain'];
+        let categoriesList = ['Mobily', 'STC', 'Zain'];
+        let durationsList = []; // تم إفراغها لتتمكن من إضافة ما تريد وإزالة "شهر" و"شهرين" القديمة
         let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0 };
 
         function getTodayStr() {
@@ -220,55 +234,104 @@
                 .replace(/[^0-9]/g, '');
         }
 
-        function detectCompanyByCode(code) {
+        function detectCategoryByCode(code) {
             if (code.startsWith('8996601') || code.includes('8996601')) return 'STC';
             if (code.startsWith('8996603') || code.includes('8996603')) return 'Mobily';
             if (code.startsWith('8996604') || code.includes('8996604')) return 'Zain';
-            return customItems[0] || 'Mobily';
+            return categoriesList[0] || 'Mobily';
         }
 
-        function resolveSelectedCompany(code) {
-            const selected = document.getElementById('itemSelect').value;
-            if (selected && selected !== 'AUTO') {
-                return selected;
-            }
-            return detectCompanyByCode(code);
-        }
-
-        function renderItemDropdown(selectedVal = null) {
-            const select = document.getElementById('itemSelect');
-            const currentVal = selectedVal || select.value || 'AUTO';
-            
-            let html = `<option value="AUTO">🔄 تحديد تلقائي حسب الباركود (STC / Mobily / Zain)</option>`;
-            customItems.forEach(item => {
-                html += `<option value="${item}">${item}</option>`;
+        function renderDropdowns(selectedCat = null, selectedDur = null) {
+            // تحديث قائمة التصنيفات
+            const catSelect = document.getElementById('categorySelect');
+            let catHtml = `<option value="AUTO">🔄 تحديد تلقائي حسب الباركود</option>`;
+            categoriesList.forEach(c => {
+                catHtml += `<option value="${c}">${c}</option>`;
             });
-            select.innerHTML = html;
-            if ([...select.options].some(o => o.value === currentVal)) {
-                select.value = currentVal;
+            catSelect.innerHTML = catHtml;
+            if (selectedCat && [...catSelect.options].some(o => o.value === selectedCat)) {
+                catSelect.value = selectedCat;
+            }
+
+            // تحديث قائمة المدد
+            const durSelect = document.getElementById('durationSelect');
+            let durHtml = `<option value="">-- اختر المدة --</option>`;
+            durationsList.forEach(d => {
+                durHtml += `<option value="${d}">${d}</option>`;
+            });
+            durSelect.innerHTML = durHtml;
+            if (selectedDur && [...durSelect.options].some(o => o.value === selectedDur)) {
+                durSelect.value = selectedDur;
             }
         }
 
-        window.addNewItemOption = async function() {
-            const input = document.getElementById('newOptionInput');
+        window.addNewCategory = async function() {
+            const input = document.getElementById('newCategoryInput');
             const newName = input.value.trim();
             if (!newName) {
-                showMessage("⚠️ يرجى كتابة اسم المدة الجديدة أولاً.", true);
+                showMessage("⚠️ يرجى كتابة اسم التصنيف الجديد أولاً.", true);
                 return;
             }
-
-            if (!customItems.includes(newName)) {
-                customItems.push(newName);
+            if (!categoriesList.includes(newName)) {
+                categoriesList.push(newName);
             }
             if (stockInventory[newName] === undefined) {
                 stockInventory[newName] = 0;
             }
-
             input.value = '';
-            renderItemDropdown(newName);
+            renderDropdowns(newName, document.getElementById('durationSelect').value);
             renderTable();
-            showMessage(`✅ تم إضافة المدة (${newName}) وتحديث القوائم بنجاح!`);
+            showMessage(`✅ تم إضافة التصنيف (${newName}) بنجاح!`);
             await saveConfigAndSync();
+        };
+
+        window.deleteSelectedCategory = async function() {
+            const select = document.getElementById('categorySelect');
+            const val = select.value;
+            if (!val || val === 'AUTO') {
+                showMessage("⚠️ يرجى اختيار تصنيف محدد من القائمة لحذفه.", true);
+                return;
+            }
+            if (confirm(`هل أنت متأكد من حذف التصنيف (${val})؟`)) {
+                categoriesList = categoriesList.filter(c => c !== val);
+                renderDropdowns(null, document.getElementById('durationSelect').value);
+                renderTable();
+                showMessage(`🗑️ تم حذف التصنيف (${val}).`);
+                await saveConfigAndSync();
+            }
+        };
+
+        window.addNewDuration = async function() {
+            const input = document.getElementById('newDurationInput');
+            const newName = input.value.trim();
+            if (!newName) {
+                showMessage("⚠️ يرجى كتابة المدة الجديدة أولاً.", true);
+                return;
+            }
+            if (!durationsList.includes(newName)) {
+                durationsList.push(newName);
+            }
+            input.value = '';
+            renderDropdowns(document.getElementById('categorySelect').value, newName);
+            renderTable();
+            showMessage(`✅ تم إضافة المدة (${newName}) بنجاح!`);
+            await saveConfigAndSync();
+        };
+
+        window.deleteSelectedDuration = async function() {
+            const select = document.getElementById('durationSelect');
+            const val = select.value;
+            if (!val) {
+                showMessage("⚠️ يرجى اختيار مدة محددة من القائمة لحذفها.", true);
+                return;
+            }
+            if (confirm(`هل أنت متأكد من حذف المدة (${val})؟`)) {
+                durationsList = durationsList.filter(d => d !== val);
+                renderDropdowns(document.getElementById('categorySelect').value, null);
+                renderTable();
+                showMessage(`🗑️ تم حذف المدة (${val}).`);
+                await saveConfigAndSync();
+            }
         };
 
         function showMessage(text, isError = false) {
@@ -282,8 +345,8 @@
         window.initBarcodeApp = async function() {
             const localConfig = JSON.parse(localStorage.getItem('app_config'));
             if (localConfig) {
-                marketList = localConfig.marketList || [];
-                customItems = localConfig.customItems || customItems;
+                categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
+                durationsList = localConfig.durationsList || [];
                 stockInventory = localConfig.stockInventory || stockInventory;
             }
 
@@ -292,7 +355,7 @@
                 simsList = localSims;
             }
 
-            renderItemDropdown();
+            renderDropdowns();
             renderTable();
 
             try {
@@ -301,10 +364,10 @@
                     const configSnap = await window.getDoc(configRef);
                     if (configSnap.exists()) {
                         const data = configSnap.data();
-                        marketList = data.marketList || marketList;
-                        customItems = data.customItems || customItems;
+                        categoriesList = data.categoriesList || data.customItems || categoriesList;
+                        durationsList = data.durationsList || durationsList;
                         stockInventory = data.stockInventory || stockInventory;
-                        localStorage.setItem('app_config', JSON.stringify({ marketList, customItems, stockInventory }));
+                        localStorage.setItem('app_config', JSON.stringify({ categoriesList, durationsList, stockInventory }));
                     }
 
                     const querySnapshot = await window.getDocs(window.collection(window.db, "scanned_sims"));
@@ -313,7 +376,7 @@
                         simsList.push(docSnap.data());
                     });
                     localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
-                    renderItemDropdown();
+                    renderDropdowns();
                     renderTable();
                 }
             } catch (e) {
@@ -322,11 +385,11 @@
         };
 
         async function saveConfigAndSync() {
-            localStorage.setItem('app_config', JSON.stringify({ marketList, customItems, stockInventory }));
+            localStorage.setItem('app_config', JSON.stringify({ categoriesList, durationsList, stockInventory }));
             try {
                 if (window.db) {
                     const configRef = window.doc(window.db, "settings", "app_config");
-                    await window.setDoc(configRef, { marketList, customItems, stockInventory });
+                    await window.setDoc(configRef, { categoriesList, durationsList, stockInventory });
                 }
             } catch (e) {}
         }
@@ -475,12 +538,16 @@
                 return;
             }
 
-            const chosenOption = resolveSelectedCompany(code);
+            // تحديد التصنيف والمدة المختارة
+            const selectedCatInput = document.getElementById('categorySelect').value;
+            const category = (selectedCatInput && selectedCatInput !== 'AUTO') ? selectedCatInput : detectCategoryByCode(code);
+            const duration = document.getElementById('durationSelect').value || 'غير محدد';
             const inDate = document.getElementById('inDate').value || getTodayStr();
 
             const newSim = {
                 code: code,
-                company: chosenOption,
+                category: category,
+                duration: duration,
                 date: inDate,
                 addedBy: currentUser.username,
                 timestamp: now
@@ -489,14 +556,10 @@
             simsList.push(newSim);
             localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-            if (!customItems.includes(chosenOption)) {
-                customItems.push(chosenOption);
-                renderItemDropdown(chosenOption);
-            }
-            stockInventory[chosenOption] = (parseFloat(stockInventory[chosenOption]) || 0) + 1;
+            stockInventory[category] = (parseFloat(stockInventory[category]) || 0) + 1;
 
             playBeep(true);
-            showMessage(`✅ تم إضافة الشريحة تحت المدة (${chosenOption}) وتحديث الرصيد!`);
+            showMessage(`✅ تم إضافة الشريحة (تصنيف: ${category} | مدة: ${duration}) بنجاح!`);
             renderTable();
 
             await saveConfigAndSync();
@@ -515,9 +578,9 @@
                 simsList = simsList.filter(s => s.code !== code);
                 localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-                const company = target.company;
-                if (stockInventory[company] !== undefined && stockInventory[company] > 0) {
-                    stockInventory[company] = parseFloat(stockInventory[company]) - 1;
+                const category = target.category;
+                if (stockInventory[category] !== undefined && stockInventory[category] > 0) {
+                    stockInventory[category] = parseFloat(stockInventory[category]) - 1;
                 }
 
                 renderTable();
@@ -538,7 +601,7 @@
             
             const statsDiv = document.getElementById('dynamicStats');
             let statsHtml = `<span class="stat-badge total">إجمالي الممسوح: ${simsList.length}</span>`;
-            customItems.forEach(item => {
+            categoriesList.forEach(item => {
                 const count = stockInventory[item] || 0;
                 statsHtml += `<span class="stat-badge">${item}: ${count}</span>`;
             });
@@ -548,13 +611,14 @@
             const filtered = sorted.filter(item => {
                 if (!search) return true;
                 return (item.code && item.code.toLowerCase().includes(search)) ||
-                       (item.company && item.company.toLowerCase().includes(search)) ||
+                       (item.category && item.category.toLowerCase().includes(search)) ||
+                       (item.duration && item.duration.toLowerCase().includes(search)) ||
                        (item.date && item.date.toLowerCase().includes(search)) ||
                        (item.addedBy && item.addedBy.toLowerCase().includes(search));
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="padding:15px; color:#64748b; font-weight:bold;">لا توجد شرائح مسجلة</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="padding:15px; color:#64748b; font-weight:bold;">لا توجد شرائح مسجلة</td></tr>`;
                 return;
             }
 
@@ -562,7 +626,8 @@
                 <tr>
                     <td><button class="btn-del-row" onclick="deleteSim('${item.code}')">❌</button></td>
                     <td class="barcode-cell">${item.code}</td>
-                    <td><span class="company-badge">${item.company || '-'}</span></td>
+                    <td><span class="badge">${item.category || '-'}</span></td>
+                    <td><span class="badge" style="background:#fef3c7; color:#b45309;">${item.duration || '-'}</span></td>
                     <td>${item.date || '-'}</td>
                     <td><span class="user-badge">${item.addedBy || '-'}</span></td>
                 </tr>
