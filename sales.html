@@ -6,98 +6,107 @@
     <title>لوحة المبيعات وإحصائيات المخزون</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background: #f8fafc; color: #1e293b; padding: 12px; max-width: 900px; margin: 0 auto; }
+        body { background: #f8fafc; color: #1e293b; padding: 10px; max-width: 900px; margin: 0 auto; }
 
         .main-card {
             background: #ffffff;
-            border-radius: 16px;
+            border-radius: 14px;
             border: 1px solid #e2e8f0;
-            padding: 18px 14px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            padding: 14px 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
 
         .page-title {
             text-align: center;
             color: #1e3a8a;
-            font-size: 1.25rem;
+            font-size: 1.15rem;
             font-weight: 800;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .filter-box {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 14px;
-            margin-bottom: 14px;
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        select, input[type="date"] {
+        select {
             width: 100%;
-            padding: 11px 12px;
-            border-radius: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
             border: 1.5px solid #cbd5e1;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: 700;
             color: #0f172a;
             background: #fff;
             outline: none;
         }
-        select:focus, input[type="date"]:focus {
-            border-color: #2563eb;
-        }
 
         .date-row {
             display: flex;
-            gap: 10px;
-            margin-top: 10px;
+            gap: 8px;
             align-items: center;
         }
-        .date-row input[type="date"] {
-            flex: 1;
-            text-align: center;
-        }
+        
         .btn-reset {
             background: #64748b;
             color: #ffffff;
             border: none;
-            padding: 11px 18px;
-            border-radius: 10px;
-            font-size: 0.92rem;
+            padding: 9px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
         .btn-reset:hover { background: #475569; }
 
-        /* بطاقة "مباع" التفصيلية لكل شركة (بديل إجمالي المخزون وإجمالي الشرائح الممسوحة) */
+        input[type="date"] {
+            flex: 1;
+            padding: 9px 10px;
+            border-radius: 8px;
+            border: 1.5px solid #cbd5e1;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #0f172a;
+            background: #fff;
+            outline: none;
+            text-align: center;
+        }
+
+        /* بطاقة "مباع" التفصيلية لكل محل والمدة */
         .sold-company-card {
             background: #eff6ff;
             border: 1.5px solid #bfdbfe;
-            border-radius: 14px;
-            padding: 16px;
+            border-radius: 12px;
+            padding: 12px;
             margin-bottom: 12px;
         }
         .sold-header {
             text-align: center;
-            font-size: 1.05rem;
+            font-size: 0.98rem;
             font-weight: 800;
             color: #1e3a8a;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
             border-bottom: 1px solid #dbeafe;
         }
         .company-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            gap: 8px;
         }
         @media (max-width: 420px) {
             .company-grid {
@@ -107,66 +116,30 @@
         .company-item {
             background: #ffffff;
             border: 1px solid #dbeafe;
-            border-radius: 10px;
-            padding: 12px 14px;
+            border-radius: 8px;
+            padding: 10px 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
         }
         .company-name {
-            font-size: 0.95rem;
+            font-size: 0.88rem;
             font-weight: 800;
             color: #1e293b;
         }
         .company-count {
-            font-size: 1.15rem;
+            font-size: 1.05rem;
             font-weight: 800;
             color: #2563eb;
             background: #eff6ff;
-            padding: 4px 10px;
-            border-radius: 8px;
+            padding: 3px 8px;
+            border-radius: 6px;
         }
 
-        /* البطاقات الإحصائية */
-        .stat-card {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 16px 14px;
-            margin-bottom: 12px;
-            text-align: center;
-        }
-        .stat-card.blue-card {
-            background: #eff6ff;
-            border-color: #bfdbfe;
-        }
-        .stat-card.green-card {
-            background: #f0fdf4;
-            border-color: #bbf7d0;
-        }
-        .stat-card.red-card {
-            background: #fef2f2;
-            border-color: #fecaca;
-        }
-        .stat-label {
-            font-size: 0.92rem;
-            font-weight: 700;
-            color: #64748b;
-            margin-bottom: 8px;
-        }
-        .stat-value {
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: #0f172a;
-        }
-        .stat-card.blue-card .stat-value { color: #1d4ed8; }
-        .stat-card.green-card .stat-value { color: #15803d; }
-        .stat-card.red-card .stat-value { color: #dc2626; }
-
-        /* الجداول */
+        /* جدول ملخص المحلات والمدة */
         .table-card {
-            margin-top: 16px;
+            margin-top: 12px;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
             overflow: hidden;
@@ -174,18 +147,17 @@
         }
         .table-title {
             background: #f1f5f9;
-            padding: 11px 14px;
+            padding: 10px 12px;
             font-weight: 800;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: #1e3a8a;
             border-bottom: 1px solid #e2e8f0;
         }
         .table-wrap { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { border-bottom: 1px solid #e2e8f0; padding: 10px 8px; text-align: center; white-space: nowrap; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        th, td { border-bottom: 1px solid #e2e8f0; padding: 9px 8px; text-align: center; white-space: nowrap; }
         th { background: #1e293b; color: #fff; font-weight: 700; }
         tr:last-child td { border-bottom: none; }
-        .badge-cat { background: #dbeafe; color: #1e3a8a; padding: 3px 8px; border-radius: 6px; font-weight: 700; display: inline-block; margin: 1px; }
     </style>
 
     <!-- ربط Firebase السحابي بنفس قاعدة البيانات -->
@@ -224,7 +196,7 @@
 
         <div class="filter-box">
             <select id="itemFilter" onchange="renderDashboard()">
-                <option value="ALL">📦 كل الأصناف / الخيارات</option>
+                <option value="ALL">📦 كل المحلات / الأصناف</option>
             </select>
 
             <div class="date-row">
@@ -236,44 +208,21 @@
             </div>
         </div>
 
-        <!-- البند الجديد: مباع (عدد الحبات المباعة من كل شركة بناءً على فواتير البيع sales_records) -->
+        <!-- البند الجديد: مباع (حسب فواتير البيع لكل محل والمدة) -->
         <div class="sold-company-card">
-            <div class="sold-header">📦 مباع (حسب فواتير البيع لكل شركة)</div>
+            <div class="sold-header">📦 مباع (حسب فواتير البيع لكل محل والمدة)</div>
             <div class="company-grid" id="soldByCompanyGrid"></div>
         </div>
 
-        <!-- عدد الفواتير المسجلة -->
-        <div class="stat-card">
-            <div class="stat-label">عدد الفواتير المسجلة</div>
-            <div class="stat-value" id="totalInvoicesCount">0</div>
-        </div>
-
-        <!-- إجمالي الكمية المباعة -->
-        <div class="stat-card blue-card">
-            <div class="stat-label">إجمالي الكمية المباعة</div>
-            <div class="stat-value" id="totalSoldQty">0</div>
-        </div>
-
-        <!-- إجمالي قيمة المبيعات -->
-        <div class="stat-card green-card">
-            <div class="stat-label">إجمالي قيمة المبيعات</div>
-            <div class="stat-value" id="totalSalesAmount">0</div>
-        </div>
-
-        <!-- إجمالي المديونيات المتبقية -->
-        <div class="stat-card red-card">
-            <div class="stat-label">إجمالي المديونيات المتبقية</div>
-            <div class="stat-value" id="totalRemainingAmount">0</div>
-        </div>
-
-        <!-- جدول ملخص الشركات (الرصيد، الممسوح، المباع، القيمة) -->
+        <!-- جدول ملخص المحلات والمدة -->
         <div class="table-card">
-            <div class="table-title">📊 ملخص الشركات والأصناف</div>
+            <div class="table-title">📊 ملخص المحلات والمدة</div>
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            <th>الشركة / الصنف</th>
+                            <th>المحل / الصنف</th>
+                            <th>المدة</th>
                             <th>الرصيد المتاح</th>
                             <th>الممسوح</th>
                             <th>المباع (حبة)</th>
@@ -284,33 +233,11 @@
                 </table>
             </div>
         </div>
-
-        <!-- سجل الفواتير المطابقة للفلتر -->
-        <div class="table-card">
-            <div class="table-title">📄 سجل فواتير البيع</div>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>العميل / المحل</th>
-                            <th>الأصناف المباعة</th>
-                            <th>الكمية</th>
-                            <th>الإجمالي</th>
-                            <th>المدفوع</th>
-                            <th>المتبقي</th>
-                        </tr>
-                    </thead>
-                    <tbody id="salesTableBody">
-                        <tr><td colspan="7" style="padding:14px; color:#64748b;">جاري تحميل البيانات...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
     </div>
 
     <script>
         let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
+        let durationsList = ['30', '60'];
         let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0, 'Redbull': 0 };
         let simsList = [];
         let invoicesList = [];
@@ -330,64 +257,50 @@
             return s;
         }
 
-        // استخراج الأصناف المباعة من كل فاتورة في sales_records
         function extractInvoiceItems(inv) {
             const extracted = [];
 
-            // 1. الحالة الأساسية في invoice.html: مصفوفة cartItems تحتوي على { item, qty, price, total }
+            // 1. مصفوفة cartItems
             if (Array.isArray(inv.cartItems) && inv.cartItems.length > 0) {
                 inv.cartItems.forEach(it => {
                     const rawCat = it.item || it.category || it.company || it.name || it.type || '';
                     const company = normalizeCompanyName(rawCat);
+                    const duration = String(it.duration || it.dur || inv.duration || '60');
                     const qty = parseFloat(it.qty ?? it.quantity ?? it.count ?? 0) || 0;
                     const price = parseFloat(it.price ?? 0) || 0;
                     const total = parseFloat(it.total ?? (qty * price) ?? 0) || 0;
                     if (company || qty > 0) {
-                        extracted.push({ company: company || 'أخرى', rawCat: rawCat || company, qty, total });
+                        extracted.push({ company: company || 'أخرى', duration, rawCat: rawCat || company, qty, total });
                     }
                 });
                 return extracted;
             }
 
-            // 2. إذا كانت المصفوفة باسم items أو products
+            // 2. مصفوفة items أو products
             const altArray = inv.items || inv.products;
             if (Array.isArray(altArray) && altArray.length > 0) {
                 altArray.forEach(it => {
                     const rawCat = it.item || it.category || it.company || it.name || '';
                     const company = normalizeCompanyName(rawCat);
+                    const duration = String(it.duration || it.dur || inv.duration || '60');
                     const qty = parseFloat(it.qty ?? it.quantity ?? it.count ?? 0) || 0;
                     const price = parseFloat(it.price ?? 0) || 0;
                     const total = parseFloat(it.total ?? (qty * price) ?? 0) || 0;
                     if (company || qty > 0) {
-                        extracted.push({ company: company || 'أخرى', rawCat: rawCat || company, qty, total });
+                        extracted.push({ company: company || 'أخرى', duration, rawCat: rawCat || company, qty, total });
                     }
                 });
                 return extracted;
             }
 
-            // 3. إذا كانت الفاتورة تحتوي على نص ملخص itemsSummary
-            if (typeof inv.itemsSummary === 'string' && inv.itemsSummary.trim() !== '') {
-                const summary = inv.itemsSummary;
-                const regex = /([A-Za-z\u0600-\u06FF\s]+?)\s*[\(\:\-x×]\s*(\d+)/g;
-                let match;
-                while ((match = regex.exec(summary)) !== null) {
-                    const rawCat = match[1].trim();
-                    const company = normalizeCompanyName(rawCat);
-                    const qty = parseFloat(match[2]) || 0;
-                    if (company && qty > 0) {
-                        extracted.push({ company, rawCat, qty, total: 0 });
-                    }
-                }
-                if (extracted.length > 0) return extracted;
-            }
-
-            // 4. إذا كانت الفاتورة بصنف واحد مباشر في حقول الفاتورة
+            // 3. حقول مباشرة في الفاتورة
             const rawCat = inv.item || inv.category || inv.company || inv.simType || '';
             const company = normalizeCompanyName(rawCat);
+            const duration = String(inv.duration || '60');
             const qty = parseFloat(inv.qty ?? inv.quantity ?? inv.count ?? inv.totalQty ?? 0) || 0;
             const total = parseFloat(inv.total ?? inv.totalAmount ?? 0) || 0;
             if (company || qty > 0) {
-                extracted.push({ company: company || 'أخرى', rawCat: rawCat || company, qty, total });
+                extracted.push({ company: company || 'أخرى', duration, rawCat: rawCat || company, qty, total });
             }
 
             return extracted;
@@ -396,7 +309,7 @@
         function populateFilterDropdown() {
             const select = document.getElementById('itemFilter');
             const currentVal = select.value || 'ALL';
-            let html = `<option value="ALL">📦 كل الأصناف / الخيارات</option>`;
+            let html = `<option value="ALL">📦 كل المحلات / الأصناف</option>`;
             categoriesList.forEach(cat => {
                 html += `<option value="${cat}">${cat}</option>`;
             });
@@ -416,164 +329,113 @@
             const selectedCat = document.getElementById('itemFilter').value;
             const selectedDate = document.getElementById('dateFilter').value;
 
-            const soldByCompany = {};
-            const revenueByCompany = {};
-            const scannedByCompany = {};
+            // هيكل لتخزين البيانات مفصولة حسب (الشركة + المدة)
+            // مفتاح الكائن سيكون مثلاً "Mobily_60" أو "STC_30"
+            const soldMap = {};
+            const revenueMap = {};
+            const scannedMap = {};
 
             categoriesList.forEach(c => {
-                soldByCompany[c] = 0;
-                revenueByCompany[c] = 0;
-                scannedByCompany[c] = 0;
+                durationsList.forEach(d => {
+                    const key = `${c}_${d}`;
+                    soldMap[key] = 0;
+                    revenueMap[key] = 0;
+                    scannedMap[key] = 0;
+                });
             });
 
-            // حساب الشرائح الممسوحة لكل شركة
+            // حساب الشرائح الممسوحة مفصولة حسب الشركة والمدة
             simsList.forEach(sim => {
                 const simDate = (sim.date || '').slice(0, 10);
                 if (selectedDate && simDate !== selectedDate) return;
                 const comp = normalizeCompanyName(sim.category || sim.company || '');
+                const dur = String(sim.duration || '60');
                 if (comp) {
-                    if (scannedByCompany[comp] === undefined) scannedByCompany[comp] = 0;
-                    scannedByCompany[comp]++;
+                    const key = `${comp}_${dur}`;
+                    if (scannedMap[key] === undefined) scannedMap[key] = 0;
+                    scannedMap[key]++;
                 }
             });
 
-            let matchedInvoicesCount = 0;
-            let totalSoldQty = 0;
-            let totalSalesAmount = 0;
-            let totalRemainingAmount = 0;
-            const tableRows = [];
-
-            const sortedInvoices = [...invoicesList].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-            sortedInvoices.forEach(inv => {
+            // حساب الفواتير المباعة مفصولة حسب الشركة والمدة
+            invoicesList.forEach(inv => {
                 const invDate = (inv.date || '').slice(0, 10);
                 if (selectedDate && invDate !== selectedDate) return;
 
                 const items = extractInvoiceItems(inv);
+                items.forEach(it => {
+                    const comp = it.company;
+                    const dur = it.duration;
+                    const key = `${comp}_${dur}`;
 
-                const matchingItems = selectedCat === 'ALL'
-                    ? items
-                    : items.filter(it => it.company === selectedCat || it.rawCat === selectedCat);
-
-                if (selectedCat === 'ALL' || matchingItems.length > 0) {
-                    matchedInvoicesCount++;
-
-                    let invQtySum = 0;
-                    let invItemsTotalSum = 0;
-                    const itemsBadges = [];
-
-                    matchingItems.forEach(it => {
-                        const compKey = it.company || 'أخرى';
-                        if (soldByCompany[compKey] === undefined) soldByCompany[compKey] = 0;
-                        if (revenueByCompany[compKey] === undefined) revenueByCompany[compKey] = 0;
-
-                        soldByCompany[compKey] += it.qty;
-                        revenueByCompany[compKey] += it.total;
-
-                        totalSoldQty += it.qty;
-                        invQtySum += it.qty;
-                        invItemsTotalSum += it.total;
-
-                        if (it.company) {
-                            itemsBadges.push(`${it.company} (${it.qty})`);
-                        }
-                    });
-
-                    const invTotal = selectedCat === 'ALL'
-                        ? (parseFloat(inv.total ?? invItemsTotalSum ?? 0) || 0)
-                        : (invItemsTotalSum || parseFloat(inv.total ?? 0) || 0);
-
-                    const invPaid = parseFloat(inv.paid ?? 0) || 0;
-                    const invRemaining = parseFloat(inv.remaining ?? Math.max(0, invTotal - invPaid)) || 0;
-
-                    totalSalesAmount += invTotal;
-                    totalRemainingAmount += invRemaining;
-
-                    const clientDisplay = [inv.clientName, inv.shopName].filter(Boolean).join(' - ') || inv.customer || 'عميل';
-
-                    tableRows.push({
-                        date: invDate || '-',
-                        client: clientDisplay,
-                        itemsText: itemsBadges.length > 0 ? itemsBadges.join(' ، ') : (inv.itemsSummary || '-'),
-                        qty: invQtySum,
-                        total: invTotal,
-                        paid: invPaid,
-                        remaining: invRemaining
-                    });
-                }
+                    if (soldMap[key] === undefined) {
+                        soldMap[key] = 0;
+                        revenueMap[key] = 0;
+                    }
+                    soldMap[key] += it.qty;
+                    revenueMap[key] += it.total;
+                });
             });
 
-            // 1. تحديث بطاقة "مباع" لكل شركة بناءً على فواتير البيع
+            // توليد قائمة الأزواج (شركة + مدة) المعروضة
+            let activeKeys = [];
+            categoriesList.forEach(c => {
+                durationsList.forEach(d => {
+                    activeKeys.push({ company: c, duration: d, key: `${c}_${d}` });
+                });
+            });
+
+            // تطبيق الفلتر إذا تم اختيار صنف معين
+            if (selectedCat !== 'ALL') {
+                activeKeys = activeKeys.filter(item => item.company === selectedCat);
+            }
+
+            // 1. تحديث بطاقة "مباع" لكل محل والمدة
             const grid = document.getElementById('soldByCompanyGrid');
-            const companiesToShow = selectedCat === 'ALL'
-                ? Object.keys(soldByCompany)
-                : [selectedCat];
+            grid.innerHTML = activeKeys.map(item => {
+                const soldQty = soldMap[item.key] || 0;
+                return `
+                    <div class="company-item">
+                        <span class="company-name">🔹 ${item.company} (${item.duration})</span>
+                        <span class="company-count">${soldQty} حبة</span>
+                    </div>
+                `;
+            }).join('');
 
-            grid.innerHTML = companiesToShow.map(comp => `
-                <div class="company-item">
-                    <span class="company-name">🔹 ${comp}</span>
-                    <span class="company-count">${soldByCompany[comp] || 0} حبة</span>
-                </div>
-            `).join('');
-
-            // 2. تحديث البطاقات الرقمية
-            document.getElementById('totalInvoicesCount').innerText = matchedInvoicesCount;
-            document.getElementById('totalSoldQty').innerText = totalSoldQty;
-            document.getElementById('totalSalesAmount').innerText = totalSalesAmount.toLocaleString('en-US') + ' ر.س';
-            document.getElementById('totalRemainingAmount').innerText = totalRemainingAmount.toLocaleString('en-US') + ' ر.س';
-
-            // 3. تحديث جدول ملخص الشركات
+            // 2. تحديث جدول ملخص المحلات والمدة
             const summaryBody = document.getElementById('companySummaryBody');
-            summaryBody.innerHTML = companiesToShow.map(comp => {
-                const stock = parseFloat(stockInventory[comp] ?? 0) || 0;
-                const scanned = scannedByCompany[comp] || 0;
-                const sold = soldByCompany[comp] || 0;
-                const rev = revenueByCompany[comp] || 0;
+            summaryBody.innerHTML = activeKeys.map(item => {
+                // افتراض توزيع الرصيد المتاح أو عرضه إجمالياً
+                const stock = parseFloat(stockInventory[item.company] ?? 0) / durationsList.length;
+                const scanned = scannedMap[item.key] || 0;
+                const sold = soldMap[item.key] || 0;
+                const rev = revenueMap[item.key] || 0;
                 return `
                     <tr>
-                        <td style="font-weight:800; color:#1e3a8a;">${comp}</td>
-                        <td style="font-weight:700;">${stock}</td>
+                        <td style="font-weight:800; color:#1e3a8a;">${item.company}</td>
+                        <td style="font-weight:700; color:#b45309;">${item.duration}</td>
+                        <td style="font-weight:700;">${stock > 0 ? stock.toFixed(0) : 0}</td>
                         <td>${scanned}</td>
                         <td style="font-weight:800; color:#2563eb;">${sold} حبة</td>
                         <td style="font-weight:700; color:#15803d;">${rev.toLocaleString('en-US')}</td>
                     </tr>
                 `;
             }).join('');
-
-            // 4. تحديث جدول سجل الفواتير
-            const tbody = document.getElementById('salesTableBody');
-            if (tableRows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="padding:15px; color:#64748b; font-weight:bold;">لا توجد فواتير مسجلة مطابقة للفلتر</td></tr>`;
-            } else {
-                tbody.innerHTML = tableRows.map(r => `
-                    <tr>
-                        <td>${r.date}</td>
-                        <td style="font-weight:700;">${r.client}</td>
-                        <td><span class="badge-cat">${r.itemsText}</span></td>
-                        <td style="font-weight:800; color:#2563eb;">${r.qty} حبة</td>
-                        <td style="font-weight:700;">${r.total.toLocaleString('en-US')}</td>
-                        <td style="color:#15803d; font-weight:700;">${r.paid.toLocaleString('en-US')}</td>
-                        <td style="color:#dc2626; font-weight:700;">${r.remaining.toLocaleString('en-US')}</td>
-                    </tr>
-                `).join('');
-            }
         };
 
         window.initSalesDashboard = async function() {
-            // 1. قراءة الإعدادات المحلية
             const localConfig = JSON.parse(localStorage.getItem('app_config') || 'null');
             if (localConfig) {
                 categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
+                durationsList = localConfig.durationsList || durationsList;
                 stockInventory = localConfig.stockInventory || stockInventory;
             }
 
-            // 2. قراءة الشرائح الممسوحة محلياً
             const localSims = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
             if (Array.isArray(localSims)) {
                 simsList = localSims;
             }
 
-            // 3. قراءة الفواتير المحفوظة محلياً (sales_records_offline)
             const localInvoices = JSON.parse(
                 localStorage.getItem('sales_records_offline') ||
                 localStorage.getItem('sales_records') ||
@@ -586,17 +448,17 @@
             populateFilterDropdown();
             renderDashboard();
 
-            // 4. المزامنة المباشرة مع Firebase السحابي
             try {
                 if (window.db) {
                     const configSnap = await window.getDoc(window.doc(window.db, "settings", "app_config"));
                     if (configSnap.exists()) {
                         const cData = configSnap.data();
                         categoriesList = cData.categoriesList || cData.customItems || categoriesList;
+                        durationsList = cData.durationsList || durationsList;
                         stockInventory = cData.stockInventory || stockInventory;
                         localStorage.setItem('app_config', JSON.stringify({
                             categoriesList,
-                            durationsList: cData.durationsList || ['30', '60'],
+                            durationsList,
                             stockInventory
                         }));
                     }
@@ -606,7 +468,6 @@
                     simsSnap.forEach(d => simsList.push(d.data()));
                     localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-                    // جلب فواتير البيع من المجموعة الأساسية sales_records
                     const recordsSnap = await window.getDocs(window.collection(window.db, "sales_records"));
                     invoicesList = [];
                     recordsSnap.forEach(docSnap => {
