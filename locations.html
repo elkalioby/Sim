@@ -96,7 +96,7 @@
             box-shadow: 0 3px 8px rgba(30, 58, 138, 0.22);
         }
 
-        /* البطاقة والنموذج بنفس روح ملف العملاء */
+        /* البطاقة والنموذج */
         .card {
             background: var(--card);
             padding: 18px;
@@ -243,7 +243,7 @@
         .sections-wrapper {
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            gap: 16px;
         }
 
         .category-section {
@@ -257,6 +257,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .category-header.has-items {
             padding-bottom: 12px;
             margin-bottom: 14px;
             border-bottom: 2px solid #f1f5f9;
@@ -286,20 +289,6 @@
             border-radius: 20px;
             font-size: 0.9rem;
             font-weight: 800;
-        }
-
-        .btn-delete-cat-icon {
-            background: #fee2e2;
-            color: var(--danger);
-            border: none;
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
         }
 
         /* شبكة التابات الملونة للأماكن */
@@ -396,7 +385,7 @@
 
         .map-open-hint {
             background: rgba(255, 255, 255, 0.24);
-            padding: 4px 9px;
+            padding: 5px 10px;
             border-radius: 7px;
             font-weight: 700;
             display: inline-flex;
@@ -407,34 +396,38 @@
         .place-actions {
             display: flex;
             gap: 6px;
+            align-items: center;
         }
 
         .action-icon-btn {
             background: rgba(255, 255, 255, 0.22);
             color: white;
             border: none;
-            width: 30px;
-            height: 30px;
-            border-radius: 7px;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
+            transition: transform 0.15s, background 0.15s;
         }
 
         .action-icon-btn:hover {
             background: rgba(255, 255, 255, 0.38);
+            transform: scale(1.07);
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 18px;
-            color: var(--text-muted);
-            background: #f8fafc;
-            border-radius: 10px;
-            border: 1px dashed #cbd5e1;
-            font-size: 0.88rem;
+        /* زرار واتساب الرسمي الأخضر */
+        .whatsapp-btn {
+            background: #25D366 !important;
+            color: white !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .whatsapp-btn:hover {
+            background: #1ebe5d !important;
         }
 
         /* نافذة تكبير الصورة */
@@ -456,7 +449,7 @@
         }
     </style>
 
-    <!-- ربط Firebase السحابي (الاقتراح رقم 3) بنفس إعدادات متجر سيم -->
+    <!-- ربط Firebase السحابي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -504,7 +497,7 @@
         <form id="locationForm" onsubmit="savePlace(event)" novalidate>
             <input type="hidden" id="editPlaceId" value="">
 
-            <!-- اسم المكان + أزرار الصورة بنفس طريقة ملف العملاء -->
+            <!-- اسم المكان + أزرار الصورة -->
             <div class="form-group">
                 <label>اسم المكان</label>
                 <div style="display: flex; gap: 6px;">
@@ -524,16 +517,17 @@
                 </div>
             </div>
 
-            <!-- القسم (أيقونات فقط + زر إضافة قسم) -->
+            <!-- القسم: قائمة الأيقونات + زر (+) للإضافة + زر (✕) لحذف القسم المحدد مثل صفحة العملاء تماماً -->
             <div class="form-group">
                 <label>القسم</label>
                 <div style="display: flex; gap: 6px; align-items: center;">
-                    <select id="placeCategory" style="flex: 1; font-size: 1.1rem;"></select>
+                    <select id="placeCategory" style="flex: 1; font-size: 1.15rem;"></select>
                     <button type="button" class="icon-btn icon-btn-add" onclick="addNewCategoryPrompt()" title="إضافة قسم جديد">+</button>
+                    <button type="button" class="icon-btn icon-btn-del" onclick="deleteSelectedCategory()" title="حذف القسم المحدد">✕</button>
                 </div>
             </div>
 
-            <!-- اللوكيشن تحت القسم مباشرة بنفس طريقة الملف المرفق + دعم لصق الرابط (اقتراح 4) -->
+            <!-- اللوكيشن تحت القسم مباشرة -->
             <div class="form-group">
                 <label>اللوكيشن</label>
                 <div style="display: flex; gap: 6px;">
@@ -565,7 +559,7 @@
                 <textarea id="placeNotes" placeholder="اكتب ملاحظة..."></textarea>
             </div>
 
-            <!-- زر حفظ فقط -->
+            <!-- زر حفظ -->
             <button type="submit" class="btn btn-primary" id="submitBtn">حفظ</button>
             <button type="button" class="btn" id="cancelEditBtn" onclick="resetForm()" style="background:#e5e7eb; color:#374151; width:100%; margin-top:8px; display:none;">إلغاء</button>
         </form>
@@ -602,7 +596,6 @@
         let selectedTheme = 'auto';
         let tempImageBase64 = '';
 
-        // تحميل البيانات المحلية وتنظيف أي أسماء قديمة (مثل كلمة أسواق أو مطاعم) للاكتفاء بالأيقونات فقط
         function loadLocalData() {
             const savedCats = JSON.parse(localStorage.getItem('sim_loc_categories') || 'null');
             if (Array.isArray(savedCats) && savedCats.length > 0) {
@@ -627,7 +620,6 @@
             localStorage.setItem('sim_saved_places', JSON.stringify(places));
         }
 
-        // المزامنة السحابية مع Firebase (الاقتراح رقم 3)
         window.initLocationsCloud = async function() {
             loadLocalData();
             renderCategoryControls();
@@ -656,7 +648,6 @@
             try {
                 if (!window.db) return;
 
-                // جلب الأقسام من السحابة
                 const catSnap = await window.getDoc(window.doc(window.db, "settings", "locations_config"));
                 if (catSnap.exists() && Array.isArray(catSnap.data().categories) && catSnap.data().categories.length > 0) {
                     categories = catSnap.data().categories.map(c => ({
@@ -666,7 +657,6 @@
                     }));
                 }
 
-                // جلب الأماكن المحفوظة من السحابة
                 const querySnapshot = await window.getDocs(window.collection(window.db, "locations"));
                 const cloudPlaces = [];
                 querySnapshot.forEach((docSnap) => {
@@ -687,13 +677,13 @@
             }
         }
 
-        // رسم أزرار الفلترة وقائمة الأقسام بالأيقونات فقط
         function renderCategoryControls() {
             const select = document.getElementById('placeCategory');
             const filterBar = document.getElementById('categoryFilterBar');
+            const currentSelected = select.value;
 
             select.innerHTML = categories.map(cat =>
-                `<option value="${cat.id}">${cat.icon}</option>`
+                `<option value="${cat.id}" ${cat.id === currentSelected ? 'selected' : ''}>${cat.icon}</option>`
             ).join('');
 
             let filterHtml = `
@@ -738,8 +728,14 @@
             document.getElementById('placeCategory').value = newCat.id;
         }
 
-        async function deleteCategory(catId) {
-            if (!confirm('حذف هذا القسم؟')) return;
+        // حذف القسم المحدد من القائمة العلوية (لتجنب تكرار أزرار الحذف في الأسفل)
+        async function deleteSelectedCategory() {
+            const selectEl = document.getElementById('placeCategory');
+            const catId = selectEl.value;
+            if (!catId) return;
+
+            const catObj = categories.find(c => c.id === catId);
+            if (!confirm(`هل أنت متأكد من حذف القسم (${catObj ? catObj.icon : ''})؟`)) return;
 
             const toDeletePlaces = places.filter(p => p.categoryId === catId);
             categories = categories.filter(c => c.id !== catId);
@@ -750,7 +746,6 @@
             renderCategoryControls();
             renderAllSections();
 
-            // حذف أماكن القسم من السحابة
             if (window.db) {
                 for (const p of toDeletePlaces) {
                     if (!String(p.id).startsWith('local_')) {
@@ -766,7 +761,6 @@
             el.classList.add('selected');
         }
 
-        // رفع وضغط الصورة بنفس طريقة ملف العملاء
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -820,7 +814,6 @@
             showImagePreview('');
         }
 
-        // تحديد الموقع الدقيق بالضبط (High Accuracy GPS) بنفس طريقة الزر المستطيل في ملف العملاء
         function getCurrentLocation() {
             return new Promise((resolve, reject) => {
                 const locInput = document.getElementById('locationInput');
@@ -853,7 +846,6 @@
             });
         }
 
-        // حفظ المكان (يسجل اللوكيشن أوتوماتيك إذا كان الحقل فارغاً، أو يقبل الرابط الملصق جاهزاً)
         async function savePlace(event) {
             event.preventDefault();
 
@@ -873,7 +865,6 @@
             submitBtn.disabled = true;
             submitBtn.textContent = '⏳...';
 
-            // إذا لم يلصق المستخدم رابطاً ولم يضغط "موقعي" مسبقاً، نلقط الموقع الدقيق أوتوماتيكياً الآن
             if (!locationUrl || locationUrl === 'جاري جلب الموقع الدقيق...') {
                 try {
                     locationUrl = await getCurrentLocation();
@@ -939,21 +930,34 @@
             }
         }
 
-        // فتح الموقع في Google Maps بمجرد الضغط على التاب (يدعم الروابط الجاهزة والإحداثيات)
-        function openPlaceInMap(placeId) {
-            const place = places.find(p => p.id === placeId);
-            if (!place) return;
-
+        function getPlaceMapUrl(place) {
             let loc = (place.location || '').trim();
             if (!loc && place.lat && place.lng) {
                 loc = `https://maps.google.com/?q=${place.lat},${place.lng}`;
             }
-
-            if (loc.startsWith('http://') || loc.startsWith('https://')) {
-                window.open(loc, '_blank');
-            } else if (loc) {
-                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank');
+            if (loc && !loc.startsWith('http://') && !loc.startsWith('https://')) {
+                loc = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`;
             }
+            return loc;
+        }
+
+        // فتح الموقع في Google Maps عند الضغط على التاب
+        function openPlaceInMap(placeId) {
+            const place = places.find(p => p.id === placeId);
+            if (!place) return;
+            const url = getPlaceMapUrl(place);
+            if (url) window.open(url, '_blank');
+        }
+
+        // مشاركة المكان عبر واتساب
+        function sharePlaceWhatsApp(event, placeId) {
+            event.stopPropagation();
+            const place = places.find(p => p.id === placeId);
+            if (!place) return;
+
+            const mapUrl = getPlaceMapUrl(place);
+            const text = `📍 *${place.name}*\n${place.notes ? '📝 ' + place.notes + '\n' : ''}🗺️ ${mapUrl}`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
         }
 
         function editPlace(event, id) {
@@ -1009,7 +1013,7 @@
             }
         }
 
-        // رسم الأقسام (أيقونة فقط + رقم فقط + زر حذف أيقونة فقط)
+        // رسم الأقسام والتابات (مع زرار واتساب الأخضر وبدون تكرار أزرار الحذف أو الأصفار)
         function renderAllSections() {
             const wrapper = document.getElementById('sectionsWrapper');
             const query = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
@@ -1047,6 +1051,11 @@
                                     <div class="place-footer">
                                         <span class="map-open-hint">🗺️ Google Maps</span>
                                         <div class="place-actions">
+                                            <button type="button" class="action-icon-btn whatsapp-btn" onclick="sharePlaceWhatsApp(event, '${place.id}')" title="مشاركة عبر واتساب">
+                                                <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+                                                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.124.556 4.119 1.529 5.847l-1.529 5.583 5.714-1.499c1.693.922 3.635 1.449 5.702 1.449 6.627 0 12-5.373 12-12s-5.373-12-12-12z"/>
+                                                </svg>
+                                            </button>
                                             <button type="button" class="action-icon-btn" onclick="editPlace(event, '${place.id}')" title="تعديل">✏️</button>
                                             <button type="button" class="action-icon-btn" onclick="deletePlace(event, '${place.id}')" title="حذف">🗑️</button>
                                         </div>
@@ -1055,16 +1064,15 @@
                             `;
                         }).join('')}
                        </div>`
-                    : `<div class="empty-state">0</div>`;
+                    : '';
 
                 return `
                     <section class="category-section">
-                        <div class="category-header">
+                        <div class="category-header ${catPlaces.length > 0 ? 'has-items' : ''}">
                             <div class="category-title-group">
                                 <div class="category-icon-box" style="background: ${cat.color || '#2563eb'}">${cat.icon}</div>
                                 <span class="category-count">${catPlaces.length}</span>
                             </div>
-                            <button type="button" class="btn-delete-cat-icon" onclick="deleteCategory('${cat.id}')" title="حذف">🗑️</button>
                         </div>
                         ${cardsHtml}
                     </section>
