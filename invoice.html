@@ -28,6 +28,37 @@
         #phone { text-align: right; direction: rtl; }
         input:focus, select:focus, textarea:focus { border-color: var(--primary-light); }
         input[readonly] { background-color: #f9fafb; font-weight: bold; color: var(--primary); }
+
+        /* قائمة اقتراحات العملاء المخصصة والأنيقة */
+        .autocomplete-wrapper { position: relative; }
+        .customers-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            left: 0;
+            background: #ffffff;
+            border: 1.5px solid var(--primary-light);
+            border-radius: 10px;
+            max-height: 210px;
+            overflow-y: auto;
+            z-index: 500;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            margin-top: 4px;
+        }
+        .customer-option {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            transition: background 0.15s;
+        }
+        .customer-option:last-child { border-bottom: none; }
+        .customer-option:hover, .customer-option:active { background: #eff6ff; }
+        .customer-option-main { font-weight: 700; font-size: 0.9rem; color: var(--primary); }
+        .customer-option-sub { font-size: 0.78rem; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap; }
         
         .btn { padding: 10px 14px; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
         .btn:active { opacity: 0.8; }
@@ -72,7 +103,6 @@
         .paid-amount { color: var(--success); }
         .notes-box { font-size: 0.82rem; color: #4b5563; background: #f3f4f6; padding: 8px; border-radius: 6px; margin-bottom: 10px; white-space: pre-line; }
         
-        /* تنسيق سجل الدفعات الجزئية */
         .payments-log { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 10px; margin-top: 10px; font-size: 0.8rem; }
         .payments-log-title { font-weight: bold; color: #15803d; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
         .payment-row { display: flex; justify-content: space-between; color: #166534; padding: 3px 0; border-bottom: 1px dashed #dcfce7; }
@@ -123,10 +153,11 @@
             <input type="hidden" id="editRecordId" value="">
             <div class="form-grid">
                 
-                <div>
+                <!-- حقل اسم العميل مع قائمة منسدلة مخصصة وواضحة بدون السهم الأسود المشوه -->
+                <div class="autocomplete-wrapper">
                     <label>اسم العميل *</label>
-                    <input type="text" id="clientName" list="customersSuggestions" required placeholder="اختر أو اكتب اسم العميل..." oninput="onCustomerSelected()">
-                    <datalist id="customersSuggestions"></datalist>
+                    <input type="text" id="clientName" required autocomplete="off" placeholder="اكتب اسم العميل أو المحل للبحث..." oninput="filterCustomersDropdown()" onfocus="filterCustomersDropdown()">
+                    <div id="customersDropdown" class="customers-dropdown"></div>
                 </div>
 
                 <div>
@@ -140,17 +171,11 @@
                     </div>
                 </div>
 
+                <!-- خانة العنوان / السوق: قائمة منسدلة نظيفة مربوطة بصفحة العملاء مباشرة -->
                 <div class="full-width">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <label style="margin:0;">العنوان / السوق *</label>
-                        <button type="button" class="btn" onclick="openMarketManagerModal()" style="background:#f59e0b; color:white; padding:4px 8px; font-size:0.75rem;">⚙️ إدارة العناوين</button>
-                    </div>
-                    <div style="display: flex; gap: 5px;">
-                        <input type="text" id="marketSearchInput" placeholder="ابحث في العناوين..." style="flex:1; margin-bottom:4px;" oninput="filterMarketOptions()">
-                        <button type="button" class="btn" onclick="addNewMarket()" style="background:var(--success); color:white; padding:8px 12px; font-size:0.8rem;">+ إضافة عنوان</button>
-                    </div>
-                    <select id="marketName" required size="1" style="cursor:pointer;">
-                        <option value="">-- اختر العنوان --</option>
+                    <label>العنوان / السوق *</label>
+                    <select id="marketName" required style="cursor:pointer;">
+                        <option value="">-- اختر العنوان / السوق --</option>
                     </select>
                 </div>
 
@@ -244,16 +269,6 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="marketManagerModal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3>📍 إدارة العناوين</h3>
-                <button type="button" class="btn" onclick="closeMarketManagerModal()" style="background:#e5e7eb; padding:4px 8px; font-size:0.8rem;">✕ إغلاق</button>
-            </div>
-            <div id="modalMarketList" style="max-height:250px; overflow-y:auto; margin-bottom:12px;"></div>
-        </div>
-    </div>
-
     <div class="card">
         <h2 style="margin-bottom:12px;">سجل العملاء والمديونيات</h2>
 
@@ -288,20 +303,44 @@
 
         document.getElementById('reminderDate').valueAsDate = new Date();
 
+        // إغلاق قائمة اقتراحات العملاء عند النقر خارجها
+        document.addEventListener('click', function(e) {
+            const wrapper = document.querySelector('.autocomplete-wrapper');
+            const dropdown = document.getElementById('customersDropdown');
+            if (wrapper && dropdown && !wrapper.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+
         window.addEventListener('storage', async function(e) {
-            if (e.key === 'app_config' || e.key === 'scanned_sims_offline' || e.key === 'sales_records_offline') {
+            if (e.key === 'app_config' || e.key === 'markets_list_offline' || e.key === 'customers_records_offline' || e.key === 'scanned_sims_offline' || e.key === 'sales_records_offline') {
+                loadSavedCustomers();
+                syncLocalMarkets();
                 await calculateStockFromSims();
+                updateMarketSelect();
                 updateItemSelects();
                 renderModalStockList();
             }
         });
 
+        function syncLocalMarkets() {
+            const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            const localMarketsOffline = JSON.parse(localStorage.getItem('markets_list_offline') || '[]');
+            const merged = new Set([
+                ...(Array.isArray(localConfig.marketList) ? localConfig.marketList : []),
+                ...(Array.isArray(localMarketsOffline) ? localMarketsOffline : []),
+                ...marketList
+            ]);
+            savedCustomersList.forEach(c => { if (c.marketName && c.marketName.trim()) merged.add(c.marketName.trim()); });
+            records.forEach(r => { if (r.marketName && r.marketName.trim()) merged.add(r.marketName.trim()); });
+            marketList = Array.from(merged);
+        }
+
         window.initApp = async function() {
             loadSavedCustomers();
 
-            const localConfig = JSON.parse(localStorage.getItem('app_config'));
+            const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             if (localConfig) {
-                marketList = localConfig.marketList || [];
                 deletedStockItems = localConfig.deletedStockItems || [];
             }
             
@@ -310,19 +349,52 @@
                 records = localRecords;
             }
 
+            syncLocalMarkets();
             await calculateStockFromSims();
             updateMarketSelect();
             updateItemSelects();
+            renderRecords();
 
             try {
                 if (window.db) {
+                    const mergedMarkets = new Set(marketList);
+
                     const configRef = window.doc(window.db, "settings", "app_config");
                     const configSnap = await window.getDoc(configRef);
                     if (configSnap.exists()) {
                         const data = configSnap.data();
-                        marketList = data.marketList || marketList;
+                        if (Array.isArray(data.marketList)) {
+                            data.marketList.forEach(m => { if (m && m.trim()) mergedMarkets.add(m.trim()); });
+                        }
                         deletedStockItems = data.deletedStockItems || deletedStockItems;
                     }
+
+                    const marketsConfigSnap = await window.getDoc(window.doc(window.db, "settings", "markets_config"));
+                    if (marketsConfigSnap.exists()) {
+                        const mData = marketsConfigSnap.data();
+                        if (Array.isArray(mData.marketsList)) {
+                            mData.marketsList.forEach(m => { if (m && m.trim()) mergedMarkets.add(m.trim()); });
+                        }
+                    }
+
+                    // جلب العملاء من السحابة لضمان عمل الاقتراحات دائماً
+                    const custSnap = await window.getDocs(window.collection(window.db, "customers"));
+                    if (!custSnap.empty) {
+                        savedCustomersList = [];
+                        custSnap.forEach(d => {
+                            const cData = d.data();
+                            savedCustomersList.push({ id: d.id, ...cData });
+                            if (cData.marketName && cData.marketName.trim()) {
+                                mergedMarkets.add(cData.marketName.trim());
+                            }
+                        });
+                        localStorage.setItem('customers_records_offline', JSON.stringify(savedCustomersList));
+                    }
+
+                    marketList = Array.from(mergedMarkets);
+                    localStorage.setItem('markets_list_offline', JSON.stringify(marketList));
+                    updateMarketSelect();
+
                     await loadCloudRecords();
                 }
             } catch (e) {
@@ -372,7 +444,6 @@
                 }
             });
 
-            // استبعاد الأصناف التي تم حذفها يدوياً
             deletedStockItems.forEach(delItem => {
                 delete stockInventory[delItem];
             });
@@ -381,35 +452,74 @@
         function loadSavedCustomers() {
             const localCust = JSON.parse(localStorage.getItem('customers_records_offline')) || [];
             savedCustomersList = localCust;
-            
-            const datalist = document.getElementById('customersSuggestions');
-            datalist.innerHTML = savedCustomersList.map(c => `<option value="${c.clientName || ''}">`).join('');
         }
 
-        function onCustomerSelected() {
-            const enteredName = document.getElementById('clientName').value.trim();
-            const matchedCustomer = savedCustomersList.find(c => c.clientName && c.clientName.trim().toLowerCase() === enteredName.toLowerCase());
+        function filterCustomersDropdown() {
+            const inputEl = document.getElementById('clientName');
+            const dropdown = document.getElementById('customersDropdown');
+            const query = (inputEl.value || '').trim().toLowerCase();
 
-            if (matchedCustomer) {
-                if (matchedCustomer.shopName) document.getElementById('shopName').value = matchedCustomer.shopName;
-                if (matchedCustomer.phone) document.getElementById('phone').value = matchedCustomer.phone;
-                if (matchedCustomer.marketName) {
-                    if (!marketList.includes(matchedCustomer.marketName)) {
-                        marketList.push(matchedCustomer.marketName);
-                        saveConfig();
-                    }
-                    updateMarketSelect();
-                    document.getElementById('marketName').value = matchedCustomer.marketName;
-                }
-                if (matchedCustomer.shopImage) {
-                    tempImageBase64 = matchedCustomer.shopImage;
-                }
+            if (!savedCustomersList || savedCustomersList.length === 0) {
+                dropdown.style.display = 'none';
+                return;
             }
+
+            const matched = savedCustomersList.filter(c => {
+                const cName = (c.clientName || '').toLowerCase();
+                const sName = (c.shopName || '').toLowerCase();
+                const mName = (c.marketName || '').toLowerCase();
+                const phone = (c.phone || '');
+                if (!query) return true;
+                return cName.includes(query) || sName.includes(query) || mName.includes(query) || phone.includes(query);
+            });
+
+            if (matched.length === 0) {
+                dropdown.style.display = 'none';
+                return;
+            }
+
+            dropdown.innerHTML = matched.map((c, index) => {
+                const displayClient = (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName : (c.shopName || 'عميل');
+                return `
+                    <div class="customer-option" onclick="selectCustomerFromList('${c.id || index}')">
+                        <div class="customer-option-main">👤 ${displayClient} ${c.shopName ? `— 🏪 ${c.shopName}` : ''}</div>
+                        <div class="customer-option-sub">
+                            ${c.marketName ? `<span>📍 ${c.marketName}</span>` : ''}
+                            ${c.phone ? `<span>📞 ${c.phone}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            dropdown.style.display = 'block';
+        }
+
+        function selectCustomerFromList(idOrIdx) {
+            const c = savedCustomersList.find((item, idx) => String(item.id || idx) === String(idOrIdx));
+            if (!c) return;
+
+            const displayClient = (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName : (c.shopName || '');
+            document.getElementById('clientName').value = displayClient;
+            if (c.shopName) document.getElementById('shopName').value = c.shopName;
+            if (c.phone) document.getElementById('phone').value = c.phone;
+
+            if (c.marketName) {
+                if (!marketList.includes(c.marketName)) {
+                    marketList.push(c.marketName);
+                }
+                updateMarketSelect(c.marketName);
+            }
+            if (c.shopImage) {
+                tempImageBase64 = c.shopImage;
+            }
+
+            document.getElementById('customersDropdown').style.display = 'none';
         }
 
         async function saveConfig() {
             const dataToSave = { marketList, stockInventory, deletedStockItems };
             localStorage.setItem('app_config', JSON.stringify(dataToSave));
+            localStorage.setItem('markets_list_offline', JSON.stringify(marketList));
             try {
                 if (window.db) {
                     const configRef = window.doc(window.db, "settings", "app_config");
@@ -433,77 +543,13 @@
             }).join('');
         }
 
-        function updateMarketSelect(filterText = '') {
+        function updateMarketSelect(selectedVal = '') {
             const select = document.getElementById('marketName');
+            const currentVal = selectedVal || select.value || '';
             const sortedMarkets = [...marketList].sort((a, b) => a.localeCompare(b, 'ar'));
-            const filtered = sortedMarkets.filter(m => m.toLowerCase().includes(filterText.toLowerCase()));
 
-            select.innerHTML = `<option value="">-- اختر العنوان --</option>` + 
-                filtered.map(m => `<option value="${m}">${m}</option>`).join('');
-        }
-
-        function filterMarketOptions() {
-            const query = document.getElementById('marketSearchInput').value;
-            updateMarketSelect(query);
-        }
-
-        async function addNewMarket() {
-            const newMarketName = prompt('أدخل اسم العنوان الجديد:');
-            if (newMarketName && newMarketName.trim() !== '') {
-                const trimmed = newMarketName.trim();
-                if (!marketList.includes(trimmed)) {
-                    marketList.push(trimmed);
-                    await saveConfig();
-                    document.getElementById('marketSearchInput').value = '';
-                    updateMarketSelect();
-                    document.getElementById('marketName').value = trimmed;
-                }
-            }
-        }
-
-        function openMarketManagerModal() {
-            renderModalMarketList();
-            document.getElementById('marketManagerModal').style.display = 'flex';
-        }
-
-        function closeMarketManagerModal() {
-            document.getElementById('marketManagerModal').style.display = 'none';
-        }
-
-        function renderModalMarketList() {
-            const container = document.getElementById('modalMarketList');
-            if (marketList.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#6b7280;">لا توجد عناوين مضافة بعد.</p>';
-                return;
-            }
-            const sortedMarkets = [...marketList].sort((a, b) => a.localeCompare(b, 'ar'));
-            container.innerHTML = sortedMarkets.map(market => `
-                <div class="stock-row">
-                    <div class="stock-info">📍 <strong>${market}</strong></div>
-                    <div style="display:flex; gap:5px;">
-                        <button type="button" class="btn btn-warning" onclick="editMarketName('${market}')" style="padding:4px 8px; font-size:0.75rem;">✏️</button>
-                        <button type="button" class="btn btn-danger" onclick="deleteMarketName('${market}')" style="padding:4px 8px; font-size:0.75rem;">🗑️ حذف</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function editMarketName(oldName) {
-            const newName = prompt(`تعديل اسم العنوان (${oldName}):`, oldName);
-            if (!newName || !newName.trim()) return;
-            marketList = marketList.map(m => m === oldName ? newName.trim() : m);
-            await saveConfig();
-            updateMarketSelect();
-            renderModalMarketList();
-        }
-
-        async function deleteMarketName(marketName) {
-            if (confirm(`هل أنت متأكد من حذف العنوان (${marketName})؟`)) {
-                marketList = marketList.filter(m => m !== marketName);
-                await saveConfig();
-                updateMarketSelect();
-                renderModalMarketList();
-            }
+            select.innerHTML = `<option value="">-- اختر العنوان / السوق --</option>` + 
+                sortedMarkets.map(m => `<option value="${m}" ${m === currentVal ? 'selected' : ''}>${m}</option>`).join('');
         }
 
         function openStockModal() {
@@ -650,9 +696,14 @@
                 const querySnapshot = await window.getDocs(window.collection(window.db, "sales_records"));
                 records = [];
                 querySnapshot.forEach((docSnap) => {
-                    records.push({ firebaseId: docSnap.id, ...docSnap.data() });
+                    const data = docSnap.data();
+                    records.push({ firebaseId: docSnap.id, ...data });
+                    if (data.marketName && data.marketName.trim() && !marketList.includes(data.marketName.trim())) {
+                        marketList.push(data.marketName.trim());
+                    }
                 });
                 localStorage.setItem('sales_records_offline', JSON.stringify(records));
+                updateMarketSelect();
                 await calculateStockFromSims();
                 updateItemSelects();
                 renderRecords();
@@ -668,7 +719,7 @@
 
             const marketVal = document.getElementById('marketName').value;
             if (!marketVal) {
-                alert('يرجى اختيار العنوان.');
+                alert('يرجى اختيار العنوان / السوق.');
                 return;
             }
 
@@ -768,8 +819,7 @@
             document.getElementById('formTitle').innerText = '+ تسجيل فاتورة / حركة بيع جديدة';
             document.getElementById('submitBtn').innerText = 'حفظ الفاتورة ومزامنتها';
             document.getElementById('cancelEditBtn').style.display = 'none';
-            document.getElementById('marketSearchInput').value = '';
-            updateMarketSelect();
+            updateMarketSelect('');
             currentCart = [];
             tempImageBase64 = '';
             renderCart();
@@ -784,7 +834,10 @@
             document.getElementById('editRecordId').value = r.firebaseId;
             document.getElementById('clientName').value = r.clientName || '';
             document.getElementById('shopName').value = r.shopName || '';
-            document.getElementById('marketName').value = r.marketName || '';
+            if (r.marketName && !marketList.includes(r.marketName)) {
+                marketList.push(r.marketName);
+            }
+            updateMarketSelect(r.marketName || '');
             document.getElementById('phone').value = r.phone || '';
             document.getElementById('paid').value = r.paid || '';
             document.getElementById('reminderDate').value = r.reminderDate || '';

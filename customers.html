@@ -21,7 +21,6 @@
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
         .top-bar h1 { font-size: 1.25rem; color: var(--primary); }
         
-        /* بطاقة الإحصائية العلوية لعدد العملاء */
         .stat-badge-box { background: var(--card); border-top: 4px solid var(--primary); padding: 10px 18px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); text-align: center; min-width: 130px; }
         .stat-title { font-size: 0.75rem; color: #6b7280; margin-bottom: 4px; }
         .stat-value { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
@@ -38,8 +37,26 @@
 
         .form-group { margin-bottom: 12px; }
         label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: #374151; }
-        input { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; outline: none; background: #fff; }
-        input:focus { border-color: var(--primary-light); }
+        input, select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; outline: none; background: #fff; }
+        input:focus, select:focus { border-color: var(--primary-light); }
+
+        .icon-btn {
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: #fff;
+        }
+        .icon-btn-add { background-color: var(--success); }
+        .icon-btn-del { background-color: var(--danger); }
 
         #phone { text-align: right; direction: rtl; }
 
@@ -72,7 +89,7 @@
     <!-- ربط Firebase السحابي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
@@ -93,13 +110,14 @@
         window.doc = doc;
         window.deleteDoc = deleteDoc;
         window.updateDoc = updateDoc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
 
         if (window.initCustomersApp) { window.initCustomersApp(); }
     </script>
 </head>
 <body>
 
-    <!-- الشريط العلوي وبطاقة إحصائية عدد العملاء -->
     <div class="top-bar">
         <h1>🏪 دليل وإدارة العملاء</h1>
         <div class="stat-badge-box">
@@ -108,7 +126,6 @@
         </div>
     </div>
 
-    <!-- نموذج إضافة / تعديل عميل -->
     <div class="card" id="customerFormCard">
         <h2 id="formTitle">+ إضافة عميل جديد</h2>
         <form id="customerForm" onsubmit="saveCustomer(event)" novalidate>
@@ -138,9 +155,16 @@
                 </div>
             </div>
 
+            <!-- خانة السوق: قائمة منسدلة + زر (+) للإضافة + زر (✕) للحذف -->
             <div class="form-group">
                 <label>السوق</label>
-                <input type="text" id="marketName" placeholder="أدخل اسم السوق أو المنطقة">
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <select id="marketSelect" style="flex: 1;">
+                        <option value="">-- اختر السوق أو المنطقة --</option>
+                    </select>
+                    <button type="button" class="icon-btn icon-btn-add" onclick="addNewMarketPrompt()" title="إضافة سوق جديد">+</button>
+                    <button type="button" class="icon-btn icon-btn-del" onclick="deleteSelectedMarket()" title="حذف السوق المحدد">✕</button>
+                </div>
             </div>
 
             <div class="form-group">
@@ -163,7 +187,6 @@
         </form>
     </div>
 
-    <!-- سجل العملاء المحفوظين -->
     <div class="card">
         <h2>📋 قائمة العملاء المسجلين</h2>
         <input type="text" id="searchInput" class="search-bar" placeholder="🔍 ابحث باسم العميل، المحل، السوق، أو رقم الهاتف..." oninput="renderCustomers()">
@@ -172,32 +195,104 @@
         </div>
     </div>
 
-    <!-- نافذة عرض صورة المحل بحجم كبير -->
     <div class="modal-overlay" id="imageModal" onclick="this.style.display='none'">
         <img id="modalFullImage" class="modal-img" src="" alt="صورة المحل">
     </div>
 
     <script>
         let customers = [];
+        let marketsList = [];
         let tempImageBase64 = '';
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
 
-        window.initCustomersApp = async function() {
-            const localData = JSON.parse(localStorage.getItem('customers_records_offline'));
-            if (Array.isArray(localData)) {
-                customers = localData;
+        function loadLocalMarketsAndCustomers() {
+            const appConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            const localMarkets = JSON.parse(localStorage.getItem('markets_list_offline') || '[]');
+            const localCust = JSON.parse(localStorage.getItem('customers_records_offline') || '[]');
+            const localSales = JSON.parse(localStorage.getItem('sales_records_offline') || '[]');
+
+            if (Array.isArray(localCust)) customers = localCust;
+
+            const merged = new Set([
+                ...(Array.isArray(appConfig.marketList) ? appConfig.marketList : []),
+                ...(Array.isArray(localMarkets) ? localMarkets : [])
+            ]);
+
+            customers.forEach(c => { if (c.marketName && c.marketName.trim()) merged.add(c.marketName.trim()); });
+            if (Array.isArray(localSales)) {
+                localSales.forEach(r => { if (r.marketName && r.marketName.trim()) merged.add(r.marketName.trim()); });
             }
+
+            marketsList = Array.from(merged);
+        }
+
+        async function syncMarketsToStorageAndCloud() {
+            localStorage.setItem('markets_list_offline', JSON.stringify(marketsList));
+            const appConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            appConfig.marketList = marketsList;
+            localStorage.setItem('app_config', JSON.stringify(appConfig));
+
+            try {
+                if (window.db) {
+                    await window.setDoc(window.doc(window.db, "settings", "app_config"), { marketList: marketsList }, { merge: true });
+                    await window.setDoc(window.doc(window.db, "settings", "markets_config"), { marketsList: marketsList }, { merge: true });
+                }
+            } catch (e) {
+                console.error("خطأ في مزامنة الأسواق:", e);
+            }
+        }
+
+        window.initCustomersApp = async function() {
+            loadLocalMarketsAndCustomers();
+            renderMarketsDropdown();
             renderCustomers();
-            await loadCloudCustomers();
+            await loadCloudData();
         };
 
         window.addEventListener('DOMContentLoaded', () => {
-            const localData = JSON.parse(localStorage.getItem('customers_records_offline'));
-            if (Array.isArray(localData)) {
-                customers = localData;
-            }
+            loadLocalMarketsAndCustomers();
+            renderMarketsDropdown();
             renderCustomers();
         });
+
+        function renderMarketsDropdown(selectedVal = '') {
+            const selectEl = document.getElementById('marketSelect');
+            if (!selectEl) return;
+
+            const currentVal = selectedVal || selectEl.value || '';
+            const sorted = [...marketsList].sort((a, b) => a.localeCompare(b, 'ar'));
+            let html = `<option value="">-- اختر السوق أو المنطقة --</option>`;
+            sorted.forEach(m => {
+                html += `<option value="${m}" ${m === currentVal ? 'selected' : ''}>${m}</option>`;
+            });
+            selectEl.innerHTML = html;
+        }
+
+        async function addNewMarketPrompt() {
+            const newMarket = prompt('✨ أدخل اسم السوق أو المنطقة الجديدة:');
+            if (!newMarket || !newMarket.trim()) return;
+
+            const trimmed = newMarket.trim();
+            if (!marketsList.includes(trimmed)) {
+                marketsList.push(trimmed);
+                await syncMarketsToStorageAndCloud();
+            }
+            renderMarketsDropdown(trimmed);
+        }
+
+        async function deleteSelectedMarket() {
+            const selectEl = document.getElementById('marketSelect');
+            const selected = selectEl.value;
+            if (!selected) {
+                alert('⚠️ يرجى اختيار السوق من القائمة أولاً لحذفه.');
+                return;
+            }
+            if (confirm(`هل أنت متأكد من حذف السوق (${selected}) من القائمة؟`)) {
+                marketsList = marketsList.filter(m => m !== selected);
+                await syncMarketsToStorageAndCloud();
+                renderMarketsDropdown('');
+            }
+        }
 
         function handleImageUpload(event) {
             const file = event.target.files[0];
@@ -274,24 +369,54 @@
             );
         }
 
-        async function loadCloudCustomers() {
+        async function loadCloudData() {
             try {
                 if (!window.db) {
                     renderCustomers();
                     return;
                 }
+
+                const mergedMarkets = new Set(marketsList);
+
+                const appConfigSnap = await window.getDoc(window.doc(window.db, "settings", "app_config"));
+                if (appConfigSnap.exists()) {
+                    const cData = appConfigSnap.data();
+                    if (Array.isArray(cData.marketList)) {
+                        cData.marketList.forEach(m => { if (m && m.trim()) mergedMarkets.add(m.trim()); });
+                    }
+                }
+
+                const marketSnap = await window.getDoc(window.doc(window.db, "settings", "markets_config"));
+                if (marketSnap.exists()) {
+                    const mData = marketSnap.data();
+                    if (Array.isArray(mData.marketsList)) {
+                        mData.marketsList.forEach(m => { if (m && m.trim()) mergedMarkets.add(m.trim()); });
+                    }
+                }
+
                 const querySnapshot = await window.getDocs(window.collection(window.db, "customers"));
                 const cloudList = [];
                 querySnapshot.forEach((docSnap) => {
-                    cloudList.push({ id: docSnap.id, ...docSnap.data() });
+                    const data = docSnap.data();
+                    cloudList.push({ id: docSnap.id, ...data });
+                    if (data.marketName && data.marketName.trim()) {
+                        mergedMarkets.add(data.marketName.trim());
+                    }
                 });
+
+                marketsList = Array.from(mergedMarkets);
+                localStorage.setItem('markets_list_offline', JSON.stringify(marketsList));
+                const appConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+                appConfig.marketList = marketsList;
+                localStorage.setItem('app_config', JSON.stringify(appConfig));
 
                 cloudList.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 customers = cloudList;
                 localStorage.setItem('customers_records_offline', JSON.stringify(customers));
             } catch (error) {
-                console.error("خطأ أثناء جلب العملاء من السحابة:", error);
+                console.error("خطأ أثناء جلب البيانات من السحابة:", error);
             } finally {
+                renderMarketsDropdown();
                 renderCustomers();
             }
         }
@@ -302,7 +427,7 @@
             const editId = document.getElementById('editCustomerId').value;
             const clientName = document.getElementById('clientName').value.trim();
             const shopName = document.getElementById('shopName').value.trim();
-            const marketName = document.getElementById('marketName').value.trim();
+            const marketName = document.getElementById('marketSelect').value.trim();
             const phone = document.getElementById('phone').value.trim();
             const location = document.getElementById('locationInput').value.trim();
 
@@ -316,7 +441,7 @@
             submitBtn.textContent = '⏳ جاري الحفظ...';
 
             const customerData = {
-                clientName: clientName || 'بدون اسم',
+                clientName: clientName || shopName || 'بدون اسم',
                 shopName: shopName || '',
                 marketName: marketName || '',
                 phone: phone || '',
@@ -442,7 +567,12 @@
             document.getElementById('editCustomerId').value = c.id;
             document.getElementById('clientName').value = c.clientName || '';
             document.getElementById('shopName').value = c.shopName || '';
-            document.getElementById('marketName').value = c.marketName || '';
+            
+            if (c.marketName && !marketsList.includes(c.marketName)) {
+                marketsList.push(c.marketName);
+            }
+            renderMarketsDropdown(c.marketName || '');
+            
             document.getElementById('phone').value = c.phone || '';
             document.getElementById('locationInput').value = c.location || '';
 
@@ -475,6 +605,7 @@
         function resetForm() {
             document.getElementById('customerForm').reset();
             document.getElementById('editCustomerId').value = '';
+            renderMarketsDropdown('');
             clearImage();
             document.getElementById('formTitle').textContent = '+ إضافة عميل جديد';
             document.getElementById('submitBtn').textContent = '💾 حفظ بيانات العميل';

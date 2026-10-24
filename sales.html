@@ -86,7 +86,6 @@
             text-align: center;
         }
 
-        /* بطاقة "مباع" التفصيلية لكل محل والمدة */
         .sold-company-card {
             background: #eff6ff;
             border: 1.5px solid #bfdbfe;
@@ -137,7 +136,6 @@
             border-radius: 6px;
         }
 
-        /* جدول ملخص المحلات والمدة */
         .table-card {
             margin-top: 12px;
             border: 1px solid #e2e8f0;
@@ -160,7 +158,6 @@
         tr:last-child td { border-bottom: none; }
     </style>
 
-    <!-- ربط Firebase السحابي بنفس قاعدة البيانات -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -208,13 +205,11 @@
             </div>
         </div>
 
-        <!-- البند الجديد: مباع (حسب فواتير البيع لكل محل والمدة) -->
         <div class="sold-company-card">
             <div class="sold-header">📦 مباع (حسب فواتير البيع لكل محل والمدة)</div>
             <div class="company-grid" id="soldByCompanyGrid"></div>
         </div>
 
-        <!-- جدول ملخص المحلات والمدة -->
         <div class="table-card">
             <div class="table-title">📊 ملخص المحلات والمدة</div>
             <div class="table-wrap">
@@ -238,69 +233,85 @@
     <script>
         let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
         let durationsList = ['30', '60'];
-        let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0, 'Redbull': 0 };
         let simsList = [];
         let invoicesList = [];
 
-        function normalizeCompanyName(rawName) {
-            if (!rawName) return '';
-            const s = String(rawName).trim();
-            const lower = s.toLowerCase();
-            if (lower.includes('mobily') || lower.includes('موبايلي')) return 'Mobily';
-            if (lower.includes('stc') || lower.includes('اس تي سي') || lower.includes('إس تي سي') || lower.includes('سوا')) return 'STC';
-            if (lower.includes('zain') || lower.includes('زين')) return 'Zain';
-            if (lower.includes('redbull') || lower.includes('red bull') || lower.includes('ريد بل') || lower.includes('ريدبل')) return 'Redbull';
-            
-            for (const cat of categoriesList) {
-                if (lower === cat.toLowerCase() || lower.includes(cat.toLowerCase())) return cat;
+        // استخراج اسم الشركة والمدة بدقة من النص مثل "Mobily (30)" أو "Mobily (60)"
+        function parseCompanyAndDuration(rawStr, explicitDur) {
+            const s = String(rawStr || '').trim();
+            let dur = explicitDur ? String(explicitDur).trim() : '';
+
+            // البحث عن رقم المدة داخل الأقواس مثل (30) أو (60)
+            const parenMatch = s.match(/\((\d+)\)/);
+            if (!dur && parenMatch) {
+                dur = parenMatch[1];
+            } else if (!dur) {
+                const numMatch = s.match(/(30|60|90|180|365)/);
+                if (numMatch) dur = numMatch[1];
             }
-            return s;
+
+            const cleanName = s.replace(/\(\d+\)/g, '').replace(/(30|60|90)/g, '').trim();
+            const lower = cleanName.toLowerCase();
+
+            let company = cleanName || 'Mobily';
+            if (lower.includes('mobily') || lower.includes('موبايلي')) company = 'Mobily';
+            else if (lower.includes('stc') || lower.includes('اس تي سي') || lower.includes('إس تي سي') || lower.includes('سوا')) company = 'STC';
+            else if (lower.includes('zain') || lower.includes('زين')) company = 'Zain';
+            else if (lower.includes('redbull') || lower.includes('red bull') || lower.includes('ريد بل') || lower.includes('ريدبل')) company = 'Redbull';
+            else {
+                for (const cat of categoriesList) {
+                    if (lower === cat.toLowerCase() || lower.includes(cat.toLowerCase())) {
+                        company = cat;
+                        break;
+                    }
+                }
+            }
+
+            if (!dur || dur === '-' || dur === 'غير محدد') {
+                dur = (company === 'Redbull') ? '30' : '60';
+            }
+
+            return { company, duration: dur };
         }
 
         function extractInvoiceItems(inv) {
             const extracted = [];
 
-            // 1. مصفوفة cartItems
             if (Array.isArray(inv.cartItems) && inv.cartItems.length > 0) {
                 inv.cartItems.forEach(it => {
-                    const rawCat = it.item || it.category || it.company || it.name || it.type || '';
-                    const company = normalizeCompanyName(rawCat);
-                    const duration = String(it.duration || it.dur || inv.duration || '60');
+                    const rawCat = it.item || it.category || it.company || it.name || '';
+                    const { company, duration } = parseCompanyAndDuration(rawCat, it.duration || it.dur);
                     const qty = parseFloat(it.qty ?? it.quantity ?? it.count ?? 0) || 0;
                     const price = parseFloat(it.price ?? 0) || 0;
                     const total = parseFloat(it.total ?? (qty * price) ?? 0) || 0;
                     if (company || qty > 0) {
-                        extracted.push({ company: company || 'أخرى', duration, rawCat: rawCat || company, qty, total });
+                        extracted.push({ company, duration, qty, total });
                     }
                 });
                 return extracted;
             }
 
-            // 2. مصفوفة items أو products
             const altArray = inv.items || inv.products;
             if (Array.isArray(altArray) && altArray.length > 0) {
                 altArray.forEach(it => {
                     const rawCat = it.item || it.category || it.company || it.name || '';
-                    const company = normalizeCompanyName(rawCat);
-                    const duration = String(it.duration || it.dur || inv.duration || '60');
+                    const { company, duration } = parseCompanyAndDuration(rawCat, it.duration || it.dur);
                     const qty = parseFloat(it.qty ?? it.quantity ?? it.count ?? 0) || 0;
                     const price = parseFloat(it.price ?? 0) || 0;
                     const total = parseFloat(it.total ?? (qty * price) ?? 0) || 0;
                     if (company || qty > 0) {
-                        extracted.push({ company: company || 'أخرى', duration, rawCat: rawCat || company, qty, total });
+                        extracted.push({ company, duration, qty, total });
                     }
                 });
                 return extracted;
             }
 
-            // 3. حقول مباشرة في الفاتورة
             const rawCat = inv.item || inv.category || inv.company || inv.simType || '';
-            const company = normalizeCompanyName(rawCat);
-            const duration = String(inv.duration || '60');
+            const { company, duration } = parseCompanyAndDuration(rawCat, inv.duration);
             const qty = parseFloat(inv.qty ?? inv.quantity ?? inv.count ?? inv.totalQty ?? 0) || 0;
             const total = parseFloat(inv.total ?? inv.totalAmount ?? 0) || 0;
             if (company || qty > 0) {
-                extracted.push({ company: company || 'أخرى', duration, rawCat: rawCat || company, qty, total });
+                extracted.push({ company, duration, qty, total });
             }
 
             return extracted;
@@ -329,55 +340,52 @@
             const selectedCat = document.getElementById('itemFilter').value;
             const selectedDate = document.getElementById('dateFilter').value;
 
-            // هيكل لتخزين البيانات مفصولة حسب (الشركة + المدة)
-            // مفتاح الكائن سيكون مثلاً "Mobily_60" أو "STC_30"
-            const soldMap = {};
-            const revenueMap = {};
-            const scannedMap = {};
+            const allScannedMap = {};
+            const allSoldMap = {};
+            const filteredScannedMap = {};
+            const filteredSoldMap = {};
+            const filteredRevenueMap = {};
 
             categoriesList.forEach(c => {
                 durationsList.forEach(d => {
                     const key = `${c}_${d}`;
-                    soldMap[key] = 0;
-                    revenueMap[key] = 0;
-                    scannedMap[key] = 0;
+                    allScannedMap[key] = 0;
+                    allSoldMap[key] = 0;
+                    filteredScannedMap[key] = 0;
+                    filteredSoldMap[key] = 0;
+                    filteredRevenueMap[key] = 0;
                 });
             });
 
-            // حساب الشرائح الممسوحة مفصولة حسب الشركة والمدة
+            // 1. حساب الشرائح الممسوحة لكل شركة ومدة
             simsList.forEach(sim => {
+                const { company, duration } = parseCompanyAndDuration(sim.category || sim.company || '', sim.duration);
+                const key = `${company}_${duration}`;
+                allScannedMap[key] = (allScannedMap[key] || 0) + 1;
+
                 const simDate = (sim.date || '').slice(0, 10);
-                if (selectedDate && simDate !== selectedDate) return;
-                const comp = normalizeCompanyName(sim.category || sim.company || '');
-                const dur = String(sim.duration || '60');
-                if (comp) {
-                    const key = `${comp}_${dur}`;
-                    if (scannedMap[key] === undefined) scannedMap[key] = 0;
-                    scannedMap[key]++;
+                if (!selectedDate || simDate === selectedDate) {
+                    filteredScannedMap[key] = (filteredScannedMap[key] || 0) + 1;
                 }
             });
 
-            // حساب الفواتير المباعة مفصولة حسب الشركة والمدة
+            // 2. حساب المبيعات من الفواتير لكل شركة ومدة (يقرأ "Mobily (30)" و "Mobily (60)" بشكل منفصل تماماً)
             invoicesList.forEach(inv => {
-                const invDate = (inv.date || '').slice(0, 10);
-                if (selectedDate && invDate !== selectedDate) return;
-
                 const items = extractInvoiceItems(inv);
-                items.forEach(it => {
-                    const comp = it.company;
-                    const dur = it.duration;
-                    const key = `${comp}_${dur}`;
+                const invDate = (inv.date || '').slice(0, 10);
+                const matchesDate = !selectedDate || invDate === selectedDate;
 
-                    if (soldMap[key] === undefined) {
-                        soldMap[key] = 0;
-                        revenueMap[key] = 0;
+                items.forEach(it => {
+                    const key = `${it.company}_${it.duration}`;
+                    allSoldMap[key] = (allSoldMap[key] || 0) + it.qty;
+
+                    if (matchesDate) {
+                        filteredSoldMap[key] = (filteredSoldMap[key] || 0) + it.qty;
+                        filteredRevenueMap[key] = (filteredRevenueMap[key] || 0) + it.total;
                     }
-                    soldMap[key] += it.qty;
-                    revenueMap[key] += it.total;
                 });
             });
 
-            // توليد قائمة الأزواج (شركة + مدة) المعروضة
             let activeKeys = [];
             categoriesList.forEach(c => {
                 durationsList.forEach(d => {
@@ -385,15 +393,14 @@
                 });
             });
 
-            // تطبيق الفلتر إذا تم اختيار صنف معين
             if (selectedCat !== 'ALL') {
                 activeKeys = activeKeys.filter(item => item.company === selectedCat);
             }
 
-            // 1. تحديث بطاقة "مباع" لكل محل والمدة
+            // تحديث بطاقة "مباع"
             const grid = document.getElementById('soldByCompanyGrid');
             grid.innerHTML = activeKeys.map(item => {
-                const soldQty = soldMap[item.key] || 0;
+                const soldQty = filteredSoldMap[item.key] || 0;
                 return `
                     <div class="company-item">
                         <span class="company-name">🔹 ${item.company} (${item.duration})</span>
@@ -402,19 +409,18 @@
                 `;
             }).join('');
 
-            // 2. تحديث جدول ملخص المحلات والمدة
+            // تحديث جدول ملخص المحلات والمدة
             const summaryBody = document.getElementById('companySummaryBody');
             summaryBody.innerHTML = activeKeys.map(item => {
-                // افتراض توزيع الرصيد المتاح أو عرضه إجمالياً
-                const stock = parseFloat(stockInventory[item.company] ?? 0) / durationsList.length;
-                const scanned = scannedMap[item.key] || 0;
-                const sold = soldMap[item.key] || 0;
-                const rev = revenueMap[item.key] || 0;
+                const availableStock = Math.max(0, (allScannedMap[item.key] || 0) - (allSoldMap[item.key] || 0));
+                const scanned = filteredScannedMap[item.key] || 0;
+                const sold = filteredSoldMap[item.key] || 0;
+                const rev = filteredRevenueMap[item.key] || 0;
                 return `
                     <tr>
                         <td style="font-weight:800; color:#1e3a8a;">${item.company}</td>
                         <td style="font-weight:700; color:#b45309;">${item.duration}</td>
-                        <td style="font-weight:700;">${stock > 0 ? stock.toFixed(0) : 0}</td>
+                        <td style="font-weight:700;">${availableStock}</td>
                         <td>${scanned}</td>
                         <td style="font-weight:800; color:#2563eb;">${sold} حبة</td>
                         <td style="font-weight:700; color:#15803d;">${rev.toLocaleString('en-US')}</td>
@@ -428,22 +434,17 @@
             if (localConfig) {
                 categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
                 durationsList = localConfig.durationsList || durationsList;
-                stockInventory = localConfig.stockInventory || stockInventory;
             }
 
             const localSims = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
-            if (Array.isArray(localSims)) {
-                simsList = localSims;
-            }
+            if (Array.isArray(localSims)) simsList = localSims;
 
             const localInvoices = JSON.parse(
                 localStorage.getItem('sales_records_offline') ||
                 localStorage.getItem('sales_records') ||
                 '[]'
             );
-            if (Array.isArray(localInvoices)) {
-                invoicesList = localInvoices;
-            }
+            if (Array.isArray(localInvoices)) invoicesList = localInvoices;
 
             populateFilterDropdown();
             renderDashboard();
@@ -455,12 +456,6 @@
                         const cData = configSnap.data();
                         categoriesList = cData.categoriesList || cData.customItems || categoriesList;
                         durationsList = cData.durationsList || durationsList;
-                        stockInventory = cData.stockInventory || stockInventory;
-                        localStorage.setItem('app_config', JSON.stringify({
-                            categoriesList,
-                            durationsList,
-                            stockInventory
-                        }));
                     }
 
                     const simsSnap = await window.getDocs(window.collection(window.db, "scanned_sims"));
