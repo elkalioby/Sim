@@ -3,40 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إحصائيات المبيعات والمخزون</title>
+    <title>لوحة المبيعات وإحصائيات المخزون</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 950px; margin: 0 auto; padding: 12px; background: #f8fafc; color: #1e293b; }
-        .card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid #e2e8f0; }
-        h3, h4 { margin-top: 0; color: #1e3a8a; }
-        
-        .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
-        .filters select, .filters input { flex: 1; min-width: 140px; padding: 9px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: bold; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: #f8fafc; color: #1e293b; padding: 14px; max-width: 900px; margin: 0 auto; }
 
-        /* شبكة البطاقات المنظمة */
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
-        .kpi-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center; }
-        .kpi-title { font-size: 12px; color: #64748b; font-weight: bold; margin-bottom: 6px; }
-        .kpi-value { font-size: 20px; font-weight: bold; color: #0f172a; }
-        .kpi-box.blue { background: #eff6ff; border-color: #bfdbfe; }
-        .kpi-box.blue .kpi-value { color: #1d4ed8; }
-        .kpi-box.green { background: #f0fdf4; border-color: #bbf7d0; }
-        .kpi-box.green .kpi-value { color: #15803d; }
-        .kpi-box.red { background: #fef2f2; border-color: #fecaca; }
-        .kpi-box.red .kpi-value { color: #b91c1c; }
+        .main-card {
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            padding: 18px 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        }
 
-        /* بطاقات الأصناف/الخيارات المضافة */
-        .items-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-        .item-card { background: #fff; border: 1px solid #cbd5e1; border-right: 5px solid #2563eb; border-radius: 10px; padding: 12px; }
-        .item-name { font-size: 15px; font-weight: bold; color: #1e3a8a; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .item-stat-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px dashed #f1f5f9; }
-        .item-stat-row:last-child { border-bottom: none; }
+        .page-title {
+            text-align: center;
+            color: #1e3a8a;
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
 
+        .filter-box {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        select, input[type="date"] {
+            width: 100%;
+            padding: 11px 12px;
+            border-radius: 10px;
+            border: 1.5px solid #cbd5e1;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #0f172a;
+            background: #fff;
+            outline: none;
+        }
+        select:focus, input[type="date"]:focus {
+            border-color: #2563eb;
+        }
+
+        .date-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+        .date-row input[type="date"] {
+            flex: 1;
+            text-align: center;
+        }
+        .btn-reset {
+            background: #64748b;
+            color: #ffffff;
+            border: none;
+            padding: 11px 18px;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-reset:hover { background: #475569; }
+
+        /* البطاقات الإحصائية */
+        .stat-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px 14px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        .stat-card.blue-card {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+        .stat-label {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .stat-card.blue-card .stat-value {
+            color: #1d4ed8;
+        }
+
+        /* بطاقة "مباع" التفصيلية لكل شركة */
+        .sold-company-card {
+            background: #eff6ff;
+            border: 1.5px solid #bfdbfe;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .sold-header {
+            text-align: center;
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #1e3a8a;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dbeafe;
+        }
+        .company-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+        }
+        .company-item {
+            background: #ffffff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .company-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #334155;
+        }
+        .company-count {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #2563eb;
+        }
+
+        /* جدول تفاصيل الفواتير */
+        .table-card {
+            margin-top: 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .table-title {
+            background: #f1f5f9;
+            padding: 10px 14px;
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: #1e293b;
+            border-bottom: 1px solid #e2e8f0;
+        }
         .table-wrap { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
-        th, td { border: 1px solid #e2e8f0; padding: 10px 8px; text-align: center; white-space: nowrap; }
-        th { background: #1e293b; color: white; }
-        tr:nth-child(even) { background: #f8fafc; }
-        .badge { background: #dbeafe; color: #1e3a8a; padding: 3px 10px; border-radius: 8px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { border-bottom: 1px solid #e2e8f0; padding: 10px 8px; text-align: center; white-space: nowrap; }
+        th { background: #1e293b; color: #fff; font-weight: 700; }
+        tr:last-child td { border-bottom: none; }
+        .badge-cat { background: #dbeafe; color: #1e3a8a; padding: 3px 8px; border-radius: 6px; font-weight: 700; }
     </style>
 
     <!-- ربط Firebase السحابي بنفس قاعدة البيانات -->
@@ -62,257 +196,292 @@
         window.doc = doc;
         window.getDoc = getDoc;
 
-        if (window.initSalesApp) { window.initSalesApp(); }
+        if (window.initSalesDashboard) { window.initSalesDashboard(); }
     </script>
 </head>
 <body>
 
-    <h3 style="text-align:center; margin-bottom:14px;">📊 لوحة المبيعات وإحصائيات المخزون</h3>
+    <div class="main-card">
+        <div class="page-title">
+            <span>📊</span>
+            <span>لوحة المبيعات وإحصائيات المخزون</span>
+        </div>
 
-    <!-- فلاتر الإحصائيات (مربع الشهر فقط) -->
-    <div class="card">
-        <div class="filters">
-            <select id="filterItem" onchange="renderDashboard()">
+        <div class="filter-box">
+            <select id="itemFilter" onchange="renderDashboard()">
                 <option value="ALL">📦 كل الأصناف / الخيارات</option>
             </select>
-            <!-- مربع الشهر فقط -->
-            <input type="month" id="filterMonth" onchange="renderDashboard()" title="فلترة بالشهر">
-            <button onclick="resetFilters()" style="padding:9px 14px; background:#64748b; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">🔄 عرض الكل</button>
+
+            <div class="date-row">
+                <input type="date" id="dateFilter" onchange="renderDashboard()">
+                <button class="btn-reset" onclick="resetFilters()">
+                    <span>🔄</span>
+                    <span>عرض الكل</span>
+                </button>
+            </div>
         </div>
 
-        <!-- ملخص المبيعات والمخزون العام -->
-        <div class="kpi-grid">
-            <div class="kpi-box blue">
-                <div class="kpi-title">إجمالي رصيد المخزون المتاح</div>
-                <div class="kpi-value" id="kpiTotalStock">0</div>
-            </div>
-            <div class="kpi-box">
-                <div class="kpi-title">إجمالي الشرائح الممسوحة</div>
-                <div class="kpi-value" id="kpiTotalScanned">0</div>
-            </div>
-            <div class="kpi-box">
-                <div class="kpi-title">عدد الفواتير المسجلة</div>
-                <div class="kpi-value" id="kpiInvoicesCount">0</div>
-            </div>
-            <div class="kpi-box blue">
-                <div class="kpi-title">إجمالي الكمية المباعة</div>
-                <div class="kpi-value" id="kpiSoldQty">0</div>
-            </div>
-            <div class="kpi-box green">
-                <div class="kpi-title">إجمالي قيمة المبيعات</div>
-                <div class="kpi-value" id="kpiTotalSales">0</div>
-            </div>
-            <div class="kpi-box red">
-                <div class="kpi-title">إجمالي المديونيات المتبقية</div>
-                <div class="kpi-value" id="kpiTotalDebt">0</div>
-            </div>
+        <!-- البند الجديد: مباع (عدد الحبات المباعة من كل شركة بناءً على فواتير البيع) -->
+        <!-- تم وضعه مكان إجمالي رصيد المخزون المتاح وإجمالي الشرائح الممسوحة -->
+        <div class="sold-company-card">
+            <div class="sold-header">📦 مباع (حسب فواتير البيع لكل شركة)</div>
+            <div class="company-grid" id="soldByCompanyGrid"></div>
         </div>
-    </div>
 
-    <!-- بطاقات تفصيلية لكل خيار/شركة مضافة في الباركود -->
-    <div class="card">
-        <h4>📱 أرصدة وإحصائيات الأصناف (تتحدث تلقائياً مع صفحة الباركود)</h4>
-        <div class="items-grid" id="itemsCardsGrid"></div>
-    </div>
+        <!-- عدد الفواتير المسجلة -->
+        <div class="stat-card">
+            <div class="stat-label">عدد الفواتير المسجلة</div>
+            <div class="stat-value" id="totalInvoicesCount">0</div>
+        </div>
 
-    <!-- جدول تحليلي منظم لكل صنف -->
-    <div class="card">
-        <h4>📋 جدول مقارنة الأصناف التفصيلي</h4>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>الصنف / الخيار</th>
-                        <th>الممسوح بالباركود</th>
-                        <th>الرصيد المتاح بالمخزون</th>
-                        <th>الكمية المباعة بالفواتير</th>
-                        <th>إجمالي مبيعات الصنف</th>
-                    </tr>
-                </thead>
-                <tbody id="summaryTableBody"></tbody>
-            </table>
+        <!-- إجمالي الكمية المباعة -->
+        <div class="stat-card blue-card">
+            <div class="stat-label">إجمالي الكمية المباعة</div>
+            <div class="stat-value" id="totalSoldQty">0</div>
+        </div>
+
+        <!-- إجمالي قيمة المبيعات -->
+        <div class="stat-card">
+            <div class="stat-label">إجمالي مبالغ الفواتير</div>
+            <div class="stat-value" id="totalSalesAmount" style="color:#16a34a;">0</div>
+        </div>
+
+        <!-- سجل الفواتير المطابقة للفلتر -->
+        <div class="table-card">
+            <div class="table-title">📄 تفاصيل فواتير البيع</div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>العميل</th>
+                            <th>الصنف / الشركة</th>
+                            <th>الكمية</th>
+                            <th>الإجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesTableBody">
+                        <tr><td colspan="5" style="padding:14px; color:#64748b;">جاري تحميل البيانات...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
         let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
-        let stockInventory = { 'Mobily': 0, 'STC': 0, 'Zain': 0, 'Redbull': 0 };
-        let simsList = [];
         let invoicesList = [];
 
-        window.initSalesApp = async function() {
-            const localConfig = JSON.parse(localStorage.getItem('app_config'));
-            if (localConfig) {
-                categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
-                stockInventory = localConfig.stockInventory || stockInventory;
+        function normalizeCompanyName(rawName) {
+            if (!rawName) return '';
+            const s = String(rawName).trim();
+            const lower = s.toLowerCase();
+            if (lower.includes('mobily') || lower.includes('موبايلي')) return 'Mobily';
+            if (lower.includes('stc') || lower.includes('اس تي سي') || lower.includes('إس تي سي') || lower.includes('سوا')) return 'STC';
+            if (lower.includes('zain') || lower.includes('زين')) return 'Zain';
+            if (lower.includes('redbull') || lower.includes('red bull') || lower.includes('ريد بل') || lower.includes('ريدبل')) return 'Redbull';
+            
+            for (const cat of categoriesList) {
+                if (lower.includes(cat.toLowerCase())) return cat;
             }
-            simsList = JSON.parse(localStorage.getItem('scanned_sims_offline')) || [];
-            invoicesList = JSON.parse(localStorage.getItem('sales_records_offline')) || [];
+            return s;
+        }
 
-            populateFilterDropdown();
-            renderDashboard();
-
-            try {
-                if (window.db) {
-                    const configSnap = await window.getDoc(window.doc(window.db, "settings", "app_config"));
-                    if (configSnap.exists()) {
-                        const data = configSnap.data();
-                        categoriesList = data.categoriesList || data.customItems || categoriesList;
-                        stockInventory = data.stockInventory || stockInventory;
-                        localStorage.setItem('app_config', JSON.stringify(data));
-                    }
-
-                    const simsSnap = await window.getDocs(window.collection(window.db, "scanned_sims"));
-                    simsList = [];
-                    simsSnap.forEach(d => simsList.push(d.data()));
-                    localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
-
-                    const invSnap = await window.getDocs(window.collection(window.db, "sales_records"));
-                    if (!invSnap.empty) {
-                        invoicesList = [];
-                        invSnap.forEach(d => invoicesList.push(d.data()));
-                        localStorage.setItem('sales_records_offline', JSON.stringify(invoicesList));
-                    }
-
-                    populateFilterDropdown();
-                    renderDashboard();
-                }
-            } catch (e) {
-                console.log("عرض الإحصائيات من الذاكرة المحلية.");
+        function extractInvoiceItems(inv) {
+            const extracted = [];
+            if (Array.isArray(inv.items) && inv.items.length > 0) {
+                inv.items.forEach(it => {
+                    const rawCat = it.category || it.company || it.item || it.type || it.product || it.name || '';
+                    const company = normalizeCompanyName(rawCat);
+                    const qty = parseFloat(it.quantity ?? it.qty ?? it.count ?? it.amount ?? 1) || 0;
+                    const total = parseFloat(it.total ?? it.sum ?? (parseFloat(it.price || 0) * qty) ?? 0) || 0;
+                    extracted.push({ company, rawCat: rawCat || company, qty, total });
+                });
+            } else if (Array.isArray(inv.products) && inv.products.length > 0) {
+                inv.products.forEach(it => {
+                    const rawCat = it.category || it.company || it.item || it.type || it.name || '';
+                    const company = normalizeCompanyName(rawCat);
+                    const qty = parseFloat(it.quantity ?? it.qty ?? it.count ?? 1) || 0;
+                    const total = parseFloat(it.total ?? (parseFloat(it.price || 0) * qty) ?? 0) || 0;
+                    extracted.push({ company, rawCat: rawCat || company, qty, total });
+                });
+            } else {
+                const rawCat = inv.category || inv.company || inv.item || inv.type || inv.simType || inv.product || inv.name || '';
+                const company = normalizeCompanyName(rawCat);
+                let qty = parseFloat(inv.quantity ?? inv.qty ?? inv.count ?? inv.totalQty ?? 0);
+                if (!qty && Array.isArray(inv.codes)) qty = inv.codes.length;
+                if (!qty && Array.isArray(inv.sims)) qty = inv.sims.length;
+                if (isNaN(qty)) qty = 0;
+                const total = parseFloat(inv.total ?? inv.totalAmount ?? inv.finalTotal ?? inv.amount ?? inv.price ?? 0) || 0;
+                extracted.push({ company, rawCat: rawCat || company, qty, total });
             }
-        };
+            return extracted;
+        }
 
         function populateFilterDropdown() {
-            const select = document.getElementById('filterItem');
-            const current = select.value || 'ALL';
+            const select = document.getElementById('itemFilter');
+            const currentVal = select.value || 'ALL';
             let html = `<option value="ALL">📦 كل الأصناف / الخيارات</option>`;
-            categoriesList.forEach(item => {
-                html += `<option value="${item}">${item}</option>`;
+            categoriesList.forEach(cat => {
+                html += `<option value="${cat}">${cat}</option>`;
             });
             select.innerHTML = html;
-            select.value = current;
+            if ([...select.options].some(o => o.value === currentVal)) {
+                select.value = currentVal;
+            }
         }
 
-        function resetFilters() {
-            document.getElementById('filterItem').value = 'ALL';
-            document.getElementById('filterMonth').value = '';
+        window.resetFilters = function() {
+            document.getElementById('itemFilter').value = 'ALL';
+            document.getElementById('dateFilter').value = '';
             renderDashboard();
-        }
+        };
 
         window.renderDashboard = function() {
-            const selectedItem = document.getElementById('filterItem').value;
-            const selectedMonth = document.getElementById('filterMonth').value;
+            const selectedCat = document.getElementById('itemFilter').value;
+            const selectedDate = document.getElementById('dateFilter').value;
 
-            // فلترة الشرائح الممسوحة حسب الشهر فقط
-            const filteredSims = simsList.filter(s => {
-                const cat = s.category || s.company || '';
-                if (selectedItem !== 'ALL' && cat !== selectedItem) return false;
-                if (selectedMonth && (!s.date || !s.date.startsWith(selectedMonth))) return false;
-                return true;
-            });
+            const soldByCompany = {};
+            categoriesList.forEach(c => soldByCompany[c] = 0);
 
-            // فلترة الفواتير حسب الشهر فقط
-            const filteredInvoices = invoicesList.filter(inv => {
-                const invDate = inv.date || '';
-                if (selectedMonth && (!invDate || !invDate.startsWith(selectedMonth))) return false;
-                
-                if (selectedItem !== 'ALL') {
-                    const hasItem = inv.cartItems && inv.cartItems.some(ci => ci.item === selectedItem);
-                    return hasItem;
-                }
-                return true;
-            });
+            let matchedInvoicesCount = 0;
+            let totalSoldQty = 0;
+            let totalSalesAmount = 0;
+            const tableRows = [];
 
-            // حساب الأرقام الإجمالية
-            let totalStock = 0;
-            const itemsToShow = selectedItem === 'ALL' ? categoriesList : [selectedItem];
-            itemsToShow.forEach(item => {
-                totalStock += parseFloat(stockInventory[item]) || 0;
-            });
+            invoicesList.forEach(inv => {
+                const invDate = (inv.date || inv.invoiceDate || inv.createdAt || '').slice(0, 10);
+                if (selectedDate && invDate !== selectedDate) return;
 
-            let soldQty = 0;
-            let totalSales = 0;
-            let totalDebt = 0;
+                const items = extractInvoiceItems(inv);
+                const matchingItems = items.filter(it => {
+                    if (selectedCat === 'ALL') return true;
+                    return it.company === selectedCat || it.rawCat === selectedCat;
+                });
 
-            filteredInvoices.forEach(inv => {
-                totalSales += parseFloat(inv.total || 0);
-                totalDebt += parseFloat(inv.remaining || 0);
+                if (matchingItems.length > 0) {
+                    matchedInvoicesCount++;
+                    let invQtySum = 0;
+                    let invTotalSum = 0;
+                    const catsInInv = [];
 
-                if (inv.cartItems && Array.isArray(inv.cartItems)) {
-                    inv.cartItems.forEach(ci => {
-                        if (selectedItem === 'ALL' || ci.item === selectedItem) {
-                            soldQty += parseFloat(ci.qty || 0);
+                    matchingItems.forEach(it => {
+                        const compKey = it.company || 'أخرى';
+                        if (soldByCompany[compKey] === undefined) {
+                            soldByCompany[compKey] = 0;
                         }
+                        soldByCompany[compKey] += it.qty;
+                        totalSoldQty += it.qty;
+                        invQtySum += it.qty;
+                        invTotalSum += it.total;
+                        if (it.rawCat && !catsInInv.includes(it.rawCat)) {
+                            catsInInv.push(it.rawCat);
+                        }
+                    });
+
+                    const finalInvTotal = invTotalSum || parseFloat(inv.total ?? inv.totalAmount ?? inv.amount ?? 0) || 0;
+                    totalSalesAmount += finalInvTotal;
+
+                    tableRows.push({
+                        date: invDate || '-',
+                        customer: inv.customer || inv.customerName || inv.client || inv.clientName || 'عميل نقدي',
+                        category: catsInInv.join(' ، ') || '-',
+                        qty: invQtySum,
+                        total: finalInvTotal
                     });
                 }
             });
 
-            document.getElementById('kpiTotalStock').innerText = totalStock;
-            document.getElementById('kpiTotalScanned').innerText = filteredSims.length;
-            document.getElementById('kpiInvoicesCount').innerText = filteredInvoices.length;
-            document.getElementById('kpiSoldQty').innerText = soldQty;
-            document.getElementById('kpiTotalSales').innerText = totalSales.toLocaleString();
-            document.getElementById('kpiTotalDebt').innerText = totalDebt.toLocaleString();
+            // 1. تحديث بطاقة "مباع" لكل شركة
+            const grid = document.getElementById('soldByCompanyGrid');
+            const companiesToShow = selectedCat === 'ALL'
+                ? Object.keys(soldByCompany)
+                : [selectedCat];
 
-            const cardsGrid = document.getElementById('itemsCardsGrid');
-            const tbody = document.getElementById('summaryTableBody');
+            grid.innerHTML = companiesToShow.map(comp => `
+                <div class="company-item">
+                    <span class="company-name">🔹 ${comp}</span>
+                    <span class="company-count">${soldByCompany[comp] || 0} حبة</span>
+                </div>
+            `).join('');
 
-            let cardsHtml = '';
-            let tableHtml = '';
+            // 2. تحديث الأرقام الإجمالية
+            document.getElementById('totalInvoicesCount').innerText = matchedInvoicesCount;
+            document.getElementById('totalSoldQty').innerText = totalSoldQty;
+            document.getElementById('totalSalesAmount').innerText = totalSalesAmount.toLocaleString('en-US');
 
-            itemsToShow.forEach(item => {
-                const stock = parseFloat(stockInventory[item]) || 0;
-                const scannedCount = filteredSims.filter(s => (s.category || s.company) === item).length;
-                
-                let itemSoldQty = 0;
-                let itemSalesSum = 0;
-
-                filteredInvoices.forEach(inv => {
-                    if (inv.cartItems && Array.isArray(inv.cartItems)) {
-                        inv.cartItems.forEach(ci => {
-                            if (ci.item === item) {
-                                itemSoldQty += parseFloat(ci.qty || 0);
-                                itemSalesSum += parseFloat(ci.total || 0);
-                            }
-                        });
-                    }
-                });
-
-                cardsHtml += `
-                    <div class="item-card">
-                        <div class="item-name">
-                            <span>${item}</span>
-                            <span class="badge">${stock} بالمخزون</span>
-                        </div>
-                        <div class="item-stat-row">
-                            <span>الممسوح بالباركود:</span>
-                            <b>${scannedCount}</b>
-                        </div>
-                        <div class="item-stat-row">
-                            <span>المباع بالفواتير:</span>
-                            <b>${itemSoldQty}</b>
-                        </div>
-                        <div class="item-stat-row">
-                            <span>قيمة المبيعات:</span>
-                            <b style="color:#15803d;">${itemSalesSum.toLocaleString()}</b>
-                        </div>
-                    </div>
-                `;
-
-                tableHtml += `
+            // 3. تحديث جدول الفواتير
+            const tbody = document.getElementById('salesTableBody');
+            if (tableRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="padding:15px; color:#64748b; font-weight:bold;">لا توجد فواتير مطابقة للبحث</td></tr>`;
+            } else {
+                tbody.innerHTML = tableRows.map(r => `
                     <tr>
-                        <td><span class="badge">${item}</span></td>
-                        <td><b>${scannedCount}</b></td>
-                        <td style="color:#1d4ed8; font-weight:bold;">${stock}</td>
-                        <td><b>${itemSoldQty}</b></td>
-                        <td style="color:#15803d; font-weight:bold;">${itemSalesSum.toLocaleString()}</td>
+                        <td>${r.date}</td>
+                        <td style="font-weight:700;">${r.customer}</td>
+                        <td><span class="badge-cat">${r.category}</span></td>
+                        <td style="font-weight:800; color:#2563eb;">${r.qty} حبة</td>
+                        <td style="font-weight:700; color:#16a34a;">${r.total.toLocaleString('en-US')}</td>
                     </tr>
-                `;
-            });
-
-            cardsGrid.innerHTML = cardsHtml;
-            tbody.innerHTML = tableHtml;
+                `).join('');
+            }
         };
+
+        window.initSalesDashboard = async function() {
+            // 1. قراءة الإعدادات المحلية
+            const localConfig = JSON.parse(localStorage.getItem('app_config') || 'null');
+            if (localConfig) {
+                categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
+            }
+
+            // 2. قراءة الفواتير المحفوظة محلياً
+            const localKeys = ['invoices', 'invoices_offline', 'sales_invoices', 'saved_invoices', 'sales'];
+            for (const key of localKeys) {
+                const data = JSON.parse(localStorage.getItem(key) || 'null');
+                if (Array.isArray(data) && data.length > 0) {
+                    invoicesList = data;
+                    break;
+                }
+            }
+
+            populateFilterDropdown();
+            renderDashboard();
+
+            // 3. المزامنة مع Firebase السحابي
+            try {
+                if (window.db) {
+                    const configSnap = await window.getDoc(window.doc(window.db, "settings", "app_config"));
+                    if (configSnap.exists()) {
+                        const cData = configSnap.data();
+                        categoriesList = cData.categoriesList || cData.customItems || categoriesList;
+                    }
+
+                    const possibleCollections = ["invoices", "sales", "sales_invoices", "bills"];
+                    for (const colName of possibleCollections) {
+                        try {
+                            const snap = await window.getDocs(window.collection(window.db, colName));
+                            if (!snap.empty) {
+                                const fetched = [];
+                                snap.forEach(docSnap => fetched.push({ id: docSnap.id, ...docSnap.data() }));
+                                invoicesList = fetched;
+                                break;
+                            }
+                        } catch (innerErr) {}
+                    }
+                }
+            } catch (e) {
+                console.log("وضع الأوفلاين مفعل.");
+            }
+
+            populateFilterDropdown();
+            renderDashboard();
+        };
+
+        // تشغيل مبدئي في حال تأخر تحميل الموديول
+        window.addEventListener('DOMContentLoaded', () => {
+            populateFilterDropdown();
+            renderDashboard();
+        });
     </script>
 </body>
 </html>

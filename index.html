@@ -14,7 +14,7 @@
             --text: #1e293b;
             --text-light: #64748b;
             --danger: #ef4444;
-            --success: #22c55e;
+            --success: #16a34a;
             --border: #e2e8f0;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -34,33 +34,129 @@
         /* الحاوية الرئيسية والتنقل (Tabs) */
         .main-container { max-width: 1200px; width: 100%; margin: 12px auto; padding: 0 15px; flex: 1; display: flex; flex-direction: column; gap: 14px; }
         
-        .tabs-wrapper { display: flex; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 8px; align-items: center; }
-        .tab-btn { background: #f1f5f9; color: var(--text-light); border: none; padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; transition: all 0.2s ease; }
-        .tab-btn .tab-icon { font-size: 0.85rem; line-height: 1; }
+        /* ترتيب التابات العلوي بشكل منظم ومتجاوب */
+        .tabs-wrapper {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+            gap: 8px;
+            background: var(--card);
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+        .tab-btn {
+            background: #f1f5f9;
+            color: var(--text);
+            border: 1px solid transparent;
+            padding: 9px 10px;
+            border-radius: 9px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .tab-btn .tab-icon { font-size: 0.95rem; line-height: 1; }
         .tab-btn:hover { background: #e2e8f0; color: var(--primary); }
-        .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 2px 8px rgba(30,58,138,0.2); }
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 3px 10px rgba(30,58,138,0.22);
+        }
 
         /* إطار عرض الصفحات (Iframe) */
         .frame-wrapper { background: var(--card); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.03); overflow: hidden; flex: 1; display: flex; flex-direction: column; }
         iframe { width: 100%; height: 850px; border: none; flex: 1; }
 
-        /* شاشة ترحيبية احترافية عند الفتح */
-        .welcome-hero { padding: 80px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); flex: 1; border-radius: 16px; }
+        /* شاشة ترحيبية احترافية عند الفتح مع ترتيب التابات/الأزرار تحت رسالة الترحيب */
+        .welcome-hero { padding: 50px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); flex: 1; border-radius: 16px; }
         .welcome-hero h2 { color: var(--primary); font-size: 1.8rem; font-weight: 700; }
-        .welcome-hero p { color: var(--text-light); max-width: 500px; font-size: 1rem; line-height: 1.6; }
-        .hero-actions { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; justify-content: center; }
-        .hero-btn { background: var(--primary-light); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(37,99,235,0.2); transition: transform 0.2s; }
-        .hero-btn:hover { transform: translateY(-2px); }
+        .welcome-hero p { color: var(--text-light); max-width: 520px; font-size: 1rem; line-height: 1.6; margin-bottom: 6px; }
+        
+        .hero-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 14px;
+            width: 100%;
+            max-width: 760px;
+            margin-top: 10px;
+        }
+        .hero-btn {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 16px 18px;
+            border-radius: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            transition: all 0.2s ease;
+        }
+        .hero-btn .hero-icon {
+            font-size: 1.3rem;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: #eff6ff;
+        }
+        .hero-btn:hover {
+            transform: translateY(-3px);
+            border-color: var(--primary-light);
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+        }
+        .hero-btn.btn-invoices { background: #2563eb; color: white; border-color: #2563eb; }
+        .hero-btn.btn-invoices .hero-icon { background: rgba(255,255,255,0.2); }
+        .hero-btn.btn-sales { background: #0284c7; color: white; border-color: #0284c7; }
+        .hero-btn.btn-sales .hero-icon { background: rgba(255,255,255,0.2); }
+        .hero-btn.btn-barcode { background: #16a34a; color: white; border-color: #16a34a; }
+        .hero-btn.btn-barcode .hero-icon { background: rgba(255,255,255,0.2); }
+        .hero-btn.btn-customers { background: #0f172a; color: white; border-color: #0f172a; }
+        .hero-btn.btn-customers .hero-icon { background: rgba(255,255,255,0.15); }
+        .hero-btn.btn-users { background: #4f46e5; color: white; border-color: #4f46e5; }
+        .hero-btn.btn-users .hero-icon { background: rgba(255,255,255,0.2); }
 
         @media (max-width: 768px) {
             .navbar { padding: 10px 15px; }
-            .tabs-wrapper { overflow-x: auto; padding-bottom: 6px; }
+            .tabs-wrapper {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+                padding: 8px;
+            }
+            .tab-btn {
+                font-size: 0.78rem;
+                padding: 8px 6px;
+            }
+            .welcome-hero { padding: 35px 15px; }
+            .welcome-hero h2 { font-size: 1.45rem; }
+            .hero-actions {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            .hero-btn {
+                flex-direction: column;
+                padding: 14px 10px;
+                font-size: 0.85rem;
+                gap: 8px;
+            }
         }
     </style>
 </head>
 <body>
 
-    <!-- شريط التنقل العلوي الاحترافي[span_1](start_span)[span_1](end_span) -->
+    <!-- شريط التنقل العلوي الاحترافي -->
     <header class="navbar">
         <div class="logo-area">
             <img src="logo.jpg" class="logo-img" alt="شعار سيم" onerror="this.src='https://via.placeholder.com/45?text=SIM'">
@@ -74,7 +170,7 @@
         </div>
     </header>
 
-    <!-- المحتوى الرئيسي والتبويبات المصغرة[span_2](start_span)[span_2](end_span) -->
+    <!-- المحتوى الرئيسي والتبويبات المرتبة -->
     <main class="main-container">
         <div class="tabs-wrapper">
             <button class="tab-btn active" id="homeTabBtn" onclick="switchTab('home', this)">
@@ -83,15 +179,14 @@
             <button class="tab-btn" id="invoiceTabBtn" onclick="switchTab('invoice.html', this)">
                 <span class="tab-icon">📄</span> الفواتير
             </button>
-            <button class="tab-btn" id="customersTabBtn" onclick="switchTab('customers.html', this)">
-                <span class="tab-icon">🏪</span> العملاء
+            <button class="tab-btn" id="salesTabBtn" onclick="switchTab('sales.html', this)">
+                <span class="tab-icon">📊</span> المبيعات
             </button>
             <button class="tab-btn" id="barcodeTabBtn" onclick="switchTab('barcode.html', this)">
                 <span class="tab-icon">📱</span> إضافة شريحة
             </button>
-            <!-- تبويب المبيعات الجديد -->
-            <button class="tab-btn" id="salesTabBtn" onclick="switchTab('sales.html', this)">
-                <span class="tab-icon">📊</span> المبيعات
+            <button class="tab-btn" id="customersTabBtn" onclick="switchTab('customers.html', this)">
+                <span class="tab-icon">🏪</span> العملاء
             </button>
             <button class="tab-btn" id="usersTabBtn" onclick="switchTab('users.html', this)" style="display: none;">
                 <span class="tab-icon">👥</span> الموظفين
@@ -99,15 +194,31 @@
         </div>
 
         <div class="frame-wrapper" id="frameContainer">
-            <!-- شاشة ترحيبية احترافية[span_3](start_span)[span_3](end_span) -->
+            <!-- شاشة ترحيبية احترافية مع ترتيب الأقسام بشكل متناسق -->
             <div class="welcome-hero" id="welcomeScreen">
                 <h2>أهلاً بك في متجر سيم</h2>
-                <p>يمكنك إدارة المبيعات، المخزون، العملاء، ومتابعة المديونيات بكل سهولة عبر الأقسام المتاحة بالأعلى.</p>
+                <p>يمكنك إدارة المبيعات، المخزون، العملاء، ومتابعة المديونيات بكل سهولة عبر الأقسام المتاحة.</p>
                 <div class="hero-actions">
-                    <button class="hero-btn" onclick="switchTab('invoice.html', document.getElementById('invoiceTabBtn'))">ابدأ العمل على الفواتير 🚀</button>
-                    <button class="hero-btn" style="background: #0f172a;" onclick="switchTab('customers.html', document.getElementById('customersTabBtn'))">إدارة العملاء 🏪</button>
-                    <button class="hero-btn" style="background: #16a34a;" onclick="switchTab('barcode.html', document.getElementById('barcodeTabBtn'))">إضافة شريحة 📱</button>
-                    <button class="hero-btn" style="background: #0284c7;" onclick="switchTab('sales.html', document.getElementById('salesTabBtn'))">لوحة المبيعات 📊</button>
+                    <button class="hero-btn btn-invoices" onclick="switchTab('invoice.html', document.getElementById('invoiceTabBtn'))">
+                        <span class="hero-icon">📄</span>
+                        <span>الفواتير والمبيعات اليومية</span>
+                    </button>
+                    <button class="hero-btn btn-sales" onclick="switchTab('sales.html', document.getElementById('salesTabBtn'))">
+                        <span class="hero-icon">📊</span>
+                        <span>لوحة المبيعات والإحصائيات</span>
+                    </button>
+                    <button class="hero-btn btn-barcode" onclick="switchTab('barcode.html', document.getElementById('barcodeTabBtn'))">
+                        <span class="hero-icon">📱</span>
+                        <span>إضافة شريحة للمخزون</span>
+                    </button>
+                    <button class="hero-btn btn-customers" onclick="switchTab('customers.html', document.getElementById('customersTabBtn'))">
+                        <span class="hero-icon">🏪</span>
+                        <span>إدارة العملاء والمديونيات</span>
+                    </button>
+                    <button class="hero-btn btn-users" id="heroUsersBtn" style="display: none;" onclick="switchTab('users.html', document.getElementById('usersTabBtn'))">
+                        <span class="hero-icon">👥</span>
+                        <span>إدارة الموظفين والصلاحيات</span>
+                    </button>
                 </div>
             </div>
             <iframe id="contentFrame" style="display: none;" src=""></iframe>
@@ -122,13 +233,15 @@
             document.getElementById('loggedUserText').innerText = `${loggedUser.username}`;
             
             if (loggedUser.role === 'admin') {
-                document.getElementById('usersTabBtn').style.display = 'inline-flex';
+                document.getElementById('usersTabBtn').style.display = 'flex';
+                const heroUsersBtn = document.getElementById('heroUsersBtn');
+                if (heroUsersBtn) heroUsersBtn.style.display = 'flex';
             }
         }
 
         function switchTab(page, btn) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            if (btn) btn.classList.add('active');
             
             const welcomeScreen = document.getElementById('welcomeScreen');
             const contentFrame = document.getElementById('contentFrame');
