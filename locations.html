@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>دليل اللوكيشن والأماكن المفضلة</title>
+    <title>اللوكيشن - متجر سيم</title>
     <style>
         :root {
-            --bg: #f1f5f9;
-            --card: #ffffff;
-            --text: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
             --primary: #1e3a8a;
-            --accent: #2563eb;
-            --success: #10b981;
-            --danger: #ef4444;
+            --primary-light: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --text: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
         }
 
         * {
@@ -27,102 +28,41 @@
         body {
             background-color: var(--bg);
             color: var(--text);
-            padding: 18px;
-            min-height: 100vh;
+            padding: 15px;
+            max-width: 950px;
+            margin: 0 auto;
         }
 
-        .container {
-            max-width: 1120px;
-            margin: 0 auto;
+        /* شريط البحث والفلترة بالأيقونات */
+        .top-controls {
+            background: var(--card);
+            padding: 14px;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 16px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
-        }
-
-        /* ترويسة الصفحة الملونة */
-        .page-header {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%);
-            color: white;
-            padding: 22px 25px;
-            border-radius: 18px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.18);
-        }
-
-        .header-title h1 {
-            font-size: 1.5rem;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .header-title p {
-            font-size: 0.9rem;
-            opacity: 0.9;
-            margin-top: 4px;
-        }
-
-        .stats-badges {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .stat-pill {
-            background: rgba(255, 255, 255, 0.18);
-            backdrop-filter: blur(8px);
-            padding: 8px 15px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-        }
-
-        /* شريط البحث والفلترة وإدارة الأقسام */
-        .top-controls {
-            display: grid;
-            grid-template-columns: 1fr auto;
             gap: 12px;
-            background: var(--card);
-            padding: 15px;
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
 
         .search-box {
             position: relative;
-            display: flex;
-            align-items: center;
+            width: 100%;
         }
 
         .search-box input {
             width: 100%;
-            padding: 12px 42px 12px 15px;
-            border-radius: 12px;
-            border: 1.5px solid var(--border);
+            padding: 10px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
             font-size: 0.95rem;
-            background: #f8fafc;
-            transition: all 0.2s;
+            outline: none;
+            background: #f9fafb;
         }
 
         .search-box input:focus {
-            outline: none;
-            border-color: var(--accent);
+            border-color: var(--primary-light);
             background: #fff;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        .search-box .search-icon {
-            position: absolute;
-            right: 14px;
-            font-size: 1.1rem;
-            color: var(--text-muted);
         }
 
         .category-filter-bar {
@@ -134,17 +74,17 @@
         }
 
         .filter-chip {
-            border: none;
-            background: #f1f5f9;
+            border: 1px solid var(--border);
+            background: #f8fafc;
             color: var(--text);
-            padding: 10px 16px;
-            border-radius: 11px;
-            font-weight: 700;
-            font-size: 0.85rem;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 0.95rem;
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.2s;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 6px;
         }
@@ -152,125 +92,125 @@
         .filter-chip.active {
             background: var(--primary);
             color: white;
-            box-shadow: 0 4px 10px rgba(30, 58, 138, 0.2);
+            border-color: var(--primary);
+            box-shadow: 0 3px 8px rgba(30, 58, 138, 0.22);
         }
 
-        .btn-new-cat {
-            background: #f0fdf4;
-            color: #16a34a;
-            border: 1px dashed #16a34a;
-            padding: 9px 14px;
-            border-radius: 11px;
-            font-weight: 700;
-            font-size: 0.82rem;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: 0.2s;
-        }
-
-        .btn-new-cat:hover {
-            background: #16a34a;
-            color: white;
-        }
-
-        /* نموذج إضافة لوكيشن جديد */
-        .form-card {
+        /* البطاقة والنموذج بنفس روح ملف العملاء */
+        .card {
             background: var(--card);
-            border-radius: 18px;
-            padding: 22px;
-            border: 1px solid var(--border);
-            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+            padding: 18px;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
         }
 
-        .form-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .form-header h3 {
+        .card h2 {
             font-size: 1.1rem;
+            margin-bottom: 15px;
             color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
         }
 
-        .gps-status-badge {
-            font-size: 0.8rem;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-weight: 700;
-            background: #f1f5f9;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        .form-group {
+            margin-bottom: 12px;
         }
 
-        .gps-status-badge.ready {
-            background: #dcfce7;
-            color: #15803d;
-        }
-
-        .gps-status-badge.loading {
-            background: #fef3c7;
-            color: #b45309;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-            gap: 14px;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .input-group.full-width {
-            grid-column: 1 / -1;
-        }
-
-        .input-group label {
+        label {
+            display: block;
             font-size: 0.85rem;
             font-weight: 700;
-            color: var(--text);
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            margin-bottom: 5px;
+            color: #374151;
         }
 
-        .input-group input,
-        .input-group select,
-        .input-group textarea {
-            padding: 11px 14px;
-            border-radius: 11px;
-            border: 1.5px solid var(--border);
-            font-size: 0.92rem;
-            background: #f8fafc;
-            transition: 0.2s;
-        }
-
-        .input-group textarea {
-            resize: vertical;
-            min-height: 75px;
-        }
-
-        .input-group input:focus,
-        .input-group select:focus,
-        .input-group textarea:focus {
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.95rem;
             outline: none;
-            border-color: var(--accent);
-            background: white;
+            background: #fff;
         }
 
-        /* اختيار اللون المفضل للتاب */
+        textarea {
+            resize: vertical;
+            min-height: 68px;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary-light);
+        }
+
+        .btn {
+            padding: 10px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn:active {
+            opacity: 0.85;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-light);
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px;
+            font-size: 1rem;
+        }
+
+        .icon-btn {
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.15rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: #fff;
+        }
+
+        .icon-btn-add { background-color: var(--success); }
+        .icon-btn-del { background-color: var(--danger); }
+
+        /* معاينة الصورة المرفقة */
+        .image-preview-box {
+            margin-top: 8px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            background: #f8fafc;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px dashed #cbd5e1;
+        }
+
+        .image-preview-box img {
+            width: 55px;
+            height: 55px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* اختيار اللون للتاب */
         .color-picker-row {
             display: flex;
             gap: 8px;
@@ -280,8 +220,8 @@
         }
 
         .color-dot {
-            width: 30px;
-            height: 30px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             cursor: pointer;
             border: 3px solid transparent;
@@ -290,117 +230,35 @@
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: bold;
         }
 
-        .color-dot:hover {
-            transform: scale(1.12);
-        }
-
         .color-dot.selected {
-            border-color: #0f172a;
+            border-color: #111827;
             transform: scale(1.15);
         }
 
-        /* رفع الصورة ومعاينتها */
-        .photo-upload-box {
-            border: 2px dashed #cbd5e1;
-            border-radius: 12px;
-            padding: 10px 14px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #f8fafc;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .photo-upload-box:hover {
-            border-color: var(--accent);
-            background: #eff6ff;
-        }
-
-        .photo-preview-mini {
-            width: 46px;
-            height: 46px;
-            border-radius: 10px;
-            object-fit: cover;
-            display: none;
-            border: 1px solid var(--border);
-        }
-
-        /* أزرار الإجراءات والحفظ الأوتوماتيكي */
-        .form-actions {
-            margin-top: 18px;
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 12px;
-        }
-
-        .btn-auto-gps-save {
-            background: linear-gradient(135deg, #16a34a 0%, #059669 100%);
-            color: white;
-            border: none;
-            padding: 14px 20px;
-            border-radius: 13px;
-            font-size: 1rem;
-            font-weight: 800;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            box-shadow: 0 6px 18px rgba(22, 163, 74, 0.28);
-            transition: all 0.2s;
-        }
-
-        .btn-auto-gps-save:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 22px rgba(22, 163, 74, 0.36);
-        }
-
-        .btn-only-gps {
-            background: #eff6ff;
-            color: var(--accent);
-            border: 1.5px solid #bfdbfe;
-            padding: 14px 16px;
-            border-radius: 13px;
-            font-size: 0.9rem;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: 0.2s;
-        }
-
-        .btn-only-gps:hover {
-            background: #dbeafe;
-        }
-
-        /* أقسام العرض (أسواق - مطاعم - إلخ) */
+        /* أقسام العرض بالأيقونات فقط */
         .sections-wrapper {
             display: flex;
             flex-direction: column;
-            gap: 24px;
+            gap: 18px;
         }
 
         .category-section {
             background: var(--card);
-            border-radius: 18px;
-            padding: 20px;
-            border: 1px solid var(--border);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
         .category-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 14px;
-            margin-bottom: 16px;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
             border-bottom: 2px solid #f1f5f9;
         }
 
@@ -413,70 +271,63 @@
         .category-icon-box {
             width: 42px;
             height: 42px;
-            border-radius: 12px;
+            border-radius: 11px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.35rem;
+            font-size: 1.4rem;
             color: white;
-            font-weight: bold;
-        }
-
-        .category-title-group h2 {
-            font-size: 1.25rem;
-            font-weight: 800;
         }
 
         .category-count {
-            background: #f1f5f9;
-            color: var(--text-muted);
-            padding: 4px 11px;
+            background: #e2e8f0;
+            color: #1e293b;
+            padding: 4px 12px;
             border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 700;
+            font-size: 0.9rem;
+            font-weight: 800;
         }
 
-        .btn-delete-cat {
-            background: #fff1f2;
-            color: #e11d48;
+        .btn-delete-cat-icon {
+            background: #fee2e2;
+            color: var(--danger);
             border: none;
-            padding: 6px 11px;
+            width: 36px;
+            height: 36px;
             border-radius: 8px;
-            font-size: 0.78rem;
-            font-weight: 700;
+            font-size: 1rem;
             cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* شبكة التابات الملونة للأماكن داخل كل قسم */
+        /* شبكة التابات الملونة للأماكن */
         .places-tabs-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
         }
 
-        /* التاب الملون للمكان */
         .place-tab-card {
-            border-radius: 16px;
-            padding: 16px;
+            border-radius: 14px;
+            padding: 14px;
             color: white;
-            position: relative;
             cursor: pointer;
-            overflow: hidden;
-            transition: all 0.25s ease;
+            transition: transform 0.2s, box-shadow 0.2s;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            gap: 12px;
-            min-height: 150px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+            gap: 10px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
         }
 
         .place-tab-card:hover {
-            transform: translateY(-4px) scale(1.01);
-            box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
         }
 
-        /* تدرجات ألوان متنوعة للتابات حتى لا تكون لوناً واحداً */
+        /* تدرجات ألوان متنوعة للتابات */
         .theme-blue { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); }
         .theme-emerald { background: linear-gradient(135deg, #10b981 0%, #047857 100%); }
         .theme-sunset { background: linear-gradient(135deg, #f97316 0%, #c2410c 100%); }
@@ -489,28 +340,27 @@
         .place-top-row {
             display: flex;
             gap: 12px;
-            align-items: flex-start;
+            align-items: center;
         }
 
         .place-thumb {
-            width: 64px;
-            height: 64px;
-            border-radius: 13px;
+            width: 60px;
+            height: 60px;
+            border-radius: 11px;
             object-fit: cover;
-            border: 2px solid rgba(255, 255, 255, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.6);
             flex-shrink: 0;
-            background: rgba(255, 255, 255, 0.15);
         }
 
         .place-icon-fallback {
-            width: 56px;
-            height: 56px;
-            border-radius: 13px;
+            width: 52px;
+            height: 52px;
+            border-radius: 11px;
             background: rgba(255, 255, 255, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.6rem;
+            font-size: 1.5rem;
             flex-shrink: 0;
         }
 
@@ -520,23 +370,18 @@
         }
 
         .place-name {
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             font-weight: 800;
-            margin-bottom: 4px;
             line-height: 1.3;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
 
         .place-notes {
-            font-size: 0.85rem;
-            opacity: 0.92;
-            background: rgba(0, 0, 0, 0.15);
-            padding: 7px 10px;
-            border-radius: 9px;
-            line-height: 1.45;
+            font-size: 0.83rem;
+            background: rgba(0, 0, 0, 0.16);
+            padding: 6px 9px;
+            border-radius: 8px;
             margin-top: 6px;
+            line-height: 1.4;
             word-break: break-word;
         }
 
@@ -545,18 +390,18 @@
             justify-content: space-between;
             align-items: center;
             padding-top: 8px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.22);
             font-size: 0.78rem;
         }
 
         .map-open-hint {
             background: rgba(255, 255, 255, 0.24);
-            padding: 5px 10px;
-            border-radius: 8px;
+            padding: 4px 9px;
+            border-radius: 7px;
             font-weight: 700;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
         }
 
         .place-actions {
@@ -568,127 +413,142 @@
             background: rgba(255, 255, 255, 0.22);
             color: white;
             border: none;
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.9rem;
-            transition: 0.2s;
+            font-size: 0.85rem;
         }
 
         .action-icon-btn:hover {
-            background: rgba(255, 255, 255, 0.4);
-            transform: scale(1.08);
-        }
-
-        .action-icon-btn.delete-btn:hover {
-            background: #ef4444;
+            background: rgba(255, 255, 255, 0.38);
         }
 
         .empty-state {
             text-align: center;
-            padding: 28px 15px;
+            padding: 18px;
             color: var(--text-muted);
             background: #f8fafc;
-            border-radius: 13px;
-            border: 1px dashed var(--border);
-            font-size: 0.9rem;
+            border-radius: 10px;
+            border: 1px dashed #cbd5e1;
+            font-size: 0.88rem;
         }
 
         /* نافذة تكبير الصورة */
-        .image-modal {
+        .modal-overlay {
+            display: none;
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.85);
-            display: none;
-            align-items: center;
+            background: rgba(0,0,0,0.78);
+            z-index: 1000;
             justify-content: center;
-            z-index: 999;
-            padding: 20px;
+            align-items: center;
+            padding: 15px;
         }
 
-        .image-modal img {
+        .modal-img {
             max-width: 95%;
             max-height: 85vh;
-            border-radius: 16px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
-        }
-
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            .top-controls { grid-template-columns: 1fr; }
-            .form-actions { grid-template-columns: 1fr; }
-            .places-tabs-grid { grid-template-columns: 1fr; }
+            border-radius: 12px;
         }
     </style>
+
+    <!-- ربط Firebase السحابي (الاقتراح رقم 3) بنفس إعدادات متجر سيم -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
+            authDomain: "ahmed-hassan-bb80b.firebaseapp.com",
+            projectId: "ahmed-hassan-bb80b",
+            storageBucket: "ahmed-hassan-bb80b.firebasestorage.app",
+            messagingSenderId: "503682153846",
+            appId: "1:503682153846:web:93b3a174ab31e351a04e57"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.getDocs = getDocs;
+        window.doc = doc;
+        window.deleteDoc = deleteDoc;
+        window.updateDoc = updateDoc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+
+        if (window.initLocationsCloud) {
+            window.initLocationsCloud();
+        }
+    </script>
 </head>
 <body>
 
-<div class="container">
-    <!-- الترويسة العلوية -->
-    <div class="page-header">
-        <div class="header-title">
-            <h1>📍 دليل اللوكيشن والأماكن المحفوظة</h1>
-            <p>احفظ مواقع الأسواق والمطاعم بدقة GPS عالية وافتحها بضغطة واحدة في Google Maps</p>
-        </div>
-        <div class="stats-badges">
-            <div class="stat-pill" id="totalPlacesStat">إجمالي الأماكن: 0</div>
-            <div class="stat-pill" id="totalCategoriesStat">الأقسام: 2</div>
-        </div>
-    </div>
-
-    <!-- شريط البحث والفلترة بالأقسام -->
+    <!-- شريط البحث والفلترة بالأيقونات فقط -->
     <div class="top-controls">
         <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="searchInput" placeholder="ابحث باسم السوق أو المطعم أو بكلمة داخل الملاحظات..." oninput="renderAllSections()">
+            <input type="text" id="searchInput" placeholder="🔍 بحث بالاسم..." oninput="renderAllSections()">
         </div>
-        <div class="category-filter-bar" id="categoryFilterBar">
-            <!-- يتم توليد أزرار الفلترة هنا تلقائياً -->
-        </div>
+        <div class="category-filter-bar" id="categoryFilterBar"></div>
     </div>
 
-    <!-- بطاقة إضافة لوكيشن جديد -->
-    <div class="form-card">
-        <div class="form-header">
-            <h3 id="formTitle">✨ تسجيل لوكيشن مكان جديد</h3>
-            <div class="gps-status-badge" id="gpsStatusBadge">
-                <span>📡</span> <span id="gpsStatusText">جاهز لتحديد الموقع الدقيق</span>
-            </div>
-        </div>
+    <!-- بطاقة التسجيل -->
+    <div class="card" id="formCard">
+        <h2 id="formTitle">التسجيل</h2>
+        <form id="locationForm" onsubmit="savePlace(event)" novalidate>
+            <input type="hidden" id="editPlaceId" value="">
 
-        <input type="hidden" id="editPlaceId" value="">
-        <input type="hidden" id="capturedLat" value="">
-        <input type="hidden" id="capturedLng" value="">
-        <input type="hidden" id="capturedAccuracy" value="">
+            <!-- اسم المكان + أزرار الصورة بنفس طريقة ملف العملاء -->
+            <div class="form-group">
+                <label>اسم المكان</label>
+                <div style="display: flex; gap: 6px;">
+                    <input type="text" id="placeName" placeholder="أدخل اسم المكان..." style="flex: 1;">
+                    
+                    <input type="file" id="placeImageGallery" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+                    <button type="button" class="btn" onclick="document.getElementById('placeImageGallery').click()" style="background:#e5e7eb; color:#1f2937; padding:10px 12px;" title="اختيار صورة من الهاتف">📁</button>
+                    
+                    <input type="file" id="placeImageCamera" accept="image/*" capture="environment" style="display:none;" onchange="handleImageUpload(event)">
+                    <button type="button" class="btn" onclick="document.getElementById('placeImageCamera').click()" style="background:#2563eb; color:white; padding:10px 12px;" title="تصوير بالكاميرا">📷</button>
+                </div>
 
-        <div class="form-grid">
-            <div class="input-group">
-                <label>🏷️ اسم المكان (السوق / المطعم)</label>
-                <input type="text" id="placeName" placeholder="مثال: سوق الصواريخ / مطعم البيك...">
-            </div>
-
-            <div class="input-group">
-                <label>📂 القسم</label>
-                <select id="placeCategory"></select>
-            </div>
-
-            <div class="input-group">
-                <label>📸 صورة المكان (اختياري - كاميرا أو استوديو)</label>
-                <label class="photo-upload-box" for="placePhotoInput">
-                    <span id="photoLabelText" style="font-size: 0.84rem; color: var(--text-muted);">اضغط لاختيار أو التقاط صورة...</span>
-                    <img id="photoPreviewMini" class="photo-preview-mini" alt="معاينة">
-                </label>
-                <input type="file" id="placePhotoInput" accept="image/*" style="display: none;" onchange="handlePhotoSelect(event)">
+                <div class="image-preview-box" id="imagePreviewBox">
+                    <img id="imagePreview" src="" alt="معاينة">
+                    <span style="font-size: 0.8rem; color: var(--success); font-weight: 600; flex: 1;">تم إرفاق الصورة ✓</span>
+                    <button type="button" class="btn" onclick="clearImage()" style="background:#fee2e2; color:var(--danger); padding: 4px 8px; font-size:0.8rem;">✕</button>
+                </div>
             </div>
 
-            <div class="input-group">
-                <label>🎨 لون التاب المميز</label>
-                <div class="color-picker-row" id="colorPickerRow">
-                    <div class="color-dot selected" data-theme="auto" style="background: conic-gradient(#2563eb, #10b981, #f97316, #8b5cf6, #f43f5e);" onclick="selectColorTheme('auto', this)" title="تلوين تلقائي متنوع">تلقائي</div>
+            <!-- القسم (أيقونات فقط + زر إضافة قسم) -->
+            <div class="form-group">
+                <label>القسم</label>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <select id="placeCategory" style="flex: 1; font-size: 1.1rem;"></select>
+                    <button type="button" class="icon-btn icon-btn-add" onclick="addNewCategoryPrompt()" title="إضافة قسم جديد">+</button>
+                </div>
+            </div>
+
+            <!-- اللوكيشن تحت القسم مباشرة بنفس طريقة الملف المرفق + دعم لصق الرابط (اقتراح 4) -->
+            <div class="form-group">
+                <label>اللوكيشن</label>
+                <div style="display: flex; gap: 6px;">
+                    <input type="text" id="locationInput" placeholder="رابط الخريطة أو اضغط موقعي..." style="flex: 1;">
+                    <button type="button" class="btn" id="gpsBtn" onclick="getCurrentLocation()" style="background:#10b981; color:white; padding:10px 14px; white-space:nowrap;" title="تحديد موقعي بالضبط تلقائياً">
+                        📍 موقعي
+                    </button>
+                </div>
+            </div>
+
+            <!-- اللون -->
+            <div class="form-group">
+                <label>اللون</label>
+                <div class="color-picker-row">
+                    <div class="color-dot selected" data-theme="auto" style="background: conic-gradient(#2563eb, #10b981, #f97316, #8b5cf6, #f43f5e);" onclick="selectColorTheme('auto', this)">تلقائي</div>
                     <div class="color-dot" data-theme="theme-blue" style="background: #2563eb;" onclick="selectColorTheme('theme-blue', this)"></div>
                     <div class="color-dot" data-theme="theme-emerald" style="background: #10b981;" onclick="selectColorTheme('theme-emerald', this)"></div>
                     <div class="color-dot" data-theme="theme-sunset" style="background: #f97316;" onclick="selectColorTheme('theme-sunset', this)"></div>
@@ -699,465 +559,518 @@
                 </div>
             </div>
 
-            <div class="input-group full-width">
-                <label>📝 ملاحظات عن المكان</label>
-                <textarea id="placeNotes" placeholder="اكتب أي تفاصيل مهمة: رقم البوابة، أفضل الأصناف، مواعيد العمل، اسم المحل أو المندوب..."></textarea>
+            <!-- ملاحظات -->
+            <div class="form-group">
+                <label>ملاحظات</label>
+                <textarea id="placeNotes" placeholder="اكتب ملاحظة..."></textarea>
             </div>
-        </div>
 
-        <div class="form-actions">
-            <button class="btn-auto-gps-save" id="mainSaveBtn" onclick="captureAccurateGpsAndSave()">
-                <span>📍</span>
-                <span id="mainSaveBtnText">تحديد الموقع بالضبط وحفظ اللوكيشن أوتوماتيك</span>
-            </button>
-            <button class="btn-only-gps" onclick="lockExactCoordinatesOnly()">
-                <span>🎯</span>
-                <span>لقط الإحداثيات فقط الآن</span>
-            </button>
-        </div>
+            <!-- زر حفظ فقط -->
+            <button type="submit" class="btn btn-primary" id="submitBtn">حفظ</button>
+            <button type="button" class="btn" id="cancelEditBtn" onclick="resetForm()" style="background:#e5e7eb; color:#374151; width:100%; margin-top:8px; display:none;">إلغاء</button>
+        </form>
     </div>
 
-    <!-- حاوية الأقسام والتابات الملونة -->
+    <!-- عرض الأقسام والتابات الملونة -->
     <div class="sections-wrapper" id="sectionsWrapper"></div>
-</div>
 
-<!-- نافذة عرض الصورة المكبرة -->
-<div class="image-modal" id="imageModal" onclick="this.style.display='none'">
-    <img id="modalFullImage" src="" alt="صورة المكان">
-</div>
+    <!-- نافذة تكبير الصورة -->
+    <div class="modal-overlay" id="imageModal" onclick="this.style.display='none'">
+        <img id="modalFullImage" class="modal-img" src="" alt="صورة المكان">
+    </div>
 
-<script>
-    // الألوان المتنوعة للتابات
-    const TAB_THEMES = [
-        'theme-blue',
-        'theme-emerald',
-        'theme-sunset',
-        'theme-purple',
-        'theme-rose',
-        'theme-teal',
-        'theme-amber',
-        'theme-indigo'
-    ];
+    <script>
+        const TAB_THEMES = [
+            'theme-blue',
+            'theme-emerald',
+            'theme-sunset',
+            'theme-purple',
+            'theme-rose',
+            'theme-teal',
+            'theme-amber',
+            'theme-indigo'
+        ];
 
-    // الأقسام الافتراضية (أسواق ومطاعم) مع إمكانية الإضافة والحذف
-    let categories = JSON.parse(localStorage.getItem('sim_loc_categories')) || [
-        { id: 'markets', name: 'أسواق', icon: '🛒', color: '#2563eb' },
-        { id: 'restaurants', name: 'مطاعم', icon: '🍽️', color: '#ea580c' }
-    ];
+        const DEFAULT_CATEGORIES = [
+            { id: 'markets', icon: '🛒', color: '#2563eb' },
+            { id: 'restaurants', icon: '🍽️', color: '#ea580c' }
+        ];
 
-    // قائمة الأماكن المحفوظة
-    let places = JSON.parse(localStorage.getItem('sim_saved_places')) || [];
+        let categories = [];
+        let places = [];
+        let activeCategoryFilter = 'all';
+        let selectedTheme = 'auto';
+        let tempImageBase64 = '';
 
-    let activeCategoryFilter = 'all';
-    let selectedTheme = 'auto';
-    let currentCompressedPhoto = '';
+        // تحميل البيانات المحلية وتنظيف أي أسماء قديمة (مثل كلمة أسواق أو مطاعم) للاكتفاء بالأيقونات فقط
+        function loadLocalData() {
+            const savedCats = JSON.parse(localStorage.getItem('sim_loc_categories') || 'null');
+            if (Array.isArray(savedCats) && savedCats.length > 0) {
+                categories = savedCats.map(c => ({
+                    id: c.id,
+                    icon: c.icon || '📍',
+                    color: c.color || '#2563eb'
+                }));
+            } else {
+                categories = [...DEFAULT_CATEGORIES];
+            }
 
-    function saveToStorage() {
-        localStorage.setItem('sim_loc_categories', JSON.stringify(categories));
-        localStorage.setItem('sim_saved_places', JSON.stringify(places));
-    }
+            const savedPlaces = JSON.parse(localStorage.getItem('sim_saved_places') || '[]');
+            if (Array.isArray(savedPlaces)) {
+                places = savedPlaces;
+            }
+            localStorage.setItem('sim_loc_categories', JSON.stringify(categories));
+        }
 
-    // تهيئة الصفحة عند الفتح
-    function initPage() {
-        renderCategoryControls();
-        renderAllSections();
-    }
+        function saveLocalData() {
+            localStorage.setItem('sim_loc_categories', JSON.stringify(categories));
+            localStorage.setItem('sim_saved_places', JSON.stringify(places));
+        }
 
-    // تحديث قائمة الأقسام في الـ Select وفي شريط الفلترة العلوي
-    function renderCategoryControls() {
-        const select = document.getElementById('placeCategory');
-        const filterBar = document.getElementById('categoryFilterBar');
+        // المزامنة السحابية مع Firebase (الاقتراح رقم 3)
+        window.initLocationsCloud = async function() {
+            loadLocalData();
+            renderCategoryControls();
+            renderAllSections();
+            await loadFromCloud();
+        };
 
-        select.innerHTML = categories.map(cat =>
-            `<option value="${cat.id}">${cat.icon} ${cat.name}</option>`
-        ).join('');
+        window.addEventListener('DOMContentLoaded', () => {
+            loadLocalData();
+            renderCategoryControls();
+            renderAllSections();
+        });
 
-        let filterHtml = `
-            <button class="filter-chip ${activeCategoryFilter === 'all' ? 'active' : ''}" onclick="setCategoryFilter('all')">
-                🌟 الكل (${places.length})
-            </button>
-        `;
+        async function syncCategoriesToCloud() {
+            saveLocalData();
+            try {
+                if (window.db) {
+                    await window.setDoc(window.doc(window.db, "settings", "locations_config"), { categories: categories }, { merge: true });
+                }
+            } catch (e) {
+                console.error("خطأ في مزامنة الأقسام:", e);
+            }
+        }
 
-        categories.forEach(cat => {
-            const count = places.filter(p => p.categoryId === cat.id).length;
-            filterHtml += `
-                <button class="filter-chip ${activeCategoryFilter === cat.id ? 'active' : ''}" onclick="setCategoryFilter('${cat.id}')">
-                    <span>${cat.icon}</span> <span>${cat.name} (${count})</span>
+        async function loadFromCloud() {
+            try {
+                if (!window.db) return;
+
+                // جلب الأقسام من السحابة
+                const catSnap = await window.getDoc(window.doc(window.db, "settings", "locations_config"));
+                if (catSnap.exists() && Array.isArray(catSnap.data().categories) && catSnap.data().categories.length > 0) {
+                    categories = catSnap.data().categories.map(c => ({
+                        id: c.id,
+                        icon: c.icon || '📍',
+                        color: c.color || '#2563eb'
+                    }));
+                }
+
+                // جلب الأماكن المحفوظة من السحابة
+                const querySnapshot = await window.getDocs(window.collection(window.db, "locations"));
+                const cloudPlaces = [];
+                querySnapshot.forEach((docSnap) => {
+                    cloudPlaces.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                if (cloudPlaces.length > 0) {
+                    cloudPlaces.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                    places = cloudPlaces;
+                }
+
+                saveLocalData();
+            } catch (e) {
+                console.error("خطأ في جلب اللوكيشن من السحابة:", e);
+            } finally {
+                renderCategoryControls();
+                renderAllSections();
+            }
+        }
+
+        // رسم أزرار الفلترة وقائمة الأقسام بالأيقونات فقط
+        function renderCategoryControls() {
+            const select = document.getElementById('placeCategory');
+            const filterBar = document.getElementById('categoryFilterBar');
+
+            select.innerHTML = categories.map(cat =>
+                `<option value="${cat.id}">${cat.icon}</option>`
+            ).join('');
+
+            let filterHtml = `
+                <button type="button" class="filter-chip ${activeCategoryFilter === 'all' ? 'active' : ''}" onclick="setCategoryFilter('all')">
+                    🌟 (${places.length})
                 </button>
             `;
-        });
 
-        filterHtml += `
-            <button class="btn-new-cat" onclick="addNewCategoryPrompt()">+ قسم جديد</button>
-        `;
+            categories.forEach(cat => {
+                const count = places.filter(p => p.categoryId === cat.id).length;
+                filterHtml += `
+                    <button type="button" class="filter-chip ${activeCategoryFilter === cat.id ? 'active' : ''}" onclick="setCategoryFilter('${cat.id}')">
+                        <span>${cat.icon}</span> <span>(${count})</span>
+                    </button>
+                `;
+            });
 
-        filterBar.innerHTML = filterHtml;
-        document.getElementById('totalPlacesStat').innerText = `إجمالي الأماكن: ${places.length}`;
-        document.getElementById('totalCategoriesStat').innerText = `الأقسام: ${categories.length}`;
-    }
-
-    function setCategoryFilter(catId) {
-        activeCategoryFilter = catId;
-        renderCategoryControls();
-        renderAllSections();
-    }
-
-    // إضافة قسم جديد في أي وقت
-    function addNewCategoryPrompt() {
-        const name = prompt('اكتب اسم القسم الجديد (مثال: كافيهات، مستودعات، عملاء، صيانة):');
-        if (!name || !name.trim()) return;
-        const icon = prompt('اختر أيقونة القسم (اختياري):', '📌') || '📌';
-        const colors = ['#0d9488', '#7c3aed', '#e11d48', '#0284c7', '#16a34a'];
-        const randomColor = colors[categories.length % colors.length];
-
-        categories.push({
-            id: 'cat_' + Date.now(),
-            name: name.trim(),
-            icon: icon.trim(),
-            color: randomColor
-        });
-
-        saveToStorage();
-        renderCategoryControls();
-        renderAllSections();
-    }
-
-    // حذف قسم
-    function deleteCategory(catId) {
-        const hasPlaces = places.some(p => p.categoryId === catId);
-        const msg = hasPlaces
-            ? 'هذا القسم يحتوي على أماكن محفوظة، هل أنت متأكد من حذف القسم وجميع الأماكن بداخله؟'
-            : 'هل تريد حذف هذا القسم؟';
-
-        if (!confirm(msg)) return;
-
-        categories = categories.filter(c => c.id !== catId);
-        places = places.filter(p => p.categoryId !== catId);
-        if (activeCategoryFilter === catId) activeCategoryFilter = 'all';
-
-        saveToStorage();
-        renderCategoryControls();
-        renderAllSections();
-    }
-
-    // اختيار لون التاب
-    function selectColorTheme(theme, el) {
-        selectedTheme = theme;
-        document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
-        el.classList.add('selected');
-    }
-
-    // ضغط الصورة أوتوماتيكياً قبل حفظها لتوفير المساحة
-    function handlePhotoSelect(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = new Image();
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 600;
-                let width = img.width;
-                let height = img.height;
-
-                if (width > MAX_WIDTH) {
-                    height = Math.round((height * MAX_WIDTH) / width);
-                    width = MAX_WIDTH;
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-
-                currentCompressedPhoto = canvas.toDataURL('image/jpeg', 0.72);
-                const preview = document.getElementById('photoPreviewMini');
-                preview.src = currentCompressedPhoto;
-                preview.style.display = 'block';
-                document.getElementById('photoLabelText').innerText = 'تم إرفاق الصورة بنجاح ✅';
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    // دالة جلب الموقع الدقيق جداً عبر GPS (وليس التقريبي)
-    function getHighAccuracyPosition() {
-        return new Promise((resolve, reject) => {
-            if (!navigator.geolocation) {
-                reject(new Error('المتصفح لا يدعم خاصية تحديد الموقع GPS.'));
-                return;
-            }
-
-            const badge = document.getElementById('gpsStatusBadge');
-            const statusText = document.getElementById('gpsStatusText');
-            badge.className = 'gps-status-badge loading';
-            statusText.innerText = 'جاري الاتصال بالأقمار الصناعية لتحديد الموقع بالضبط...';
-
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-                    const acc = Math.round(pos.coords.accuracy);
-
-                    document.getElementById('capturedLat').value = lat;
-                    document.getElementById('capturedLng').value = lng;
-                    document.getElementById('capturedAccuracy').value = acc;
-
-                    badge.className = 'gps-status-badge ready';
-                    statusText.innerText = `تم القفل بدقة عالية (±${acc} متر) ✅`;
-                    resolve({ lat, lng, acc });
-                },
-                (err) => {
-                    badge.className = 'gps-status-badge';
-                    statusText.innerText = 'تعذر لقط الـ GPS، تأكد من تفعيل الموقع في الهاتف';
-                    reject(err);
-                },
-                {
-                    enableHighAccuracy: true, // إجبار الهاتف على استخدام شريحة الـ GPS الدقيقة
-                    timeout: 20000,
-                    maximumAge: 0             // عدم قبول أي موقع تقريبي قديم مخزن
-                }
-            );
-        });
-    }
-
-    // لقط الإحداثيات فقط وتثبيتها أثناء الوقوف أمام المكان
-    async function lockExactCoordinatesOnly() {
-        try {
-            await getHighAccuracyPosition();
-        } catch (error) {
-            alert('يرجى السماح للمتصفح بالوصول إلى الموقع الجغرافي (GPS) وتفعيل الموقع الدقيق من إعدادات الهاتف.');
-        }
-    }
-
-    // لقط الموقع بالضبط والحفظ الأوتوماتيكي فوراً
-    async function captureAccurateGpsAndSave() {
-        const nameInput = document.getElementById('placeName');
-        const categorySelect = document.getElementById('placeCategory');
-        const notesInput = document.getElementById('placeNotes');
-        const editId = document.getElementById('editPlaceId').value;
-
-        if (!nameInput.value.trim()) {
-            alert('يرجى كتابة اسم المكان أولاً (مثال: اسم السوق أو المطعم) ثم اضغط للحفظ الأوتوماتيكي.');
-            nameInput.focus();
-            return;
+            filterBar.innerHTML = filterHtml;
         }
 
-        let lat = parseFloat(document.getElementById('capturedLat').value);
-        let lng = parseFloat(document.getElementById('capturedLng').value);
-        let acc = document.getElementById('capturedAccuracy').value;
-
-        // إذا لم يكن الموقع ملتقطاً مسبقاً، نلتقطه الآن بدقة عالية أوتوماتيكياً
-        if (!lat || !lng) {
-            try {
-                const gpsData = await getHighAccuracyPosition();
-                lat = gpsData.lat;
-                lng = gpsData.lng;
-                acc = gpsData.acc;
-            } catch (error) {
-                alert('تعذر لقط الموقع تلقائياً. تأكد من فتح الـ GPS في جهازك وإعطاء صلاحية الموقع للمتصفح.');
-                return;
-            }
-        }
-
-        // تحديد لون التاب بحيث لا تكون التابات لوناً واحداً
-        let chosenTheme = selectedTheme;
-        if (chosenTheme === 'auto') {
-            chosenTheme = TAB_THEMES[places.length % TAB_THEMES.length];
-        }
-
-        if (editId) {
-            // تحديث مكان موجود
-            const idx = places.findIndex(p => p.id === editId);
-            if (idx > -1) {
-                places[idx].name = nameInput.value.trim();
-                places[idx].categoryId = categorySelect.value;
-                places[idx].notes = notesInput.value.trim();
-                places[idx].lat = lat;
-                places[idx].lng = lng;
-                places[idx].accuracy = acc;
-                if (selectedTheme !== 'auto') places[idx].theme = chosenTheme;
-                if (currentCompressedPhoto) places[idx].photo = currentCompressedPhoto;
-            }
-        } else {
-            // إضافة مكان جديد
-            const newPlace = {
-                id: 'place_' + Date.now(),
-                name: nameInput.value.trim(),
-                categoryId: categorySelect.value,
-                notes: notesInput.value.trim(),
-                lat: lat,
-                lng: lng,
-                accuracy: acc,
-                photo: currentCompressedPhoto || '',
-                theme: chosenTheme,
-                createdAt: new Date().toLocaleDateString('ar-SA')
-            };
-            places.unshift(newPlace);
-        }
-
-        saveToStorage();
-        resetForm();
-        renderCategoryControls();
-        renderAllSections();
-    }
-
-    function resetForm() {
-        document.getElementById('editPlaceId').value = '';
-        document.getElementById('capturedLat').value = '';
-        document.getElementById('capturedLng').value = '';
-        document.getElementById('capturedAccuracy').value = '';
-        document.getElementById('placeName').value = '';
-        document.getElementById('placeNotes').value = '';
-        document.getElementById('placePhotoInput').value = '';
-        currentCompressedPhoto = '';
-
-        const preview = document.getElementById('photoPreviewMini');
-        preview.style.display = 'none';
-        preview.src = '';
-        document.getElementById('photoLabelText').innerText = 'اضغط لاختيار أو التقاط صورة...';
-        document.getElementById('formTitle').innerText = '✨ تسجيل لوكيشن مكان جديد';
-        document.getElementById('mainSaveBtnText').innerText = 'تحديد الموقع بالضبط وحفظ اللوكيشن أوتوماتيك';
-    }
-
-    // فتح المكان في Google Maps مباشرة عند الضغط على التاب
-    function openInGoogleMaps(lat, lng) {
-        const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-        window.open(mapUrl, '_blank');
-    }
-
-    // مشاركة اللوكيشن عبر واتساب
-    function shareOnWhatsApp(event, name, notes, lat, lng) {
-        event.stopPropagation();
-        const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-        const text = `📍 *${name}*\n${notes ? '📝 ' + notes + '\n' : ''}🗺️ رابط الموقع الدقيق:\n${mapUrl}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-    }
-
-    // تكبير الصورة
-    function previewFullImage(event, photoSrc) {
-        event.stopPropagation();
-        const modal = document.getElementById('imageModal');
-        document.getElementById('modalFullImage').src = photoSrc;
-        modal.style.display = 'flex';
-    }
-
-    // تعديل بيانات مكان محفوظ
-    function editPlace(event, placeId) {
-        event.stopPropagation();
-        const place = places.find(p => p.id === placeId);
-        if (!place) return;
-
-        document.getElementById('editPlaceId').value = place.id;
-        document.getElementById('placeName').value = place.name;
-        document.getElementById('placeCategory').value = place.categoryId;
-        document.getElementById('placeNotes').value = place.notes || '';
-        document.getElementById('capturedLat').value = place.lat;
-        document.getElementById('capturedLng').value = place.lng;
-        document.getElementById('capturedAccuracy').value = place.accuracy || '';
-
-        if (place.photo) {
-            currentCompressedPhoto = place.photo;
-            const preview = document.getElementById('photoPreviewMini');
-            preview.src = place.photo;
-            preview.style.display = 'block';
-            document.getElementById('photoLabelText').innerText = 'الصورة الحالية مرفقة ✅';
-        }
-
-        document.getElementById('formTitle').innerText = `✏️ تعديل بيانات: ${place.name}`;
-        document.getElementById('mainSaveBtnText').innerText = 'حفظ التعديلات الآن';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // حذف مكان محفوظ
-    function deletePlace(event, placeId) {
-        event.stopPropagation();
-        const place = places.find(p => p.id === placeId);
-        if (!place) return;
-
-        if (confirm(`هل أنت متأكد من حذف "${place.name}"؟`)) {
-            places = places.filter(p => p.id !== placeId);
-            saveToStorage();
+        function setCategoryFilter(catId) {
+            activeCategoryFilter = catId;
             renderCategoryControls();
             renderAllSections();
         }
-    }
 
-    // رسم الأقسام والتابات الملونة
-    function renderAllSections() {
-        const wrapper = document.getElementById('sectionsWrapper');
-        const query = document.getElementById('searchInput').value.trim().toLowerCase();
+        async function addNewCategoryPrompt() {
+            const icon = prompt('أدخل أيقونة القسم الجديد (مثال: ☕ أو 📦 أو 🏢):', '📍');
+            if (!icon || !icon.trim()) return;
 
-        const visibleCategories = activeCategoryFilter === 'all'
-            ? categories
-            : categories.filter(c => c.id === activeCategoryFilter);
+            const colors = ['#0d9488', '#7c3aed', '#e11d48', '#0284c7', '#16a34a'];
+            const newCat = {
+                id: 'cat_' + Date.now(),
+                icon: icon.trim(),
+                color: colors[categories.length % colors.length]
+            };
 
-        wrapper.innerHTML = visibleCategories.map(cat => {
-            const catPlaces = places.filter(p => {
-                const inCategory = p.categoryId === cat.id;
-                const matchesSearch = !query ||
-                    p.name.toLowerCase().includes(query) ||
-                    (p.notes && p.notes.toLowerCase().includes(query));
-                return inCategory && matchesSearch;
+            categories.push(newCat);
+            await syncCategoriesToCloud();
+            renderCategoryControls();
+            renderAllSections();
+            document.getElementById('placeCategory').value = newCat.id;
+        }
+
+        async function deleteCategory(catId) {
+            if (!confirm('حذف هذا القسم؟')) return;
+
+            const toDeletePlaces = places.filter(p => p.categoryId === catId);
+            categories = categories.filter(c => c.id !== catId);
+            places = places.filter(p => p.categoryId !== catId);
+            if (activeCategoryFilter === catId) activeCategoryFilter = 'all';
+
+            await syncCategoriesToCloud();
+            renderCategoryControls();
+            renderAllSections();
+
+            // حذف أماكن القسم من السحابة
+            if (window.db) {
+                for (const p of toDeletePlaces) {
+                    if (!String(p.id).startsWith('local_')) {
+                        try { await window.deleteDoc(window.doc(window.db, "locations", p.id)); } catch (e) {}
+                    }
+                }
+            }
+        }
+
+        function selectColorTheme(theme, el) {
+            selectedTheme = theme;
+            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+
+        // رفع وضغط الصورة بنفس طريقة ملف العملاء
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxSize = 700;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height && width > maxSize) {
+                        height *= maxSize / width;
+                        width = maxSize;
+                    } else if (height > maxSize) {
+                        width *= maxSize / height;
+                        height = maxSize;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    tempImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    showImagePreview(tempImageBase64);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showImagePreview(src) {
+            const box = document.getElementById('imagePreviewBox');
+            const img = document.getElementById('imagePreview');
+            if (src) {
+                img.src = src;
+                box.style.display = 'flex';
+            } else {
+                img.src = '';
+                box.style.display = 'none';
+            }
+        }
+
+        function clearImage() {
+            tempImageBase64 = '';
+            document.getElementById('placeImageGallery').value = '';
+            document.getElementById('placeImageCamera').value = '';
+            showImagePreview('');
+        }
+
+        // تحديد الموقع الدقيق بالضبط (High Accuracy GPS) بنفس طريقة الزر المستطيل في ملف العملاء
+        function getCurrentLocation() {
+            return new Promise((resolve, reject) => {
+                const locInput = document.getElementById('locationInput');
+                if (!navigator.geolocation) {
+                    alert('متصفحك لا يدعم تحديد الموقع تلقائياً.');
+                    reject('no_geolocation');
+                    return;
+                }
+
+                locInput.value = 'جاري جلب الموقع الدقيق...';
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        const exactUrl = `https://maps.google.com/?q=${lat},${lng}`;
+                        locInput.value = exactUrl;
+                        resolve(exactUrl);
+                    },
+                    (err) => {
+                        locInput.value = '';
+                        alert('تعذر جلب الموقع تلقائياً. تأكد من تفعيل الموقع (GPS) وإعطاء الصلاحية للمتصفح.');
+                        reject(err);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 20000,
+                        maximumAge: 0
+                    }
+                );
             });
+        }
 
-            const placesCardsHtml = catPlaces.length > 0
-                ? `<div class="places-tabs-grid">
-                    ${catPlaces.map((place, index) => {
-                        const themeClass = place.theme || TAB_THEMES[index % TAB_THEMES.length];
-                        const visualThumb = place.photo
-                            ? `<img src="${place.photo}" class="place-thumb" alt="${place.name}" onclick="previewFullImage(event, '${place.photo}')" title="اضغط لتكبير الصورة">`
-                            : `<div class="place-icon-fallback">${cat.icon}</div>`;
+        // حفظ المكان (يسجل اللوكيشن أوتوماتيك إذا كان الحقل فارغاً، أو يقبل الرابط الملصق جاهزاً)
+        async function savePlace(event) {
+            event.preventDefault();
 
-                        return `
-                            <div class="place-tab-card ${themeClass}" onclick="openInGoogleMaps(${place.lat}, ${place.lng})" title="اضغط للفتح في Google Maps">
-                                <div class="place-top-row">
-                                    ${visualThumb}
-                                    <div class="place-info">
-                                        <div class="place-name">${place.name}</div>
-                                        <div style="font-size:0.75rem; opacity:0.85;">
-                                            🎯 دقة الـ GPS: ${place.accuracy ? '±' + place.accuracy + 'م' : 'دقيق'} | 📅 ${place.createdAt || ''}
+            const editId = document.getElementById('editPlaceId').value;
+            const name = document.getElementById('placeName').value.trim();
+            const categoryId = document.getElementById('placeCategory').value;
+            const notes = document.getElementById('placeNotes').value.trim();
+            let locationUrl = document.getElementById('locationInput').value.trim();
+
+            if (!name) {
+                alert('يرجى إدخال اسم المكان أولاً.');
+                document.getElementById('placeName').focus();
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳...';
+
+            // إذا لم يلصق المستخدم رابطاً ولم يضغط "موقعي" مسبقاً، نلقط الموقع الدقيق أوتوماتيكياً الآن
+            if (!locationUrl || locationUrl === 'جاري جلب الموقع الدقيق...') {
+                try {
+                    locationUrl = await getCurrentLocation();
+                } catch (e) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'حفظ';
+                    return;
+                }
+            }
+
+            let chosenTheme = selectedTheme;
+            if (chosenTheme === 'auto') {
+                chosenTheme = TAB_THEMES[places.length % TAB_THEMES.length];
+            }
+
+            const placeData = {
+                name: name,
+                categoryId: categoryId,
+                location: locationUrl,
+                notes: notes,
+                photo: tempImageBase64 || '',
+                theme: chosenTheme,
+                timestamp: Date.now()
+            };
+
+            try {
+                if (editId) {
+                    const idx = places.findIndex(p => p.id === editId);
+                    if (idx !== -1) {
+                        if (selectedTheme === 'auto' && places[idx].theme) {
+                            placeData.theme = places[idx].theme;
+                        }
+                        places[idx] = { id: editId, ...placeData };
+                    }
+                    if (window.db && !String(editId).startsWith('local_')) {
+                        await window.updateDoc(window.doc(window.db, "locations", editId), placeData);
+                    }
+                } else {
+                    if (window.db) {
+                        const docRef = await window.addDoc(window.collection(window.db, "locations"), placeData);
+                        places.unshift({ id: docRef.id, ...placeData });
+                    } else {
+                        places.unshift({ id: 'local_' + Date.now(), ...placeData });
+                    }
+                }
+
+                saveLocalData();
+                resetForm();
+                renderCategoryControls();
+                renderAllSections();
+            } catch (error) {
+                console.error("خطأ أثناء حفظ المكان:", error);
+                if (!editId) {
+                    places.unshift({ id: 'local_' + Date.now(), ...placeData });
+                    saveLocalData();
+                    resetForm();
+                    renderCategoryControls();
+                    renderAllSections();
+                }
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'حفظ';
+            }
+        }
+
+        // فتح الموقع في Google Maps بمجرد الضغط على التاب (يدعم الروابط الجاهزة والإحداثيات)
+        function openPlaceInMap(placeId) {
+            const place = places.find(p => p.id === placeId);
+            if (!place) return;
+
+            let loc = (place.location || '').trim();
+            if (!loc && place.lat && place.lng) {
+                loc = `https://maps.google.com/?q=${place.lat},${place.lng}`;
+            }
+
+            if (loc.startsWith('http://') || loc.startsWith('https://')) {
+                window.open(loc, '_blank');
+            } else if (loc) {
+                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank');
+            }
+        }
+
+        function editPlace(event, id) {
+            event.stopPropagation();
+            const p = places.find(item => item.id === id);
+            if (!p) return;
+
+            document.getElementById('editPlaceId').value = p.id;
+            document.getElementById('placeName').value = p.name || '';
+            document.getElementById('placeCategory').value = p.categoryId || (categories[0] && categories[0].id);
+            document.getElementById('locationInput').value = p.location || (p.lat && p.lng ? `https://maps.google.com/?q=${p.lat},${p.lng}` : '');
+            document.getElementById('placeNotes').value = p.notes || '';
+
+            tempImageBase64 = p.photo || '';
+            showImagePreview(tempImageBase64);
+
+            document.getElementById('cancelEditBtn').style.display = 'inline-flex';
+            document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function deletePlace(event, id) {
+            event.stopPropagation();
+            if (!confirm('حذف هذا المكان؟')) return;
+
+            places = places.filter(p => p.id !== id);
+            saveLocalData();
+            renderCategoryControls();
+            renderAllSections();
+
+            try {
+                if (window.db && !String(id).startsWith('local_')) {
+                    await window.deleteDoc(window.doc(window.db, "locations", id));
+                }
+            } catch (e) {
+                console.error("خطأ أثناء الحذف من السحابة:", e);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('locationForm').reset();
+            document.getElementById('editPlaceId').value = '';
+            clearImage();
+            document.getElementById('cancelEditBtn').style.display = 'none';
+        }
+
+        function openImageModal(event, src) {
+            event.stopPropagation();
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalFullImage');
+            if (modal && modalImg) {
+                modalImg.src = src;
+                modal.style.display = 'flex';
+            }
+        }
+
+        // رسم الأقسام (أيقونة فقط + رقم فقط + زر حذف أيقونة فقط)
+        function renderAllSections() {
+            const wrapper = document.getElementById('sectionsWrapper');
+            const query = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+
+            const visibleCategories = activeCategoryFilter === 'all'
+                ? categories
+                : categories.filter(c => c.id === activeCategoryFilter);
+
+            wrapper.innerHTML = visibleCategories.map(cat => {
+                const catPlaces = places.filter(p => {
+                    const inCategory = p.categoryId === cat.id;
+                    const matchesSearch = !query ||
+                        (p.name && p.name.toLowerCase().includes(query)) ||
+                        (p.notes && p.notes.toLowerCase().includes(query));
+                    return inCategory && matchesSearch;
+                });
+
+                const cardsHtml = catPlaces.length > 0
+                    ? `<div class="places-tabs-grid">
+                        ${catPlaces.map((place, idx) => {
+                            const themeClass = place.theme || TAB_THEMES[idx % TAB_THEMES.length];
+                            const thumbHtml = place.photo
+                                ? `<img src="${place.photo}" class="place-thumb" alt="${place.name}" onclick="openImageModal(event, '${place.photo}')">`
+                                : `<div class="place-icon-fallback">${cat.icon}</div>`;
+
+                            return `
+                                <div class="place-tab-card ${themeClass}" onclick="openPlaceInMap('${place.id}')">
+                                    <div class="place-top-row">
+                                        ${thumbHtml}
+                                        <div class="place-info">
+                                            <div class="place-name">${place.name}</div>
+                                            ${place.notes ? `<div class="place-notes">${place.notes}</div>` : ''}
                                         </div>
-                                        ${place.notes ? `<div class="place-notes">📝 ${place.notes}</div>` : ''}
+                                    </div>
+                                    <div class="place-footer">
+                                        <span class="map-open-hint">🗺️ Google Maps</span>
+                                        <div class="place-actions">
+                                            <button type="button" class="action-icon-btn" onclick="editPlace(event, '${place.id}')" title="تعديل">✏️</button>
+                                            <button type="button" class="action-icon-btn" onclick="deletePlace(event, '${place.id}')" title="حذف">🗑️</button>
+                                        </div>
                                     </div>
                                 </div>
+                            `;
+                        }).join('')}
+                       </div>`
+                    : `<div class="empty-state">0</div>`;
 
-                                <div class="place-footer">
-                                    <div class="map-open-hint">
-                                        <span>🗺️</span> <span>افتح في Google Maps</span>
-                                    </div>
-                                    <div class="place-actions">
-                                        <button class="action-icon-btn" onclick="shareOnWhatsApp(event, '${place.name.replace(/'/g, "\\'")}', '${(place.notes || '').replace(/'/g, "\\'")}', ${place.lat}, ${place.lng})" title="مشاركة عبر واتساب">💬</button>
-                                        <button class="action-icon-btn" onclick="editPlace(event, '${place.id}')" title="تعديل">✏️</button>
-                                        <button class="action-icon-btn delete-btn" onclick="deletePlace(event, '${place.id}')" title="حذف">🗑️</button>
-                                    </div>
-                                </div>
+                return `
+                    <section class="category-section">
+                        <div class="category-header">
+                            <div class="category-title-group">
+                                <div class="category-icon-box" style="background: ${cat.color || '#2563eb'}">${cat.icon}</div>
+                                <span class="category-count">${catPlaces.length}</span>
                             </div>
-                        `;
-                    }).join('')}
-                   </div>`
-                : `<div class="empty-state">لا توجد أماكن مسجلة في قسم "${cat.name}" حتى الآن.</div>`;
-
-            return `
-                <section class="category-section">
-                    <div class="category-header">
-                        <div class="category-title-group">
-                            <div class="category-icon-box" style="background: ${cat.color || '#2563eb'}">${cat.icon}</div>
-                            <h2>قسم ${cat.name}</h2>
-                            <span class="category-count">${catPlaces.length} مكان</span>
+                            <button type="button" class="btn-delete-cat-icon" onclick="deleteCategory('${cat.id}')" title="حذف">🗑️</button>
                         </div>
-                        <button class="btn-delete-cat" onclick="deleteCategory('${cat.id}')">حذف القسم 🗑️</button>
-                    </div>
-                    ${placesCardsHtml}
-                </section>
-            `;
-        }).join('');
-    }
-
-    initPage();
-</script>
-
+                        ${cardsHtml}
+                    </section>
+                `;
+            }).join('');
+        }
+    </script>
 </body>
 </html>
