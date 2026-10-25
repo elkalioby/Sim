@@ -48,11 +48,13 @@
         .search-box {
             position: relative;
             width: 100%;
+            display: flex;
+            align-items: center;
         }
 
         .search-box input {
             width: 100%;
-            padding: 10px 14px;
+            padding: 10px 14px 10px 38px;
             border: 1px solid #d1d5db;
             border-radius: 10px;
             font-size: 0.95rem;
@@ -63,6 +65,23 @@
         .search-box input:focus {
             border-color: var(--primary-light);
             background: #fff;
+        }
+
+        .clear-search-btn {
+            position: absolute;
+            left: 8px;
+            background: #e5e7eb;
+            color: #374151;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
         }
 
         .category-filter-bar {
@@ -430,6 +449,16 @@
             background: #1ebe5d !important;
         }
 
+        .no-results-box {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 28px 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
         /* نافذة تكبير الصورة */
         .modal-overlay {
             display: none;
@@ -486,7 +515,8 @@
     <!-- شريط البحث والفلترة بالأيقونات فقط -->
     <div class="top-controls">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="🔍 بحث بالاسم..." oninput="renderAllSections()">
+            <input type="text" id="searchInput" placeholder="🔍 بحث بالاسم أو الملاحظات..." oninput="handleSearch()" onkeyup="handleSearch()">
+            <button type="button" class="clear-search-btn" id="clearSearchBtn" onclick="clearSearch()" title="مسح البحث">✕</button>
         </div>
         <div class="category-filter-bar" id="categoryFilterBar"></div>
     </div>
@@ -517,7 +547,7 @@
                 </div>
             </div>
 
-            <!-- القسم: قائمة الأيقونات + زر (+) للإضافة + زر (✕) لحذف القسم المحدد مثل صفحة العملاء تماماً -->
+            <!-- القسم -->
             <div class="form-group">
                 <label>القسم</label>
                 <div style="display: flex; gap: 6px; align-items: center;">
@@ -595,6 +625,48 @@
         let activeCategoryFilter = 'all';
         let selectedTheme = 'auto';
         let tempImageBase64 = '';
+
+        // دالة توحيد الحروف العربية لضمان دقة البحث
+        function normalizeArabic(text) {
+            if (!text) return '';
+            return String(text)
+                .toLowerCase()
+                .trim()
+                .replace(/[\u064B-\u065F\u0670]/g, '') // إزالة التشكيل
+                .replace(/[أإآٱ]/g, 'ا')              // توحيد الألف
+                .replace(/ة/g, 'ه')                   // توحيد التاء المربوطة والهاء
+                .replace(/ى/g, 'ي')                   // توحيد الياء
+                .replace(/ؤ/g, 'و')
+                .replace(/ئ/g, 'ي');
+        }
+
+        function handleSearch() {
+            const input = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('clearSearchBtn');
+            const formCard = document.getElementById('formCard');
+            const editId = document.getElementById('editPlaceId').value;
+            const hasQuery = input && input.value.trim().length > 0;
+
+            if (clearBtn) {
+                clearBtn.style.display = hasQuery ? 'inline-flex' : 'none';
+            }
+
+            // إخفاء نموذج التسجيل مؤقتاً أثناء البحث لتظهر النتائج فوراً تحت شريط البحث
+            if (formCard && !editId) {
+                formCard.style.display = hasQuery ? 'none' : 'block';
+            }
+
+            renderAllSections();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('searchInput');
+            if (input) {
+                input.value = '';
+                handleSearch();
+                input.focus();
+            }
+        }
 
         function loadLocalData() {
             const savedCats = JSON.parse(localStorage.getItem('sim_loc_categories') || 'null');
@@ -728,7 +800,6 @@
             document.getElementById('placeCategory').value = newCat.id;
         }
 
-        // حذف القسم المحدد من القائمة العلوية (لتجنب تكرار أزرار الحذف في الأسفل)
         async function deleteSelectedCategory() {
             const selectEl = document.getElementById('placeCategory');
             const catId = selectEl.value;
@@ -941,7 +1012,6 @@
             return loc;
         }
 
-        // فتح الموقع في Google Maps عند الضغط على التاب
         function openPlaceInMap(placeId) {
             const place = places.find(p => p.id === placeId);
             if (!place) return;
@@ -949,7 +1019,6 @@
             if (url) window.open(url, '_blank');
         }
 
-        // مشاركة المكان عبر واتساب
         function sharePlaceWhatsApp(event, placeId) {
             event.stopPropagation();
             const place = places.find(p => p.id === placeId);
@@ -965,6 +1034,9 @@
             const p = places.find(item => item.id === id);
             if (!p) return;
 
+            const formCard = document.getElementById('formCard');
+            if (formCard) formCard.style.display = 'block';
+
             document.getElementById('editPlaceId').value = p.id;
             document.getElementById('placeName').value = p.name || '';
             document.getElementById('placeCategory').value = p.categoryId || (categories[0] && categories[0].id);
@@ -975,7 +1047,7 @@
             showImagePreview(tempImageBase64);
 
             document.getElementById('cancelEditBtn').style.display = 'inline-flex';
-            document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
+            formCard.scrollIntoView({ behavior: 'smooth' });
         }
 
         async function deletePlace(event, id) {
@@ -1001,6 +1073,7 @@
             document.getElementById('editPlaceId').value = '';
             clearImage();
             document.getElementById('cancelEditBtn').style.display = 'none';
+            handleSearch();
         }
 
         function openImageModal(event, src) {
@@ -1013,56 +1086,110 @@
             }
         }
 
-        // رسم الأقسام والتابات (مع زرار واتساب الأخضر وبدون تكرار أزرار الحذف أو الأصفار)
+        function buildPlaceCardHtml(place, idx, fallbackIcon) {
+            const themeClass = place.theme || TAB_THEMES[idx % TAB_THEMES.length];
+            const thumbHtml = place.photo
+                ? `<img src="${place.photo}" class="place-thumb" alt="${place.name}" onclick="openImageModal(event, '${place.photo}')">`
+                : `<div class="place-icon-fallback">${fallbackIcon || '📍'}</div>`;
+
+            return `
+                <div class="place-tab-card ${themeClass}" onclick="openPlaceInMap('${place.id}')">
+                    <div class="place-top-row">
+                        ${thumbHtml}
+                        <div class="place-info">
+                            <div class="place-name">${place.name || 'بدون اسم'}</div>
+                            ${place.notes ? `<div class="place-notes">${place.notes}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="place-footer">
+                        <span class="map-open-hint">🗺️ Google Maps</span>
+                        <div class="place-actions">
+                            <button type="button" class="action-icon-btn whatsapp-btn" onclick="sharePlaceWhatsApp(event, '${place.id}')" title="مشاركة عبر واتساب">
+                                <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+                                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c0 .072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.124.556 4.119 1.529 5.847l-1.529 5.583 5.714-1.499c1.693.922 3.635 1.449 5.702 1.449 6.627 0 12-5.373 12-12s-5.373-12-12-12z"/>
+                                </svg>
+                            </button>
+                            <button type="button" class="action-icon-btn" onclick="editPlace(event, '${place.id}')" title="تعديل">✏️</button>
+                            <button type="button" class="action-icon-btn" onclick="deletePlace(event, '${place.id}')" title="حذف">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         function renderAllSections() {
             const wrapper = document.getElementById('sectionsWrapper');
-            const query = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+            const rawQuery = (document.getElementById('searchInput')?.value || '').trim();
+            const normalizedQuery = normalizeArabic(rawQuery);
 
+            const matchesQuery = (p) => {
+                if (!normalizedQuery) return true;
+                const normName = normalizeArabic(p.name || '');
+                const normNotes = normalizeArabic(p.notes || '');
+                return normName.includes(normalizedQuery) || normNotes.includes(normalizedQuery);
+            };
+
+            // في حالة كتابة نص في البحث: ابحث في كافة الأقسام وأخفِ الأقسام الفارغة
+            if (normalizedQuery) {
+                let totalMatches = 0;
+                const knownCatIds = new Set(categories.map(c => c.id));
+
+                let sectionsHtml = categories.map(cat => {
+                    if (activeCategoryFilter !== 'all' && activeCategoryFilter !== cat.id) return '';
+                    const catPlaces = places.filter(p => p.categoryId === cat.id && matchesQuery(p));
+                    if (catPlaces.length === 0) return '';
+
+                    totalMatches += catPlaces.length;
+                    return `
+                        <section class="category-section">
+                            <div class="category-header has-items">
+                                <div class="category-title-group">
+                                    <div class="category-icon-box" style="background: ${cat.color || '#2563eb'}">${cat.icon}</div>
+                                    <span class="category-count">${catPlaces.length}</span>
+                                </div>
+                            </div>
+                            <div class="places-tabs-grid">
+                                ${catPlaces.map((place, idx) => buildPlaceCardHtml(place, idx, cat.icon)).join('')}
+                            </div>
+                        </section>
+                    `;
+                }).join('');
+
+                // إظهار أي أماكن مطابقة غير مرتبطة بقسم حالي
+                const uncategorizedPlaces = places.filter(p => !knownCatIds.has(p.categoryId) && matchesQuery(p));
+                if (uncategorizedPlaces.length > 0 && activeCategoryFilter === 'all') {
+                    totalMatches += uncategorizedPlaces.length;
+                    sectionsHtml += `
+                        <section class="category-section">
+                            <div class="category-header has-items">
+                                <div class="category-title-group">
+                                    <div class="category-icon-box" style="background: #64748b">📍</div>
+                                    <span class="category-count">${uncategorizedPlaces.length}</span>
+                                </div>
+                            </div>
+                            <div class="places-tabs-grid">
+                                ${uncategorizedPlaces.map((place, idx) => buildPlaceCardHtml(place, idx, '📍')).join('')}
+                            </div>
+                        </section>
+                    `;
+                }
+
+                wrapper.innerHTML = totalMatches > 0
+                    ? sectionsHtml
+                    : `<div class="no-results-box">🔍 لا توجد نتائج مطابقة لـ "${rawQuery}"</div>`;
+                return;
+            }
+
+            // الوضع العادي (بدون بحث)
             const visibleCategories = activeCategoryFilter === 'all'
                 ? categories
                 : categories.filter(c => c.id === activeCategoryFilter);
 
             wrapper.innerHTML = visibleCategories.map(cat => {
-                const catPlaces = places.filter(p => {
-                    const inCategory = p.categoryId === cat.id;
-                    const matchesSearch = !query ||
-                        (p.name && p.name.toLowerCase().includes(query)) ||
-                        (p.notes && p.notes.toLowerCase().includes(query));
-                    return inCategory && matchesSearch;
-                });
-
+                const catPlaces = places.filter(p => p.categoryId === cat.id);
                 const cardsHtml = catPlaces.length > 0
                     ? `<div class="places-tabs-grid">
-                        ${catPlaces.map((place, idx) => {
-                            const themeClass = place.theme || TAB_THEMES[idx % TAB_THEMES.length];
-                            const thumbHtml = place.photo
-                                ? `<img src="${place.photo}" class="place-thumb" alt="${place.name}" onclick="openImageModal(event, '${place.photo}')">`
-                                : `<div class="place-icon-fallback">${cat.icon}</div>`;
-
-                            return `
-                                <div class="place-tab-card ${themeClass}" onclick="openPlaceInMap('${place.id}')">
-                                    <div class="place-top-row">
-                                        ${thumbHtml}
-                                        <div class="place-info">
-                                            <div class="place-name">${place.name}</div>
-                                            ${place.notes ? `<div class="place-notes">${place.notes}</div>` : ''}
-                                        </div>
-                                    </div>
-                                    <div class="place-footer">
-                                        <span class="map-open-hint">🗺️ Google Maps</span>
-                                        <div class="place-actions">
-                                            <button type="button" class="action-icon-btn whatsapp-btn" onclick="sharePlaceWhatsApp(event, '${place.id}')" title="مشاركة عبر واتساب">
-                                                <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
-                                                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.124.556 4.119 1.529 5.847l-1.529 5.583 5.714-1.499c1.693.922 3.635 1.449 5.702 1.449 6.627 0 12-5.373 12-12s-5.373-12-12-12z"/>
-                                                </svg>
-                                            </button>
-                                            <button type="button" class="action-icon-btn" onclick="editPlace(event, '${place.id}')" title="تعديل">✏️</button>
-                                            <button type="button" class="action-icon-btn" onclick="deletePlace(event, '${place.id}')" title="حذف">🗑️</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
+                        ${catPlaces.map((place, idx) => buildPlaceCardHtml(place, idx, cat.icon)).join('')}
                        </div>`
                     : '';
 
