@@ -29,7 +29,6 @@
         input:focus, select:focus, textarea:focus { border-color: var(--primary-light); }
         input[readonly] { background-color: #f9fafb; font-weight: bold; color: var(--primary); }
 
-        /* قائمة اقتراحات العملاء المخصصة والأنيقة */
         .autocomplete-wrapper { position: relative; }
         .customers-dropdown {
             display: none;
@@ -153,7 +152,6 @@
             <input type="hidden" id="editRecordId" value="">
             <div class="form-grid">
                 
-                <!-- حقل اسم العميل مع قائمة منسدلة مخصصة وواضحة بدون السهم الأسود المشوه -->
                 <div class="autocomplete-wrapper">
                     <label>اسم العميل *</label>
                     <input type="text" id="clientName" required autocomplete="off" placeholder="اكتب اسم العميل أو المحل للبحث..." oninput="filterCustomersDropdown()" onfocus="filterCustomersDropdown()">
@@ -171,7 +169,6 @@
                     </div>
                 </div>
 
-                <!-- خانة العنوان / السوق: قائمة منسدلة نظيفة مربوطة بصفحة العملاء مباشرة -->
                 <div class="full-width">
                     <label>العنوان / السوق *</label>
                     <select id="marketName" required style="cursor:pointer;">
@@ -291,7 +288,10 @@
         let records = [];
         let currentCart = [];
         let stockInventory = {};
+        let autoStockInventory = {};
+        let stockOffsets = {};
         let deletedStockItems = [];
+        let configUpdatedAt = 0;
         let marketList = [];
         let savedCustomersList = [];
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'مجهول', role: 'employee' };
@@ -303,7 +303,6 @@
 
         document.getElementById('reminderDate').valueAsDate = new Date();
 
-        // إغلاق قائمة اقتراحات العملاء عند النقر خارجها
         document.addEventListener('click', function(e) {
             const wrapper = document.querySelector('.autocomplete-wrapper');
             const dropdown = document.getElementById('customersDropdown');
@@ -314,6 +313,7 @@
 
         window.addEventListener('storage', async function(e) {
             if (e.key === 'app_config' || e.key === 'markets_list_offline' || e.key === 'customers_records_offline' || e.key === 'scanned_sims_offline' || e.key === 'sales_records_offline') {
+                loadLocalConfig();
                 loadSavedCustomers();
                 syncLocalMarkets();
                 await calculateStockFromSims();
@@ -322,6 +322,15 @@
                 renderModalStockList();
             }
         });
+
+        function loadLocalConfig() {
+            const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            if (localConfig) {
+                deletedStockItems = localConfig.deletedStockItems || [];
+                stockOffsets = localConfig.stockOffsets || {};
+                configUpdatedAt = localConfig.configUpdatedAt || 0;
+            }
+        }
 
         function syncLocalMarkets() {
             const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
@@ -337,12 +346,8 @@
         }
 
         window.initApp = async function() {
+            loadLocalConfig();
             loadSavedCustomers();
-
-            const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
-            if (localConfig) {
-                deletedStockItems = localConfig.deletedStockItems || [];
-            }
             
             const localRecords = JSON.parse(localStorage.getItem('sales_records_offline'));
             if (localRecords) {
@@ -366,7 +371,22 @@
                         if (Array.isArray(data.marketList)) {
                             data.marketList.forEach(m => { if (m && m.trim()) mergedMarkets.add(m.trim()); });
                         }
-                        deletedStockItems = data.deletedStockItems || deletedStockItems;
+                        const cloudUpdatedAt = data.configUpdatedAt || 0;
+                        if (cloudUpdatedAt >= configUpdatedAt) {
+                            deletedStockItems = data.deletedStockItems || deletedStockItems;
+                            stockOffsets = data.stockOffsets || stockOffsets;
+                            configUpdatedAt = cloudUpdatedAt;
+                            localStorage.setItem('app_config', JSON.stringify({
+                                marketList: Array.from(mergedMarkets),
+                                stockInventory,
+                                stockOffsets,
+                                deletedStockItems,
+                                configUpdatedAt
+                            }));
+                        } else {
+                            // رفع التعديلات المحلية الأحدث إلى السحابة
+                            await saveConfig();
+                        }
                     }
 
                     const marketsConfigSnap = await window.getDoc(window.doc(window.db, "settings", "markets_config"));
@@ -377,7 +397,6 @@
                         }
                     }
 
-                    // جلب العملاء من السحابة لضمان عمل الاقتراحات دائماً
                     const custSnap = await window.getDocs(window.collection(window.db, "customers"));
                     if (!custSnap.empty) {
                         savedCustomersList = [];
@@ -415,7 +434,7 @@
                 } catch(err) {}
             }
 
-            stockInventory = {};
+            autoStockInventory = {};
             sims.forEach(item => {
                 const cat = item.category || item.company || 'Mobily';
                 let dur = item.duration;
@@ -423,25 +442,39 @@
                     dur = (cat === 'Redbull') ? '30' : '60';
                 }
                 const itemKey = `${cat} (${dur})`;
-                stockInventory[itemKey] = (stockInventory[itemKey] || 0) + 1;
+                autoStockInventory[itemKey] = (autoStockInventory[itemKey] || 0) + 1;
             });
 
             records.forEach(r => {
                 if (r.cartItems && Array.isArray(r.cartItems)) {
                     r.cartItems.forEach(ci => {
-                        if (stockInventory[ci.item] !== undefined) {
-                            stockInventory[ci.item] -= ci.qty;
-                            if (stockInventory[ci.item] < 0) stockInventory[ci.item] = 0;
+                        if (autoStockInventory[ci.item] === undefined) {
+                            autoStockInventory[ci.item] = 0;
                         }
+                        autoStockInventory[ci.item] -= ci.qty;
                     });
                 }
             });
 
             sims.forEach(item => {
                 const cat = item.category || item.company;
-                if (cat && stockInventory[cat] === undefined && stockInventory[`${cat} (60)`] === undefined) {
-                    stockInventory[cat] = 1;
+                if (cat && autoStockInventory[cat] === undefined && autoStockInventory[`${cat} (60)`] === undefined) {
+                    autoStockInventory[cat] = 1;
                 }
+            });
+
+            // دمج الرصيد التلقائي مع التعديلات اليدوية المحفوظة (stockOffsets)
+            stockInventory = {};
+            const allKeys = new Set([
+                ...Object.keys(autoStockInventory),
+                ...Object.keys(stockOffsets || {})
+            ]);
+
+            allKeys.forEach(key => {
+                const base = autoStockInventory[key] || 0;
+                const offset = (stockOffsets && stockOffsets[key] !== undefined) ? parseFloat(stockOffsets[key]) : 0;
+                const finalQty = base + offset;
+                stockInventory[key] = finalQty >= 0 ? finalQty : 0;
             });
 
             deletedStockItems.forEach(delItem => {
@@ -517,7 +550,14 @@
         }
 
         async function saveConfig() {
-            const dataToSave = { marketList, stockInventory, deletedStockItems };
+            configUpdatedAt = Date.now();
+            const dataToSave = {
+                marketList,
+                stockInventory,
+                stockOffsets,
+                deletedStockItems,
+                configUpdatedAt
+            };
             localStorage.setItem('app_config', JSON.stringify(dataToSave));
             localStorage.setItem('markets_list_offline', JSON.stringify(marketList));
             try {
@@ -588,22 +628,27 @@
             const newQtyStr = prompt(`أدخل الرصيد الجديد للصنف (${item}):`, currentQty);
             if (newQtyStr === null) return;
             const newQty = parseFloat(newQtyStr);
-            if (isNaN(newQty)) return;
+            if (isNaN(newQty) || newQty < 0) return;
+
+            const baseAuto = autoStockInventory[item] || 0;
+            stockOffsets[item] = newQty - baseAuto;
             stockInventory[item] = newQty;
-            await saveConfig();
+
             updateItemSelects();
             renderModalStockList();
+            await saveConfig();
         }
 
         async function deleteModalStock(item) {
             if (confirm(`هل أنت متأكد من حذف الصنف (${item}) من المخزون؟`)) {
                 delete stockInventory[item];
+                delete stockOffsets[item];
                 if (!deletedStockItems.includes(item)) {
                     deletedStockItems.push(item);
                 }
-                await saveConfig();
                 updateItemSelects();
                 renderModalStockList();
+                await saveConfig();
             }
         }
 
@@ -693,19 +738,22 @@
         window.loadCloudRecords = async function() {
             try {
                 if(!window.db) return;
+                const localUnsynced = records.filter(r => r.firebaseId && String(r.firebaseId).startsWith('local_'));
                 const querySnapshot = await window.getDocs(window.collection(window.db, "sales_records"));
-                records = [];
+                const cloudRecords = [];
                 querySnapshot.forEach((docSnap) => {
                     const data = docSnap.data();
-                    records.push({ firebaseId: docSnap.id, ...data });
+                    cloudRecords.push({ ...data, firebaseId: docSnap.id });
                     if (data.marketName && data.marketName.trim() && !marketList.includes(data.marketName.trim())) {
                         marketList.push(data.marketName.trim());
                     }
                 });
+                records = [...cloudRecords, ...localUnsynced];
                 localStorage.setItem('sales_records_offline', JSON.stringify(records));
                 updateMarketSelect();
                 await calculateStockFromSims();
                 updateItemSelects();
+                renderModalStockList();
                 renderRecords();
             } catch (e) {}
         };
@@ -729,10 +777,17 @@
             const totalVal = parseFloat(document.getElementById('total').value) || 0;
 
             let paymentsHistory = [];
+            let originalDate = new Date().toISOString().split('T')[0];
+            let originalTimestamp = Date.now();
+
             if (editId) {
                 const oldRec = records.find(r => r.firebaseId === editId);
-                if (oldRec && oldRec.paymentsHistory) {
-                    paymentsHistory = [...oldRec.paymentsHistory];
+                if (oldRec) {
+                    originalDate = oldRec.date || originalDate;
+                    originalTimestamp = oldRec.timestamp || originalTimestamp;
+                    if (oldRec.paymentsHistory) {
+                        paymentsHistory = [...oldRec.paymentsHistory];
+                    }
                 }
             }
 
@@ -745,8 +800,8 @@
             }
 
             const recordData = {
-                date: new Date().toISOString().split('T')[0],
-                timestamp: Date.now(),
+                date: originalDate,
+                timestamp: originalTimestamp,
                 clientName: document.getElementById('clientName').value,
                 shopName: document.getElementById('shopName').value,
                 marketName: marketVal,
@@ -755,7 +810,7 @@
                 cartItems: currentCart,
                 itemsSummary: currentCart.map(c => `${c.item} (عدد: ${c.qty}، سعر: ${c.price})`).join(' | '),
                 total: totalVal,
-                paid: parseFloat(document.getElementById('paid').value) || 0,
+                paid: paidNow,
                 remaining: remaining,
                 paymentsHistory: paymentsHistory,
                 reminderDate: remaining > 0 ? document.getElementById('reminderDate').value : '',
@@ -766,50 +821,51 @@
 
             try {
                 if (editId) {
-                    const oldRecord = records.find(item => item.firebaseId === editId);
-                    if (oldRecord && oldRecord.cartItems) {
-                        oldRecord.cartItems.forEach(ci => {
-                            if (stockInventory[ci.item] !== undefined) stockInventory[ci.item] += ci.qty;
-                        });
-                    }
-                    currentCart.forEach(ci => {
-                        if (stockInventory[ci.item] !== undefined) stockInventory[ci.item] -= ci.qty;
-                    });
-                    
+                    // تحديث السجل في المصفوفة المحلية فوراً
+                    records = records.map(r => r.firebaseId === editId ? { ...recordData, firebaseId: editId } : r);
+                    localStorage.setItem('sales_records_offline', JSON.stringify(records));
+
                     if (window.db) {
-                        await window.updateDoc(window.doc(window.db, "sales_records", editId), recordData);
-                    } else {
-                        records = records.map(r => r.firebaseId === editId ? recordData : r);
+                        if (editId.startsWith('local_')) {
+                            const docRef = await window.addDoc(window.collection(window.db, "sales_records"), recordData);
+                            records = records.map(r => r.firebaseId === editId ? { ...recordData, firebaseId: docRef.id } : r);
+                            localStorage.setItem('sales_records_offline', JSON.stringify(records));
+                        } else {
+                            await window.setDoc(window.doc(window.db, "sales_records", editId), recordData, { merge: true });
+                        }
                     }
                     alert('تم تعديل الفاتورة وتحديث المخزون بنجاح!');
                 } else {
-                    currentCart.forEach(ci => {
-                        if (stockInventory[ci.item] !== undefined) stockInventory[ci.item] -= ci.qty;
-                    });
-
                     if (window.db) {
-                        await window.addDoc(window.collection(window.db, "sales_records"), recordData);
+                        const docRef = await window.addDoc(window.collection(window.db, "sales_records"), recordData);
+                        records.push({ ...recordData, firebaseId: docRef.id });
                     } else {
                         recordData.firebaseId = 'local_' + Date.now();
                         records.push(recordData);
                     }
+                    localStorage.setItem('sales_records_offline', JSON.stringify(records));
                     alert('تم حفظ الفاتورة بنجاح!');
                 }
 
+                await calculateStockFromSims();
                 await saveConfig();
-                localStorage.setItem('sales_records_offline', JSON.stringify(records));
                 updateItemSelects();
                 resetForm();
-                await loadCloudRecords();
+                renderRecords();
             } catch (err) {
-                if(!editId) {
+                if (editId) {
+                    records = records.map(r => r.firebaseId === editId ? { ...recordData, firebaseId: editId } : r);
+                } else {
                     recordData.firebaseId = 'local_' + Date.now();
                     records.push(recordData);
-                    localStorage.setItem('sales_records_offline', JSON.stringify(records));
-                    alert('تم الحفظ محلياً.');
-                    resetForm();
-                    renderRecords();
                 }
+                localStorage.setItem('sales_records_offline', JSON.stringify(records));
+                await calculateStockFromSims();
+                await saveConfig();
+                updateItemSelects();
+                alert('تم حفظ التعديلات محلياً.');
+                resetForm();
+                renderRecords();
             }
         });
 
@@ -876,19 +932,22 @@
 
             r.notes = (r.notes || '') + `\n[سداد دفعة بقيمة ${addPay} بواسطة ${currentUser.username}]`;
 
+            localStorage.setItem('sales_records_offline', JSON.stringify(records));
+            renderRecords();
+
             try {
                 if (window.db && !firebaseId.startsWith('local_')) {
-                    await window.updateDoc(window.doc(window.db, "sales_records", firebaseId), {
+                    await window.setDoc(window.doc(window.db, "sales_records", firebaseId), {
                         paid: r.paid,
                         remaining: r.remaining,
                         paymentsHistory: r.paymentsHistory,
                         notes: r.notes
-                    });
+                    }, { merge: true });
                 }
-                localStorage.setItem('sales_records_offline', JSON.stringify(records));
                 alert('تم تسجيل الدفعة بنجاح!');
-                renderRecords();
-            } catch (e) {}
+            } catch (e) {
+                alert('تم تسجيل الدفعة محلياً.');
+            }
         }
 
         function renderRecords() {
@@ -1006,21 +1065,15 @@
 
         async function deleteRecord(firebaseId) {
             if (confirm('هل أنت متأكد من حذف هذا السجل وإعادة الكميات للمخزون؟')) {
-                const r = records.find(item => item.firebaseId === firebaseId);
-                if (r && r.cartItems) {
-                    r.cartItems.forEach(ci => {
-                        if (stockInventory[ci.item] !== undefined) stockInventory[ci.item] += ci.qty;
-                    });
-                    await saveConfig();
-                    updateItemSelects();
-                }
-
                 try {
                     if (window.db && !firebaseId.startsWith('local_')) {
                         await window.deleteDoc(window.doc(window.db, "sales_records", firebaseId));
                     }
                     records = records.filter(item => item.firebaseId !== firebaseId);
                     localStorage.setItem('sales_records_offline', JSON.stringify(records));
+                    await calculateStockFromSims();
+                    await saveConfig();
+                    updateItemSelects();
                     alert('تم الحذف بنجاح.');
                     renderRecords();
                 } catch (e) {
