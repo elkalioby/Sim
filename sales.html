@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة المبيعات وإحصائيات المخزون</title>
+    <title>المبيعات</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { background: #f8fafc; color: #1e293b; padding: 10px; max-width: 900px; margin: 0 auto; }
@@ -19,7 +19,7 @@
         .page-title {
             text-align: center;
             color: #1e3a8a;
-            font-size: 1.15rem;
+            font-size: 1.2rem;
             font-weight: 800;
             margin-bottom: 12px;
             display: flex;
@@ -342,7 +342,7 @@
             background: #64748b;
             color: #ffffff;
             border: none;
-            padding: 9px 16px;
+            padding: 10px 16px;
             border-radius: 8px;
             font-size: 0.85rem;
             font-weight: 700;
@@ -354,20 +354,40 @@
         }
         .btn-reset:hover { background: #475569; }
 
-        .date-input {
+        /* تصميم مخصص لمربع التاريخ يمنع ظهوره فارغاً على الهواتف */
+        .custom-date-box {
+            position: relative;
             flex: 1;
-            padding: 9px 10px;
+            height: 40px;
             border-radius: 8px;
             border: 1.5px solid #cbd5e1;
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: #0f172a;
-            background: #fff;
-            outline: none;
-            text-align: center;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: pointer;
         }
 
-        /* جدول الإحصائيات (مخفي افتراضياً حتى يتم الاختيار من الفلتر) */
+        .custom-date-label {
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: #0f172a;
+            pointer-events: none;
+            direction: rtl;
+        }
+
+        .custom-date-box input[type="date"] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* جدول الإحصائيات (يظهر عند اختيار "الكل" أو صنف أو تاريخ) */
         .table-card {
             display: none;
             margin-top: 8px;
@@ -467,7 +487,7 @@
     <div class="main-card">
         <div class="page-title">
             <span>📊</span>
-            <span>لوحة المبيعات وإحصائيات المخزون</span>
+            <span>المبيعات</span>
         </div>
 
         <!-- 4 مربعات إحصائية بالأعلى -->
@@ -535,7 +555,7 @@
                 إلغاء التعديل
             </button>
 
-            <!-- جدول الدفعات بدون شريط العنوان وإجمالي الشراء -->
+            <!-- جدول الدفعات -->
             <div class="batches-log-box">
                 <div class="batches-table-wrap">
                     <table class="batches-table">
@@ -566,7 +586,8 @@
         <div class="filter-box">
             <div class="filter-label">فلتر المبيعات حسب الشركة والمدة</div>
             <select id="itemFilter" onchange="renderDashboard()">
-                <option value="">📦 كل المحلات / الأصناف</option>
+                <option value="">اختر</option>
+                <option value="ALL">الكل</option>
             </select>
 
             <div class="date-row">
@@ -574,11 +595,14 @@
                     <span>🔄</span>
                     <span>عرض</span>
                 </button>
-                <input type="text" id="dateFilter" class="date-input" placeholder="📅 حدد التاريخ" onfocus="this.type='date'; if(this.showPicker) try{this.showPicker();}catch(e){}" onblur="if(!this.value) this.type='text'" onchange="renderDashboard()">
+                <div class="custom-date-box" onclick="openDatePicker()">
+                    <span class="custom-date-label" id="dateDisplayText">📅 حدد التاريخ</span>
+                    <input type="date" id="dateFilter" onchange="onDateFilterChange()">
+                </div>
             </div>
         </div>
 
-        <!-- جدول الإحصائيات (يظهر فقط عند الاختيار من الفلتر) -->
+        <!-- جدول الإحصائيات -->
         <div class="table-card" id="statsTableCard">
             <div class="table-title">📊 الإحصائيات</div>
             <div class="table-wrap">
@@ -617,6 +641,29 @@
         }
 
         document.getElementById('batchDate').value = getTodayStr();
+
+        function openDatePicker() {
+            const dateInput = document.getElementById('dateFilter');
+            if (dateInput && typeof dateInput.showPicker === 'function') {
+                try { dateInput.showPicker(); } catch (e) {}
+            }
+        }
+
+        function onDateFilterChange() {
+            const dateInput = document.getElementById('dateFilter');
+            const label = document.getElementById('dateDisplayText');
+            if (dateInput.value) {
+                label.textContent = `📅 ${dateInput.value}`;
+                // إذا اختار المستخدم تاريخاً وكان الفلتر لا يزال على "اختر"، نعرض له جدول "الكل" لهذا التاريخ تلقائياً
+                const itemSelect = document.getElementById('itemFilter');
+                if (!itemSelect.value) {
+                    itemSelect.value = 'ALL';
+                }
+            } else {
+                label.textContent = '📅 حدد التاريخ';
+            }
+            renderDashboard();
+        }
 
         function toggleCostPanel() {
             const panel = document.getElementById('costPanel');
@@ -922,11 +969,14 @@
             return 0;
         }
 
-        // تعبئة الفلتر بالمسميات والمدة مثل Mobily (30) و Mobily (60)
+        // القائمة تبدأ بـ "اختر" ثم "الكل" ثم الأصناف بالمدة
         function populateFilterDropdown() {
             const select = document.getElementById('itemFilter');
             const currentVal = select.value || '';
-            let html = `<option value="">📦 كل المحلات / الأصناف</option>`;
+            let html = `
+                <option value="">اختر</option>
+                <option value="ALL">الكل</option>
+            `;
             categoriesList.forEach(c => {
                 durationsList.forEach(d => {
                     const invKey = `${c} (${d})`;
@@ -943,10 +993,10 @@
         }
 
         window.resetFilters = function() {
-            document.getElementById('itemFilter').value = '';
+            document.getElementById('itemFilter').value = 'ALL';
             const dateInput = document.getElementById('dateFilter');
             dateInput.value = '';
-            dateInput.type = 'text';
+            document.getElementById('dateDisplayText').textContent = '📅 حدد التاريخ';
             renderDashboard();
         };
 
@@ -981,6 +1031,7 @@
         window.renderDashboard = function() {
             const selectedItemKey = document.getElementById('itemFilter').value;
             const selectedDate = document.getElementById('dateFilter').value;
+            const isSpecificItem = selectedItemKey && selectedItemKey !== 'ALL';
 
             const allScannedMap = {};
             const allSoldMap = {};
@@ -1053,7 +1104,7 @@
                 const items = extractInvoiceItems(inv);
                 const invDate = (inv.date || '').slice(0, 10);
                 const matchesDate = !selectedDate || invDate === selectedDate;
-                const matchesItem = !selectedItemKey || items.some(it => `${it.company}_${it.duration}` === selectedItemKey);
+                const matchesItem = !isSpecificItem || items.some(it => `${it.company}_${it.duration}` === selectedItemKey);
 
                 if (matchesDate && matchesItem) {
                     totalDebtsSum += getInvoiceDebt(inv);
@@ -1084,7 +1135,7 @@
                 });
             });
 
-            if (selectedItemKey) {
+            if (isSpecificItem) {
                 activeKeys = activeKeys.filter(item => item.key === selectedItemKey);
             }
 
@@ -1098,7 +1149,7 @@
                 totalBatchesPurchaseSum += (filteredBatchesCostMap[item.key] || 0);
             });
 
-            const appliedExtraCost = (!selectedItemKey && !selectedDate) ? (parseFloat(extraGeneralCost) || 0) : 0;
+            const appliedExtraCost = (!isSpecificItem && !selectedDate) ? (parseFloat(extraGeneralCost) || 0) : 0;
             const displayedTotalCost = +( (totalBatchesPurchaseSum > 0 ? totalBatchesPurchaseSum : totalSoldCostSum) + appliedExtraCost ).toFixed(2);
             const totalProfitSum = +(totalSalesSum - (totalSoldCostSum + appliedExtraCost)).toFixed(2);
 
@@ -1107,9 +1158,9 @@
             document.getElementById('totalProfitValue').textContent = totalProfitSum.toLocaleString('en-US');
             document.getElementById('totalDebtValue').textContent = totalDebtsSum.toLocaleString('en-US');
 
-            // إظهار جدول الإحصائيات فقط عند اختيار صنف من فلتر المبيعات فوق
+            // إخفاء الجدول إذا كان الفلتر على "اختر" ولم يتم اختيار تاريخ، وإظهاره عند اختيار "الكل" أو أي صنف أو تاريخ
             const statsTableCard = document.getElementById('statsTableCard');
-            if (!selectedItemKey) {
+            if (!selectedItemKey && !selectedDate) {
                 statsTableCard.style.display = 'none';
                 return;
             }
