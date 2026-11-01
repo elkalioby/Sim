@@ -84,10 +84,29 @@
         .profit-box .stat-value { color: #1d4ed8; }
         .debt-box .stat-value { color: #dc2626; }
 
-        /* زر ولوحة إضافة التكلفة */
+        /* أزرار التابات (إضافة تكلفة + مديونيات العملاء) */
         .btn-cost-toggle {
             width: 100%;
             background: #1e3a8a;
+            color: #ffffff;
+            border: none;
+            padding: 11px 14px;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            font-weight: 800;
+            cursor: pointer;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        .btn-cost-toggle:hover { background: #1d4ed8; }
+
+        .btn-debts-toggle {
+            width: 100%;
+            background: #be123c;
             color: #ffffff;
             border: none;
             padding: 11px 14px;
@@ -102,9 +121,9 @@
             gap: 6px;
             transition: background 0.2s;
         }
-        .btn-cost-toggle:hover { background: #1d4ed8; }
+        .btn-debts-toggle:hover { background: #9f1239; }
 
-        .cost-panel {
+        .cost-panel, .debts-panel {
             display: none;
             background: #f8fafc;
             border: 1.5px solid #cbd5e1;
@@ -122,6 +141,18 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+
+        .debts-panel-header {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #be123c;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #fecdd3;
             padding-bottom: 8px;
         }
 
@@ -195,7 +226,7 @@
             display: none;
         }
 
-        /* جدول الدفعات */
+        /* جداول الدفعات والمديونيات */
         .batches-log-box {
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -205,18 +236,18 @@
         }
 
         .batches-table-wrap {
-            max-height: 220px;
+            max-height: 260px;
             overflow-y: auto;
         }
 
         .batches-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.76rem;
+            font-size: 0.78rem;
         }
 
         .batches-table th, .batches-table td {
-            padding: 7px 4px;
+            padding: 8px 4px;
             border-bottom: 1px solid #f1f5f9;
             text-align: center;
         }
@@ -226,7 +257,7 @@
             color: #fff;
             position: sticky;
             top: 0;
-            font-size: 0.72rem;
+            font-size: 0.74rem;
         }
 
         .batch-actions {
@@ -257,6 +288,31 @@
             font-weight: bold;
             font-size: 0.75rem;
         }
+
+        .btn-pay-debt {
+            background: #16a34a;
+            color: #ffffff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+        .btn-pay-debt:hover { background: #15803d; }
+
+        .debt-search-input {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+            outline: none;
+            background: #ffffff;
+        }
+        .debt-search-input:focus { border-color: #be123c; }
 
         /* مربع إضافة مصروفات */
         .expense-row {
@@ -582,6 +638,39 @@
             </div>
         </div>
 
+        <!-- تاب مديونيات العملاء تحت إضافة تكلفة مباشرة -->
+        <button type="button" class="btn-debts-toggle" onclick="toggleDebtsPanel()">
+            <span>📋</span>
+            <span>مديونيات العملاء</span>
+        </button>
+
+        <!-- لوحة وجدول مديونيات العملاء المرتبطة بصفحة الفواتير -->
+        <div class="debts-panel" id="debtsPanel">
+            <div class="debts-panel-header">
+                <span>📋 جدول مديونيات العملاء</span>
+                <button type="button" onclick="toggleDebtsPanel()" style="background:#ffe4e6; color:#be123c; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:bold;">✕</button>
+            </div>
+
+            <input type="text" id="debtSearchInput" class="debt-search-input" placeholder="🔍 ابحث باسم العميل أو المحل..." oninput="renderDebtsTable()">
+
+            <div class="batches-log-box" style="margin-bottom:0;">
+                <div class="batches-table-wrap">
+                    <table class="batches-table">
+                        <thead>
+                            <tr>
+                                <th>اسم العميل</th>
+                                <th>المحل</th>
+                                <th>المديونية</th>
+                                <th>التاريخ</th>
+                                <th>سداد</th>
+                            </tr>
+                        </thead>
+                        <tbody id="debtsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- فلتر المبيعات حسب الشركة والمدة -->
         <div class="filter-box">
             <div class="filter-label">فلتر المبيعات حسب الشركة والمدة</div>
@@ -634,6 +723,7 @@
         let itemCosts = {};
         let costBatches = [];
         let extraGeneralCost = 0;
+        let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
 
         const ARABIC_MONTHS = [
             'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
@@ -688,6 +778,110 @@
                 panel.style.display = 'block';
             }
         }
+
+        function toggleDebtsPanel() {
+            const panel = document.getElementById('debtsPanel');
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                renderDebtsTable();
+                panel.style.display = 'block';
+            }
+        }
+
+        // عرض جدول مديونيات العملاء من فواتير صفحة الفواتير
+        window.renderDebtsTable = function() {
+            const tbody = document.getElementById('debtsTableBody');
+            const search = (document.getElementById('debtSearchInput')?.value || '').trim().toLowerCase();
+
+            const debtInvoices = invoicesList.filter(inv => {
+                const debt = getInvoiceDebt(inv);
+                if (debt <= 0) return false;
+                if (!search) return true;
+                const cName = (inv.clientName || '').toLowerCase();
+                const sName = (inv.shopName || '').toLowerCase();
+                const phone = (inv.phone || '');
+                return cName.includes(search) || sName.includes(search) || phone.includes(search);
+            });
+
+            debtInvoices.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+            if (debtInvoices.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="padding:14px; color:#64748b; font-weight:bold;">لا توجد مديونيات مسجلة على العملاء حالياً.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = debtInvoices.map(inv => {
+                const recId = inv.firebaseId || inv.id;
+                const debtAmount = getInvoiceDebt(inv);
+                return `
+                    <tr>
+                        <td style="font-weight:800; color:#1e3a8a;">${inv.clientName || 'بدون اسم'}</td>
+                        <td style="font-weight:700; color:#334155;">${inv.shopName || '-'}</td>
+                        <td style="font-weight:900; color:#dc2626;">${debtAmount.toLocaleString('en-US')}</td>
+                        <td style="font-size:0.72rem; color:#64748b;">${inv.date || '-'}</td>
+                        <td>
+                            <button type="button" class="btn-pay-debt" onclick="payCustomerDebt('${recId}')">
+                                💵 إضافة دفعة
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        // إضافة دفعة للعميل وخصمها فوراً في صفحة المبيعات وصفحة الفواتير والسحابة
+        window.payCustomerDebt = async function(recordId) {
+            const inv = invoicesList.find(r => String(r.firebaseId || r.id) === String(recordId));
+            if (!inv) return;
+
+            const currentRemaining = getInvoiceDebt(inv);
+            const addPayStr = prompt(`المديونية الحالية على (${inv.clientName || ''} - ${inv.shopName || ''}): ${currentRemaining}\nأدخل المبلغ المراد سداده الآن:`);
+            if (!addPayStr) return;
+
+            const addPay = parseFloat(addPayStr);
+            if (isNaN(addPay) || addPay <= 0) {
+                alert('⚠️ يرجى إدخال مبلغ صحيح أكبر من الصفر.');
+                return;
+            }
+            if (addPay > currentRemaining) {
+                alert(`⚠️ المبلغ المدخل (${addPay}) أكبر من المديونية المتبقية (${currentRemaining})!`);
+                return;
+            }
+
+            inv.paid = +( (parseFloat(inv.paid) || 0) + addPay ).toFixed(2);
+            inv.remaining = +( currentRemaining - addPay ).toFixed(2);
+
+            if (!Array.isArray(inv.paymentsHistory)) inv.paymentsHistory = [];
+            inv.paymentsHistory.push({
+                date: getTodayStr(),
+                amount: addPay,
+                employee: currentUser.username || 'admin'
+            });
+
+            inv.notes = (inv.notes || '') + `\n[سداد دفعة بقيمة ${addPay} بواسطة ${currentUser.username || 'admin'}]`;
+
+            // حفظ الفواتير في localStorage بنفس صيغة صفحة الفواتير ليسمع فوراً هناك
+            localStorage.setItem('sales_records_offline', JSON.stringify(invoicesList));
+
+            renderDebtsTable();
+            renderDashboard();
+
+            try {
+                const cloudDocId = inv.firebaseId || inv.id;
+                if (window.db && cloudDocId && !String(cloudDocId).startsWith('local_')) {
+                    await window.setDoc(window.doc(window.db, "sales_records", String(cloudDocId)), {
+                        paid: inv.paid,
+                        remaining: inv.remaining,
+                        paymentsHistory: inv.paymentsHistory,
+                        notes: inv.notes
+                    }, { merge: true });
+                }
+                alert('✅ تم تسجيل الدفعة وخصمها من مديونية العميل في المبيعات والفواتير بنجاح!');
+            } catch (e) {
+                alert('✅ تم تسجيل الدفعة محلياً وسيتم مزامنتها عند توفر الإنترنت.');
+            }
+        };
 
         function populateBatchItemSelect() {
             const select = document.getElementById('batchItemSelect');
@@ -1231,6 +1425,7 @@
             populateFilterDropdown();
             populateBatchItemSelect();
             renderBatchesTable();
+            renderDebtsTable();
             renderDashboard();
 
             try {
@@ -1267,7 +1462,7 @@
                     const recordsSnap = await window.getDocs(window.collection(window.db, "sales_records"));
                     invoicesList = [];
                     recordsSnap.forEach(docSnap => {
-                        invoicesList.push({ id: docSnap.id, ...docSnap.data() });
+                        invoicesList.push({ id: docSnap.id, firebaseId: docSnap.id, ...docSnap.data() });
                     });
                     localStorage.setItem('sales_records_offline', JSON.stringify(invoicesList));
                 }
@@ -1278,6 +1473,7 @@
             populateFilterDropdown();
             populateBatchItemSelect();
             renderBatchesTable();
+            renderDebtsTable();
             renderDashboard();
         };
 
@@ -1286,6 +1482,7 @@
             populateFilterDropdown();
             populateBatchItemSelect();
             renderBatchesTable();
+            renderDebtsTable();
             renderDashboard();
         });
 
@@ -1294,6 +1491,7 @@
             populateFilterDropdown();
             populateBatchItemSelect();
             renderBatchesTable();
+            renderDebtsTable();
             renderDashboard();
         });
     </script>
