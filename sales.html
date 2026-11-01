@@ -354,7 +354,7 @@
         }
         .btn-reset:hover { background: #475569; }
 
-        /* تصميم مخصص لمربع التاريخ يمنع ظهوره فارغاً على الهواتف */
+        /* تصميم مخصص لمربع اختيار الشهر يمنع ظهوره فارغاً على الهواتف */
         .custom-date-box {
             position: relative;
             flex: 1;
@@ -377,7 +377,7 @@
             direction: rtl;
         }
 
-        .custom-date-box input[type="date"] {
+        .custom-date-box input {
             position: absolute;
             inset: 0;
             width: 100%;
@@ -387,7 +387,7 @@
             border: none;
         }
 
-        /* جدول الإحصائيات (يظهر عند اختيار "الكل" أو صنف أو تاريخ) */
+        /* جدول الإحصائيات */
         .table-card {
             display: none;
             margin-top: 8px;
@@ -597,7 +597,7 @@
                 </button>
                 <div class="custom-date-box" onclick="openDatePicker()">
                     <span class="custom-date-label" id="dateDisplayText">📅 حدد التاريخ</span>
-                    <input type="date" id="dateFilter" onchange="onDateFilterChange()">
+                    <input type="month" id="dateFilter" onchange="onDateFilterChange()">
                 </div>
             </div>
         </div>
@@ -635,12 +635,29 @@
         let costBatches = [];
         let extraGeneralCost = 0;
 
+        const ARABIC_MONTHS = [
+            'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+            'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+        ];
+
         function getTodayStr() {
             const d = new Date();
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
         document.getElementById('batchDate').value = getTodayStr();
+
+        function formatMonthDisplay(ym) {
+            if (!ym) return '📅 حدد التاريخ';
+            const parts = ym.split('-');
+            if (parts.length === 2) {
+                const year = parts[0];
+                const monthIdx = parseInt(parts[1], 10) - 1;
+                const monthName = ARABIC_MONTHS[monthIdx] || parts[1];
+                return `📅 ${monthName} ${year} (${ym})`;
+            }
+            return `📅 ${ym}`;
+        }
 
         function openDatePicker() {
             const dateInput = document.getElementById('dateFilter');
@@ -653,8 +670,7 @@
             const dateInput = document.getElementById('dateFilter');
             const label = document.getElementById('dateDisplayText');
             if (dateInput.value) {
-                label.textContent = `📅 ${dateInput.value}`;
-                // إذا اختار المستخدم تاريخاً وكان الفلتر لا يزال على "اختر"، نعرض له جدول "الكل" لهذا التاريخ تلقائياً
+                label.textContent = formatMonthDisplay(dateInput.value);
                 const itemSelect = document.getElementById('itemFilter');
                 if (!itemSelect.value) {
                     itemSelect.value = 'ALL';
@@ -969,7 +985,6 @@
             return 0;
         }
 
-        // القائمة تبدأ بـ "اختر" ثم "الكل" ثم الأصناف بالمدة
         function populateFilterDropdown() {
             const select = document.getElementById('itemFilter');
             const currentVal = select.value || '';
@@ -1030,7 +1045,7 @@
 
         window.renderDashboard = function() {
             const selectedItemKey = document.getElementById('itemFilter').value;
-            const selectedDate = document.getElementById('dateFilter').value;
+            const selectedMonth = document.getElementById('dateFilter').value; // بصيغة YYYY-MM
             const isSpecificItem = selectedItemKey && selectedItemKey !== 'ALL';
 
             const allScannedMap = {};
@@ -1074,25 +1089,25 @@
                     batchQueuesMap[b.key].push({ remainingQty: q, unitCost: u });
                     fallbackCostMap[b.key] = u;
                 }
-                const bDate = (b.date || '').slice(0, 10);
-                if (!selectedDate || bDate === selectedDate) {
+                const bMonth = (b.date || '').slice(0, 7);
+                if (!selectedMonth || bMonth === selectedMonth) {
                     filteredBatchesCostMap[b.key] = (filteredBatchesCostMap[b.key] || 0) + bTotal;
                 }
             });
 
-            // 1. حساب الشرائح الممسوحة
+            // 1. حساب الشرائح الممسوحة حسب الشهر
             simsList.forEach(sim => {
                 const { company, duration } = parseCompanyAndDuration(sim.category || sim.company || '', sim.duration);
                 const key = `${company}_${duration}`;
                 allScannedMap[key] = (allScannedMap[key] || 0) + 1;
 
-                const simDate = (sim.date || '').slice(0, 10);
-                if (!selectedDate || simDate === selectedDate) {
+                const simMonth = (sim.date || '').slice(0, 7);
+                if (!selectedMonth || simMonth === selectedMonth) {
                     filteredScannedMap[key] = (filteredScannedMap[key] || 0) + 1;
                 }
             });
 
-            // 2. حساب المبيعات والمديونيات وتكلفة المباع بالترتيب الزمني
+            // 2. حساب المبيعات والمديونيات وتكلفة المباع بالترتيب الزمني وحسب الشهر المختار
             let totalDebtsSum = 0;
             const chronologicalInvoices = [...invoicesList].sort((a, b) => {
                 const dateDiff = String(a.date || '').localeCompare(String(b.date || ''));
@@ -1102,11 +1117,11 @@
 
             chronologicalInvoices.forEach(inv => {
                 const items = extractInvoiceItems(inv);
-                const invDate = (inv.date || '').slice(0, 10);
-                const matchesDate = !selectedDate || invDate === selectedDate;
+                const invMonth = (inv.date || '').slice(0, 7);
+                const matchesMonth = !selectedMonth || invMonth === selectedMonth;
                 const matchesItem = !isSpecificItem || items.some(it => `${it.company}_${it.duration}` === selectedItemKey);
 
-                if (matchesDate && matchesItem) {
+                if (matchesMonth && matchesItem) {
                     totalDebtsSum += getInvoiceDebt(inv);
                 }
 
@@ -1116,7 +1131,7 @@
 
                     const saleCost = consumeCostFromBatches(batchQueuesMap, fallbackCostMap, key, it.qty);
 
-                    if (matchesDate) {
+                    if (matchesMonth) {
                         filteredSoldMap[key] = (filteredSoldMap[key] || 0) + it.qty;
                         filteredRevenueMap[key] = (filteredRevenueMap[key] || 0) + it.total;
                         filteredSoldCostMap[key] = (filteredSoldCostMap[key] || 0) + saleCost;
@@ -1149,7 +1164,7 @@
                 totalBatchesPurchaseSum += (filteredBatchesCostMap[item.key] || 0);
             });
 
-            const appliedExtraCost = (!isSpecificItem && !selectedDate) ? (parseFloat(extraGeneralCost) || 0) : 0;
+            const appliedExtraCost = (!isSpecificItem && !selectedMonth) ? (parseFloat(extraGeneralCost) || 0) : 0;
             const displayedTotalCost = +( (totalBatchesPurchaseSum > 0 ? totalBatchesPurchaseSum : totalSoldCostSum) + appliedExtraCost ).toFixed(2);
             const totalProfitSum = +(totalSalesSum - (totalSoldCostSum + appliedExtraCost)).toFixed(2);
 
@@ -1158,9 +1173,8 @@
             document.getElementById('totalProfitValue').textContent = totalProfitSum.toLocaleString('en-US');
             document.getElementById('totalDebtValue').textContent = totalDebtsSum.toLocaleString('en-US');
 
-            // إخفاء الجدول إذا كان الفلتر على "اختر" ولم يتم اختيار تاريخ، وإظهاره عند اختيار "الكل" أو أي صنف أو تاريخ
             const statsTableCard = document.getElementById('statsTableCard');
-            if (!selectedItemKey && !selectedDate) {
+            if (!selectedItemKey && !selectedMonth) {
                 statsTableCard.style.display = 'none';
                 return;
             }
