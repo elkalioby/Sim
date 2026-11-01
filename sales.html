@@ -128,7 +128,7 @@
             background: #f8fafc;
             border: 1.5px solid #cbd5e1;
             border-radius: 12px;
-            padding: 12px;
+            padding: 10px;
             margin-bottom: 12px;
         }
 
@@ -226,7 +226,7 @@
             display: none;
         }
 
-        /* جداول الدفعات والمديونيات */
+        /* جداول الدفعات والمديونيات المتجاوبة مع الجوال */
         .batches-log-box {
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -236,20 +236,23 @@
         }
 
         .batches-table-wrap {
-            max-height: 260px;
+            max-height: 320px;
             overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .batches-table {
             width: 100%;
+            table-layout: fixed;
             border-collapse: collapse;
-            font-size: 0.78rem;
+            font-size: 0.76rem;
         }
 
         .batches-table th, .batches-table td {
             padding: 8px 4px;
             border-bottom: 1px solid #f1f5f9;
             text-align: center;
+            word-wrap: break-word;
         }
 
         .batches-table th {
@@ -257,8 +260,126 @@
             color: #fff;
             position: sticky;
             top: 0;
-            font-size: 0.74rem;
+            font-size: 0.73rem;
+            z-index: 2;
         }
+
+        /* تنسيق خاص لجدول مديونيات العملاء على الجوال */
+        .debts-mobile-table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+
+        .debts-mobile-table th {
+            background: #1e293b;
+            color: #ffffff;
+            padding: 9px 6px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .debts-mobile-table td {
+            padding: 10px 6px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        .debts-mobile-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .debts-mobile-table th:nth-child(1),
+        .debts-mobile-table td:nth-child(1) {
+            width: 46%;
+            text-align: right;
+            padding-right: 8px;
+        }
+
+        .debts-mobile-table th:nth-child(2),
+        .debts-mobile-table td:nth-child(2) {
+            width: 25%;
+            text-align: center;
+        }
+
+        .debts-mobile-table th:nth-child(3),
+        .debts-mobile-table td:nth-child(3) {
+            width: 29%;
+            text-align: center;
+        }
+
+        .debt-client-title {
+            font-weight: 800;
+            font-size: 0.86rem;
+            color: #1e3a8a;
+            line-height: 1.35;
+            margin-bottom: 3px;
+        }
+
+        .debt-shop-badge {
+            display: inline-block;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            padding: 1px 6px;
+            border-radius: 5px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+
+        .debt-meta-info {
+            font-size: 0.7rem;
+            color: #64748b;
+            font-weight: 700;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .debt-inv-count {
+            background: #fef3c7;
+            color: #b45309;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            font-weight: 800;
+        }
+
+        .debt-amount-val {
+            font-weight: 900;
+            font-size: 0.95rem;
+            color: #dc2626;
+            direction: ltr;
+            display: inline-block;
+            background: #fef2f2;
+            padding: 4px 7px;
+            border-radius: 6px;
+            border: 1px solid #fecaca;
+        }
+
+        .btn-pay-debt {
+            background: #16a34a;
+            color: #ffffff;
+            border: none;
+            padding: 7px 6px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.74rem;
+            width: 100%;
+            max-width: 95px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            box-shadow: 0 1px 3px rgba(22, 163, 74, 0.25);
+        }
+        .btn-pay-debt:active { transform: scale(0.97); }
 
         .batch-actions {
             display: flex;
@@ -288,19 +409,6 @@
             font-weight: bold;
             font-size: 0.75rem;
         }
-
-        .btn-pay-debt {
-            background: #16a34a;
-            color: #ffffff;
-            border: none;
-            padding: 6px 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 800;
-            font-size: 0.75rem;
-            white-space: nowrap;
-        }
-        .btn-pay-debt:hover { background: #15803d; }
 
         .debt-search-input {
             width: 100%;
@@ -644,24 +752,22 @@
             <span>مديونيات العملاء</span>
         </button>
 
-        <!-- لوحة وجدول مديونيات العملاء المرتبطة بصفحة الفواتير -->
+        <!-- لوحة وجدول مديونيات العملاء المجمعة والمصممة للجوال -->
         <div class="debts-panel" id="debtsPanel">
             <div class="debts-panel-header">
-                <span>📋 جدول مديونيات العملاء</span>
+                <span>📋 مديونيات العملاء المجمعة</span>
                 <button type="button" onclick="toggleDebtsPanel()" style="background:#ffe4e6; color:#be123c; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:bold;">✕</button>
             </div>
 
-            <input type="text" id="debtSearchInput" class="debt-search-input" placeholder="🔍 ابحث باسم العميل أو المحل..." oninput="renderDebtsTable()">
+            <input type="text" id="debtSearchInput" class="debt-search-input" placeholder="🔍 ابحث باسم العميل أو المحل أو الجوال..." oninput="renderDebtsTable()">
 
             <div class="batches-log-box" style="margin-bottom:0;">
                 <div class="batches-table-wrap">
-                    <table class="batches-table">
+                    <table class="debts-mobile-table">
                         <thead>
                             <tr>
-                                <th>اسم العميل</th>
-                                <th>المحل</th>
+                                <th>العميل والمحل</th>
                                 <th>المديونية</th>
-                                <th>التاريخ</th>
                                 <th>سداد</th>
                             </tr>
                         </thead>
@@ -723,6 +829,7 @@
         let itemCosts = {};
         let costBatches = [];
         let extraGeneralCost = 0;
+        let groupedCustomerDebts = [];
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
 
         const ARABIC_MONTHS = [
@@ -789,40 +896,116 @@
             }
         }
 
-        // عرض جدول مديونيات العملاء من فواتير صفحة الفواتير
+        // دالة ذكية لتوحيد اسم العميل/المحل وتجاهل الكلمات الزائدة مثل (محل، للاتصال، للاتصالات) لدمج فواتير نفس العميل
+        function normalizeCoreIdentity(text) {
+            if (!text) return '';
+            return String(text)
+                .toLowerCase()
+                .replace(/[\u064B-\u065F\u0670]/g, '')
+                .replace(/[أإآٱ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
+                .replace(/(^|\s)(محل|مؤسسه|موسسه|شركه|فرع|للاتصالات|للاتصال|اتصالات|جوالات)(\s|$)/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // تجميع كل الفواتير غير المسددة لنفس العميل في عنصر واحد
+        function buildGroupedDebts() {
+            const groups = [];
+
+            invoicesList.forEach(inv => {
+                const debt = getInvoiceDebt(inv);
+                if (debt <= 0) return;
+
+                const cleanPhone = String(inv.phone || '').replace(/\D/g, '');
+                const validPhone = cleanPhone.length >= 8 ? cleanPhone : '';
+                const coreClient = normalizeCoreIdentity(inv.clientName);
+                const coreShop = normalizeCoreIdentity(inv.shopName);
+
+                let matchedGroup = groups.find(g => {
+                    if (validPhone && g.phones.has(validPhone)) return true;
+                    if (coreShop && g.coreNames.has(coreShop)) return true;
+                    if (coreClient && g.coreNames.has(coreClient)) return true;
+                    return false;
+                });
+
+                if (!matchedGroup) {
+                    matchedGroup = {
+                        groupId: 'grp_' + groups.length,
+                        clientName: (inv.clientName || '').trim() || (inv.shopName || '').trim() || 'بدون اسم',
+                        shopName: (inv.shopName || '').trim(),
+                        phone: (inv.phone || '').trim(),
+                        totalDebt: 0,
+                        latestDate: inv.date || '',
+                        latestTimestamp: inv.timestamp || 0,
+                        invoices: [],
+                        phones: new Set(),
+                        coreNames: new Set()
+                    };
+                    groups.push(matchedGroup);
+                }
+
+                matchedGroup.totalDebt = +(matchedGroup.totalDebt + debt).toFixed(2);
+                matchedGroup.invoices.push(inv);
+
+                if (validPhone) matchedGroup.phones.add(validPhone);
+                if (coreShop) matchedGroup.coreNames.add(coreShop);
+                if (coreClient) matchedGroup.coreNames.add(coreClient);
+
+                // اختيار الاسم الأوضح والأحدث للعرض
+                if ((inv.timestamp || 0) >= matchedGroup.latestTimestamp) {
+                    matchedGroup.latestTimestamp = inv.timestamp || 0;
+                    if (inv.date) matchedGroup.latestDate = inv.date;
+                    if (inv.clientName && inv.clientName.trim()) matchedGroup.clientName = inv.clientName.trim();
+                    if (inv.shopName && inv.shopName.trim()) matchedGroup.shopName = inv.shopName.trim();
+                }
+            });
+
+            groups.sort((a, b) => (b.latestTimestamp || 0) - (a.latestTimestamp || 0));
+            groupedCustomerDebts = groups;
+            return groups;
+        }
+
         window.renderDebtsTable = function() {
             const tbody = document.getElementById('debtsTableBody');
             const search = (document.getElementById('debtSearchInput')?.value || '').trim().toLowerCase();
 
-            const debtInvoices = invoicesList.filter(inv => {
-                const debt = getInvoiceDebt(inv);
-                if (debt <= 0) return false;
+            const groups = buildGroupedDebts().filter(g => {
                 if (!search) return true;
-                const cName = (inv.clientName || '').toLowerCase();
-                const sName = (inv.shopName || '').toLowerCase();
-                const phone = (inv.phone || '');
-                return cName.includes(search) || sName.includes(search) || phone.includes(search);
+                return (
+                    (g.clientName && g.clientName.toLowerCase().includes(search)) ||
+                    (g.shopName && g.shopName.toLowerCase().includes(search)) ||
+                    (g.phone && g.phone.includes(search))
+                );
             });
 
-            debtInvoices.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-            if (debtInvoices.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="padding:14px; color:#64748b; font-weight:bold;">لا توجد مديونيات مسجلة على العملاء حالياً.</td></tr>`;
+            if (groups.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="padding:16px; color:#64748b; font-weight:bold; text-align:center;">لا توجد مديونيات مسجلة على العملاء حالياً.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = debtInvoices.map(inv => {
-                const recId = inv.firebaseId || inv.id;
-                const debtAmount = getInvoiceDebt(inv);
+            tbody.innerHTML = groups.map(g => {
+                const sameName = normalizeCoreIdentity(g.clientName) === normalizeCoreIdentity(g.shopName);
+                const showShopBadge = g.shopName && !sameName;
+                const invCount = g.invoices.length;
+
                 return `
                     <tr>
-                        <td style="font-weight:800; color:#1e3a8a;">${inv.clientName || 'بدون اسم'}</td>
-                        <td style="font-weight:700; color:#334155;">${inv.shopName || '-'}</td>
-                        <td style="font-weight:900; color:#dc2626;">${debtAmount.toLocaleString('en-US')}</td>
-                        <td style="font-size:0.72rem; color:#64748b;">${inv.date || '-'}</td>
                         <td>
-                            <button type="button" class="btn-pay-debt" onclick="payCustomerDebt('${recId}')">
-                                💵 إضافة دفعة
+                            <div class="debt-client-title">👤 ${g.clientName}</div>
+                            ${showShopBadge ? `<div class="debt-shop-badge">🏪 ${g.shopName}</div>` : ''}
+                            <div class="debt-meta-info">
+                                <span>📅 ${g.latestDate || '-'}</span>
+                                ${invCount > 1 ? `<span class="debt-inv-count">${invCount} فواتير</span>` : ''}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="debt-amount-val">${g.totalDebt.toLocaleString('en-US')}</span>
+                        </td>
+                        <td>
+                            <button type="button" class="btn-pay-debt" onclick="payCustomerGroupDebt('${g.groupId}')">
+                                💵 دفعة
                             </button>
                         </td>
                     </tr>
@@ -830,13 +1013,17 @@
             }).join('');
         };
 
-        // إضافة دفعة للعميل وخصمها فوراً في صفحة المبيعات وصفحة الفواتير والسحابة
-        window.payCustomerDebt = async function(recordId) {
-            const inv = invoicesList.find(r => String(r.firebaseId || r.id) === String(recordId));
-            if (!inv) return;
+        // خصم الدفعة من إجمالي مديونية العميل وتوزيعها على فواتيره من الأقدم للأحدث ومزامنتها مع صفحة الفواتير
+        window.payCustomerGroupDebt = async function(groupId) {
+            const group = groupedCustomerDebts.find(g => g.groupId === groupId);
+            if (!group) return;
 
-            const currentRemaining = getInvoiceDebt(inv);
-            const addPayStr = prompt(`المديونية الحالية على (${inv.clientName || ''} - ${inv.shopName || ''}): ${currentRemaining}\nأدخل المبلغ المراد سداده الآن:`);
+            const currentTotalDebt = group.totalDebt;
+            const displayTitle = group.shopName && normalizeCoreIdentity(group.shopName) !== normalizeCoreIdentity(group.clientName)
+                ? `${group.clientName} - ${group.shopName}`
+                : group.clientName;
+
+            const addPayStr = prompt(`إجمالي المديونية على (${displayTitle}): ${currentTotalDebt.toLocaleString('en-US')}\nأدخل المبلغ المراد سداده الآن:`);
             if (!addPayStr) return;
 
             const addPay = parseFloat(addPayStr);
@@ -844,38 +1031,62 @@
                 alert('⚠️ يرجى إدخال مبلغ صحيح أكبر من الصفر.');
                 return;
             }
-            if (addPay > currentRemaining) {
-                alert(`⚠️ المبلغ المدخل (${addPay}) أكبر من المديونية المتبقية (${currentRemaining})!`);
+            if (addPay > currentTotalDebt) {
+                alert(`⚠️ المبلغ المدخل (${addPay}) أكبر من إجمالي المديونية المتبقية (${currentTotalDebt})!`);
                 return;
             }
 
-            inv.paid = +( (parseFloat(inv.paid) || 0) + addPay ).toFixed(2);
-            inv.remaining = +( currentRemaining - addPay ).toFixed(2);
-
-            if (!Array.isArray(inv.paymentsHistory)) inv.paymentsHistory = [];
-            inv.paymentsHistory.push({
-                date: getTodayStr(),
-                amount: addPay,
-                employee: currentUser.username || 'admin'
+            // ترتيب فواتير هذا العميل من الأقدم إلى الأحدث لخصم الدفعة منها بالتسلسل
+            const sortedInvoices = [...group.invoices].sort((a, b) => {
+                const dateDiff = String(a.date || '').localeCompare(String(b.date || ''));
+                if (dateDiff !== 0) return dateDiff;
+                return (a.timestamp || 0) - (b.timestamp || 0);
             });
 
-            inv.notes = (inv.notes || '') + `\n[سداد دفعة بقيمة ${addPay} بواسطة ${currentUser.username || 'admin'}]`;
+            let remainingPaymentToApply = addPay;
+            const updatedInvoicesForCloud = [];
+            const today = getTodayStr();
 
-            // حفظ الفواتير في localStorage بنفس صيغة صفحة الفواتير ليسمع فوراً هناك
+            for (const inv of sortedInvoices) {
+                if (remainingPaymentToApply <= 0) break;
+                const invDebt = getInvoiceDebt(inv);
+                if (invDebt <= 0) continue;
+
+                const deductNow = +(Math.min(invDebt, remainingPaymentToApply)).toFixed(2);
+                inv.paid = +( (parseFloat(inv.paid) || 0) + deductNow ).toFixed(2);
+                inv.remaining = +( invDebt - deductNow ).toFixed(2);
+                remainingPaymentToApply = +( remainingPaymentToApply - deductNow ).toFixed(2);
+
+                if (!Array.isArray(inv.paymentsHistory)) inv.paymentsHistory = [];
+                inv.paymentsHistory.push({
+                    date: today,
+                    amount: deductNow,
+                    employee: currentUser.username || 'admin'
+                });
+
+                inv.notes = (inv.notes || '') + `\n[سداد دفعة بقيمة ${deductNow} بواسطة ${currentUser.username || 'admin'}]`;
+                updatedInvoicesForCloud.push(inv);
+            }
+
+            // حفظ التحديثات فوراً في localStorage ليسمع في صفحة الفواتير (invoice.html)
             localStorage.setItem('sales_records_offline', JSON.stringify(invoicesList));
 
             renderDebtsTable();
             renderDashboard();
 
             try {
-                const cloudDocId = inv.firebaseId || inv.id;
-                if (window.db && cloudDocId && !String(cloudDocId).startsWith('local_')) {
-                    await window.setDoc(window.doc(window.db, "sales_records", String(cloudDocId)), {
-                        paid: inv.paid,
-                        remaining: inv.remaining,
-                        paymentsHistory: inv.paymentsHistory,
-                        notes: inv.notes
-                    }, { merge: true });
+                if (window.db) {
+                    for (const inv of updatedInvoicesForCloud) {
+                        const cloudDocId = inv.firebaseId || inv.id;
+                        if (cloudDocId && !String(cloudDocId).startsWith('local_')) {
+                            await window.setDoc(window.doc(window.db, "sales_records", String(cloudDocId)), {
+                                paid: inv.paid,
+                                remaining: inv.remaining,
+                                paymentsHistory: inv.paymentsHistory,
+                                notes: inv.notes
+                            }, { merge: true });
+                        }
+                    }
                 }
                 alert('✅ تم تسجيل الدفعة وخصمها من مديونية العميل في المبيعات والفواتير بنجاح!');
             } catch (e) {
