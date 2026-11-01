@@ -258,7 +258,7 @@
             font-size: 0.75rem;
         }
 
-        /* مربع إضافة مصروفات المكبر */
+        /* مربع إضافة مصروفات */
         .expense-row {
             background: #fffbeb;
             border: 1.5px solid #fde68a;
@@ -354,7 +354,7 @@
         }
         .btn-reset:hover { background: #475569; }
 
-        /* تصميم مخصص لمربع اختيار الشهر يمنع ظهوره فارغاً على الهواتف */
+        /* تصميم مخصص لمربع اختيار الشهر */
         .custom-date-box {
             position: relative;
             flex: 1;
@@ -654,7 +654,7 @@
                 const year = parts[0];
                 const monthIdx = parseInt(parts[1], 10) - 1;
                 const monthName = ARABIC_MONTHS[monthIdx] || parts[1];
-                return `📅 ${monthName} ${year} (${ym})`;
+                return `📅 ${monthName} ${year}`;
             }
             return `📅 ${ym}`;
         }
@@ -671,10 +671,6 @@
             const label = document.getElementById('dateDisplayText');
             if (dateInput.value) {
                 label.textContent = formatMonthDisplay(dateInput.value);
-                const itemSelect = document.getElementById('itemFilter');
-                if (!itemSelect.value) {
-                    itemSelect.value = 'ALL';
-                }
             } else {
                 label.textContent = '📅 حدد التاريخ';
             }
@@ -1045,8 +1041,9 @@
 
         window.renderDashboard = function() {
             const selectedItemKey = document.getElementById('itemFilter').value;
-            const selectedMonth = document.getElementById('dateFilter').value; // بصيغة YYYY-MM
-            const isSpecificItem = selectedItemKey && selectedItemKey !== 'ALL';
+            const selectedMonth = document.getElementById('dateFilter').value;
+            const isAllItems = (selectedItemKey === 'ALL');
+            const isSpecificItem = selectedItemKey && !isAllItems;
 
             const allScannedMap = {};
             const allSoldMap = {};
@@ -1095,7 +1092,7 @@
                 }
             });
 
-            // 1. حساب الشرائح الممسوحة حسب الشهر
+            // 1. حساب الشرائح الممسوحة
             simsList.forEach(sim => {
                 const { company, duration } = parseCompanyAndDuration(sim.category || sim.company || '', sim.duration);
                 const key = `${company}_${duration}`;
@@ -1107,7 +1104,7 @@
                 }
             });
 
-            // 2. حساب المبيعات والمديونيات وتكلفة المباع بالترتيب الزمني وحسب الشهر المختار
+            // 2. حساب المبيعات والمديونيات وتكلفة المباع
             let totalDebtsSum = 0;
             const chronologicalInvoices = [...invoicesList].sort((a, b) => {
                 const dateDiff = String(a.date || '').localeCompare(String(b.date || ''));
