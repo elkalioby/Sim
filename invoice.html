@@ -303,7 +303,7 @@
 
         document.getElementById('reminderDate').valueAsDate = new Date();
 
-        // دوال حفظ واسترجاع مسودة الفاتورة تلقائياً لمنع ضياع البيانات عند إغلاق المتصفح
+        // حفظ واسترجاع مسودة الفاتورة تلقائياً
         function saveInvoiceDraft() {
             const draft = {
                 editRecordId: document.getElementById('editRecordId').value,
@@ -391,14 +391,26 @@
                 updateMarketSelect();
                 updateItemSelects();
                 renderModalStockList();
+                renderRecords();
             }
         });
+
+        // تنظيف أي أصناف وهمية بدون مدة مثل "Redbull" المنفردة
+        function cleanPhantomKeysFromObj(obj) {
+            if (!obj || typeof obj !== 'object') return;
+            Object.keys(obj).forEach(k => {
+                if (!k.includes('(')) {
+                    delete obj[k];
+                }
+            });
+        }
 
         function loadLocalConfig() {
             const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             if (localConfig) {
                 deletedStockItems = localConfig.deletedStockItems || [];
                 stockOffsets = localConfig.stockOffsets || {};
+                cleanPhantomKeysFromObj(stockOffsets);
                 configUpdatedAt = localConfig.configUpdatedAt || 0;
             }
         }
@@ -445,21 +457,10 @@
                         }
                         const cloudUpdatedAt = data.configUpdatedAt || 0;
                         if (cloudUpdatedAt >= configUpdatedAt) {
-                            deletedStockItems = data.deletedStockItems || deletedStockItems;
+                            deletedStockItems = Array.from(new Set([...(deletedStockItems || []), ...(data.deletedStockItems || [])]));
                             stockOffsets = data.stockOffsets || stockOffsets;
+                            cleanPhantomKeysFromObj(stockOffsets);
                             configUpdatedAt = cloudUpdatedAt;
-                            const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
-                            localStorage.setItem('app_config', JSON.stringify({
-                                ...existingConfig,
-                                ...data,
-                                marketList: Array.from(mergedMarkets),
-                                stockInventory,
-                                stockOffsets,
-                                deletedStockItems,
-                                configUpdatedAt
-                            }));
-                        } else {
-                            await saveConfig();
                         }
                     }
 
@@ -489,6 +490,7 @@
                     updateMarketSelect();
 
                     await loadCloudRecords();
+                    await saveConfig();
                     restoreInvoiceDraft();
                 }
             } catch (e) {
@@ -523,6 +525,7 @@
             records.forEach(r => {
                 if (r.cartItems && Array.isArray(r.cartItems)) {
                     r.cartItems.forEach(ci => {
+                        if (!ci.item || !ci.item.includes('(')) return;
                         if (autoStockInventory[ci.item] === undefined) {
                             autoStockInventory[ci.item] = 0;
                         }
@@ -531,12 +534,7 @@
                 }
             });
 
-            sims.forEach(item => {
-                const cat = item.category || item.company;
-                if (cat && autoStockInventory[cat] === undefined && autoStockInventory[`${cat} (60)`] === undefined) {
-                    autoStockInventory[cat] = 1;
-                }
-            });
+            cleanPhantomKeysFromObj(stockOffsets);
 
             stockInventory = {};
             const allKeys = new Set([
@@ -545,6 +543,7 @@
             ]);
 
             allKeys.forEach(key => {
+                if (!key.includes('(')) return; // تجاهل أي اسم صنف وهمي بدون مدة مثل Redbull المنفردة
                 const base = autoStockInventory[key] || 0;
                 const offset = (stockOffsets && stockOffsets[key] !== undefined) ? parseFloat(stockOffsets[key]) : 0;
                 const finalQty = base + offset;
@@ -665,6 +664,9 @@
 
         async function saveConfig() {
             configUpdatedAt = Date.now();
+            cleanPhantomKeysFromObj(stockInventory);
+            cleanPhantomKeysFromObj(stockOffsets);
+
             const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             const dataToSave = {
                 ...existingConfig,
@@ -687,7 +689,7 @@
         function updateItemSelects() {
             const select = document.getElementById('currentItem');
             const prevVal = select.value;
-            const itemKeys = Object.keys(stockInventory);
+            const itemKeys = Object.keys(stockInventory).filter(k => k.includes('('));
             
             if (itemKeys.length === 0) {
                 select.innerHTML = `<option value="">-- لا توجد أصناف متاحة في المخزون --</option>`;
@@ -725,7 +727,7 @@
 
         function renderModalStockList() {
             const container = document.getElementById('modalStockList');
-            const keys = Object.keys(stockInventory);
+            const keys = Object.keys(stockInventory).filter(k => k.includes('('));
             if (keys.length === 0) {
                 container.innerHTML = '<p style="text-align:center; color:#6b7280;">لا توجد أصناف في المخزون حالياً.</p>';
                 return;
@@ -754,6 +756,7 @@
             const baseAuto = autoStockInventory[item] || 0;
             stockOffsets[item] = newQty - baseAuto;
             stockInventory[item] = newQty;
+            deletedStockItems = deletedStockItems.filter(i => i !== item);
 
             updateItemSelects();
             renderModalStockList();
