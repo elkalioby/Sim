@@ -227,6 +227,16 @@
     </main>
 
     <script>
+        const tabButtonsMap = {
+            'home': 'homeTabBtn',
+            'invoice.html': 'invoiceTabBtn',
+            'sales.html': 'salesTabBtn',
+            'barcode.html': 'barcodeTabBtn',
+            'customers.html': 'customersTabBtn',
+            'locations.html': 'locationsTabBtn',
+            'users.html': 'usersTabBtn'
+        };
+
         const loggedUser = JSON.parse(localStorage.getItem('logged_user'));
         const expiryTime = localStorage.getItem('session_expiry');
 
@@ -242,12 +252,25 @@
                 const heroUsersBtn = document.getElementById('heroUsersBtn');
                 if (heroUsersBtn) heroUsersBtn.style.display = 'flex';
             }
+
+            // استرجاع آخر تبويب كان مفتوحاً قبل إغلاق المتصفح
+            const lastSavedTab = localStorage.getItem('sim_active_tab');
+            if (lastSavedTab && lastSavedTab !== 'home' && tabButtonsMap[lastSavedTab]) {
+                if (lastSavedTab === 'users.html' && loggedUser.role !== 'admin') {
+                    switchTab('home', document.getElementById('homeTabBtn'));
+                } else {
+                    switchTab(lastSavedTab, document.getElementById(tabButtonsMap[lastSavedTab]));
+                }
+            }
         }
 
         function switchTab(page, btn) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
             
+            // حفظ التبويب الحالي ليبقى مفتوحاً عند إعادة فتح المتصفح
+            localStorage.setItem('sim_active_tab', page);
+
             const welcomeScreen = document.getElementById('welcomeScreen');
             const contentFrame = document.getElementById('contentFrame');
             
@@ -265,6 +288,7 @@
         function logout() {
             localStorage.removeItem('logged_user');
             localStorage.removeItem('session_expiry');
+            localStorage.removeItem('sim_active_tab');
             window.location.href = 'login.html';
         }
     </script>

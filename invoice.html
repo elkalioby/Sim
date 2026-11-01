@@ -154,14 +154,14 @@
                 
                 <div class="autocomplete-wrapper">
                     <label>اسم العميل *</label>
-                    <input type="text" id="clientName" required autocomplete="off" placeholder="اكتب اسم العميل أو المحل للبحث..." oninput="filterCustomersDropdown()" onfocus="filterCustomersDropdown()">
+                    <input type="text" id="clientName" required autocomplete="off" placeholder="اكتب اسم العميل أو المحل للبحث..." oninput="filterCustomersDropdown(); saveInvoiceDraft();" onfocus="filterCustomersDropdown()">
                     <div id="customersDropdown" class="customers-dropdown"></div>
                 </div>
 
                 <div>
                     <label>اسم المحل وصورة المحل *</label>
                     <div style="display: flex; gap: 5px;">
-                        <input type="text" id="shopName" required placeholder="اسم المحل" style="flex:1;">
+                        <input type="text" id="shopName" required placeholder="اسم المحل" style="flex:1;" oninput="saveInvoiceDraft()">
                         <input type="file" id="shopImageGallery" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
                         <button type="button" class="btn" onclick="document.getElementById('shopImageGallery').click()" style="background:#e5e7eb; padding:8px 10px;" title="اختيار صورة من المعرض">📁</button>
                         <input type="file" id="shopImageCamera" accept="image/*" capture="environment" style="display:none;" onchange="handleImageUpload(event)">
@@ -171,14 +171,14 @@
 
                 <div class="full-width">
                     <label>العنوان / السوق *</label>
-                    <select id="marketName" required style="cursor:pointer;">
+                    <select id="marketName" required style="cursor:pointer;" onchange="saveInvoiceDraft()">
                         <option value="">-- اختر العنوان / السوق --</option>
                     </select>
                 </div>
 
                 <div class="full-width">
                     <label>رقم التليفون *</label>
-                    <input type="tel" id="phone" required placeholder="05xxxxxxxx">
+                    <input type="tel" id="phone" required placeholder="05xxxxxxxx" oninput="saveInvoiceDraft()">
                 </div>
                 
                 <div class="full-width" style="background:#f9fafb; padding:12px; border-radius:10px; border:1px solid #e5e7eb;">
@@ -189,15 +189,15 @@
                     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
                         <div style="flex:2; min-width:150px;">
                             <label style="font-size:0.75rem;">الصنف</label>
-                            <select id="currentItem"></select>
+                            <select id="currentItem" onchange="saveInvoiceDraft()"></select>
                         </div>
                         <div style="flex:1; min-width:70px;">
                             <label style="font-size:0.75rem;">العدد</label>
-                            <input type="number" id="currentQty" step="any" placeholder="0">
+                            <input type="number" id="currentQty" step="any" placeholder="0" oninput="saveInvoiceDraft()">
                         </div>
                         <div style="flex:1; min-width:70px;">
                             <label style="font-size:0.75rem;">السعر</label>
-                            <input type="number" id="currentPrice" step="any" placeholder="0">
+                            <input type="number" id="currentPrice" step="any" placeholder="0" oninput="saveInvoiceDraft()">
                         </div>
                         <div>
                             <button type="button" class="btn" onclick="addItemToCart()" style="background:var(--primary); color:white; padding:10px 14px;">➕ إضافة</button>
@@ -226,7 +226,7 @@
                 </div>
                 <div>
                     <label>المبلغ المدفوع الآن</label>
-                    <input type="number" id="paid" step="any" placeholder="" oninput="calcRemaining()">
+                    <input type="number" id="paid" step="any" placeholder="" oninput="calcRemaining(); saveInvoiceDraft();">
                 </div>
                 <div class="full-width">
                     <label>المديونية المتبقية (تلقائي)</label>
@@ -237,18 +237,18 @@
                     <div class="form-grid" style="margin:0;">
                         <div>
                             <label style="color:#b45309;">موعد التنبيه / السداد</label>
-                            <input type="date" id="reminderDate">
+                            <input type="date" id="reminderDate" onchange="saveInvoiceDraft()">
                         </div>
                         <div>
                             <label style="color:#b45309;">وقت التنبيه</label>
-                            <input type="time" id="reminderTime" value="09:00">
+                            <input type="time" id="reminderTime" value="09:00" onchange="saveInvoiceDraft()">
                         </div>
                     </div>
                 </div>
 
                 <div class="full-width">
                     <label>ملاحظات</label>
-                    <textarea id="notes" rows="2" placeholder="مواعيد سداد أو تفاصيل إضافية..."></textarea>
+                    <textarea id="notes" rows="2" placeholder="مواعيد سداد أو تفاصيل إضافية..." oninput="saveInvoiceDraft()"></textarea>
                 </div>
             </div>
             <button type="submit" class="btn btn-primary" id="submitBtn">حفظ الفاتورة ومزامنتها</button>
@@ -302,6 +302,77 @@
         const itemsPerPage = 5;
 
         document.getElementById('reminderDate').valueAsDate = new Date();
+
+        // دوال حفظ واسترجاع مسودة الفاتورة تلقائياً لمنع ضياع البيانات عند إغلاق المتصفح
+        function saveInvoiceDraft() {
+            const draft = {
+                editRecordId: document.getElementById('editRecordId').value,
+                clientName: document.getElementById('clientName').value,
+                shopName: document.getElementById('shopName').value,
+                marketName: document.getElementById('marketName').value,
+                phone: document.getElementById('phone').value,
+                currentItem: document.getElementById('currentItem').value,
+                currentQty: document.getElementById('currentQty').value,
+                currentPrice: document.getElementById('currentPrice').value,
+                currentCart: currentCart,
+                paid: document.getElementById('paid').value,
+                reminderDate: document.getElementById('reminderDate').value,
+                reminderTime: document.getElementById('reminderTime').value,
+                notes: document.getElementById('notes').value,
+                tempImageBase64: tempImageBase64
+            };
+            localStorage.setItem('sim_invoice_draft', JSON.stringify(draft));
+        }
+
+        function restoreInvoiceDraft() {
+            const rawDraft = localStorage.getItem('sim_invoice_draft');
+            if (!rawDraft) return;
+            try {
+                const draft = JSON.parse(rawDraft);
+                if (!draft) return;
+
+                if (draft.editRecordId) {
+                    document.getElementById('editRecordId').value = draft.editRecordId;
+                    document.getElementById('formTitle').innerText = '✏️ تعديل بيانات الفاتورة';
+                    document.getElementById('submitBtn').innerText = 'حفظ التعديلات';
+                    document.getElementById('cancelEditBtn').style.display = 'block';
+                }
+
+                if (draft.clientName !== undefined) document.getElementById('clientName').value = draft.clientName;
+                if (draft.shopName !== undefined) document.getElementById('shopName').value = draft.shopName;
+                if (draft.phone !== undefined) document.getElementById('phone').value = draft.phone;
+                if (draft.currentQty !== undefined) document.getElementById('currentQty').value = draft.currentQty;
+                if (draft.currentPrice !== undefined) document.getElementById('currentPrice').value = draft.currentPrice;
+                if (draft.paid !== undefined) document.getElementById('paid').value = draft.paid;
+                if (draft.reminderDate) document.getElementById('reminderDate').value = draft.reminderDate;
+                if (draft.reminderTime) document.getElementById('reminderTime').value = draft.reminderTime;
+                if (draft.notes !== undefined) document.getElementById('notes').value = draft.notes;
+                if (draft.tempImageBase64) tempImageBase64 = draft.tempImageBase64;
+
+                if (draft.marketName) {
+                    if (!marketList.includes(draft.marketName)) {
+                        marketList.push(draft.marketName);
+                    }
+                    updateMarketSelect(draft.marketName);
+                }
+
+                if (draft.currentItem) {
+                    const itemSelect = document.getElementById('currentItem');
+                    if ([...itemSelect.options].some(o => o.value === draft.currentItem)) {
+                        itemSelect.value = draft.currentItem;
+                    }
+                }
+
+                if (Array.isArray(draft.currentCart) && draft.currentCart.length > 0) {
+                    currentCart = draft.currentCart;
+                    renderCart(false);
+                } else {
+                    calcRemaining();
+                }
+            } catch (e) {
+                console.error("خطأ في استرجاع مسودة الفاتورة:", e);
+            }
+        }
 
         document.addEventListener('click', function(e) {
             const wrapper = document.querySelector('.autocomplete-wrapper');
@@ -358,6 +429,7 @@
             await calculateStockFromSims();
             updateMarketSelect();
             updateItemSelects();
+            restoreInvoiceDraft();
             renderRecords();
 
             try {
@@ -417,6 +489,7 @@
                     updateMarketSelect();
 
                     await loadCloudRecords();
+                    restoreInvoiceDraft();
                 }
             } catch (e) {
                 console.log("وضع الأوفلاين مفعل.");
@@ -488,7 +561,6 @@
             savedCustomersList = localCust;
         }
 
-        // حفظ العميل تلقائياً في دليل العملاء إذا لم يكن مسجلاً من قبل
         async function ensureCustomerInDirectory(clientName, shopName, marketName, phone, shopImage) {
             loadSavedCustomers();
             const cleanClient = (clientName || '').trim();
@@ -588,6 +660,7 @@
             }
 
             document.getElementById('customersDropdown').style.display = 'none';
+            saveInvoiceDraft();
         }
 
         async function saveConfig() {
@@ -613,6 +686,7 @@
 
         function updateItemSelects() {
             const select = document.getElementById('currentItem');
+            const prevVal = select.value;
             const itemKeys = Object.keys(stockInventory);
             
             if (itemKeys.length === 0) {
@@ -624,6 +698,10 @@
                 const currentStock = stockInventory[item] !== undefined ? stockInventory[item] : 0;
                 return `<option value="${item}">${item} (المتاحة: ${currentStock})</option>`;
             }).join('');
+
+            if (prevVal && itemKeys.includes(prevVal)) {
+                select.value = prevVal;
+            }
         }
 
         function updateMarketSelect(selectedVal = '') {
@@ -699,7 +777,10 @@
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) { tempImageBase64 = e.target.result; };
+                reader.onload = function(e) {
+                    tempImageBase64 = e.target.result;
+                    saveInvoiceDraft();
+                };
                 reader.readAsDataURL(file);
             }
         }
@@ -728,15 +809,15 @@
             currentCart.push({ item, qty, price, total: qty * price });
             document.getElementById('currentQty').value = '';
             document.getElementById('currentPrice').value = '';
-            renderCart();
+            renderCart(true);
         }
 
         function removeFromCart(index) {
             currentCart.splice(index, 1);
-            renderCart();
+            renderCart(true);
         }
 
-        function renderCart() {
+        function renderCart(shouldSaveDraft = true) {
             const container = document.getElementById('cartContainer');
             const tbody = document.getElementById('cartTableBody');
             
@@ -745,6 +826,7 @@
                 tbody.innerHTML = '';
                 document.getElementById('total').value = '0';
                 calcRemaining();
+                if (shouldSaveDraft) saveInvoiceDraft();
                 return;
             }
 
@@ -763,6 +845,7 @@
 
             document.getElementById('total').value = grandTotal;
             calcRemaining();
+            if (shouldSaveDraft) saveInvoiceDraft();
         }
 
         function calcRemaining() {
@@ -918,6 +1001,7 @@
         });
 
         function resetForm() {
+            localStorage.removeItem('sim_invoice_draft');
             document.getElementById('saleForm').reset();
             document.getElementById('editRecordId').value = '';
             document.getElementById('formTitle').innerText = '+ تسجيل فاتورة / حركة بيع جديدة';
@@ -926,7 +1010,7 @@
             updateMarketSelect('');
             currentCart = [];
             tempImageBase64 = '';
-            renderCart();
+            renderCart(false);
             document.getElementById('reminderDate').valueAsDate = new Date();
             toggleReminderVisibility();
         }
@@ -950,12 +1034,13 @@
             tempImageBase64 = r.shopImage || '';
 
             currentCart = r.cartItems ? [...r.cartItems] : [];
-            renderCart();
+            renderCart(true);
 
             document.getElementById('formTitle').innerText = '✏️ تعديل بيانات الفاتورة';
             document.getElementById('submitBtn').innerText = 'حفظ التعديلات';
             document.getElementById('cancelEditBtn').style.display = 'block';
 
+            saveInvoiceDraft();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
