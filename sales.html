@@ -28,28 +28,33 @@
             gap: 6px;
         }
 
-        /* بطاقات الإحصائيات العلوية (المبيعات + الأرباح + المديونيات) */
+        /* 4 بطاقات إحصائيات علوية (2×2) */
         .top-stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
 
         .stat-box {
             border-radius: 12px;
-            padding: 10px 8px;
+            padding: 12px 8px;
             text-align: center;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 4px;
+            gap: 5px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         }
 
         .stat-box.sales-box {
             background: #f0fdf4;
             border: 1.5px solid #bbf7d0;
+        }
+
+        .stat-box.cost-box {
+            background: #fffbeb;
+            border: 1.5px solid #fde68a;
         }
 
         .stat-box.profit-box {
@@ -63,36 +68,31 @@
         }
 
         .stat-label {
-            font-size: 0.8rem;
+            font-size: 0.82rem;
             font-weight: 800;
             color: #334155;
         }
 
         .stat-value {
-            font-size: 1.15rem;
+            font-size: 1.18rem;
             font-weight: 900;
             direction: ltr;
         }
 
-        .stat-sub {
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: #64748b;
-        }
-
         .sales-box .stat-value { color: #15803d; }
+        .cost-box .stat-value { color: #b45309; }
         .profit-box .stat-value { color: #1d4ed8; }
         .debt-box .stat-value { color: #dc2626; }
 
-        /* زر ولوحة إدارة دفعات التكلفة */
+        /* زر ولوحة إضافة التكلفة */
         .btn-cost-toggle {
             width: 100%;
             background: #1e3a8a;
             color: #ffffff;
             border: none;
-            padding: 10px 14px;
+            padding: 11px 14px;
             border-radius: 10px;
-            font-size: 0.88rem;
+            font-size: 0.92rem;
             font-weight: 800;
             cursor: pointer;
             margin-bottom: 12px;
@@ -114,7 +114,7 @@
         }
 
         .cost-panel-header {
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             font-weight: 800;
             color: #1e3a8a;
             margin-bottom: 10px;
@@ -145,7 +145,7 @@
 
         .batch-field label {
             display: block;
-            font-size: 0.75rem;
+            font-size: 0.78rem;
             font-weight: 800;
             color: #334155;
             margin-bottom: 4px;
@@ -156,7 +156,7 @@
             padding: 8px;
             border: 1px solid #cbd5e1;
             border-radius: 6px;
-            font-size: 0.85rem;
+            font-size: 0.88rem;
             font-weight: 700;
             text-align: center;
             outline: none;
@@ -174,13 +174,28 @@
             border: none;
             padding: 10px;
             border-radius: 8px;
-            font-size: 0.88rem;
+            font-size: 0.92rem;
             font-weight: 800;
             cursor: pointer;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
         .btn-add-batch:hover { background: #15803d; }
 
+        .btn-cancel-batch {
+            width: 100%;
+            background: #e2e8f0;
+            color: #334155;
+            border: none;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            cursor: pointer;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        /* جدول الدفعات */
         .batches-log-box {
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -189,19 +204,8 @@
             margin-bottom: 10px;
         }
 
-        .batches-log-title {
-            background: #eff6ff;
-            color: #1e3a8a;
-            padding: 8px 10px;
-            font-size: 0.8rem;
-            font-weight: 800;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
         .batches-table-wrap {
-            max-height: 210px;
+            max-height: 220px;
             overflow-y: auto;
         }
 
@@ -212,7 +216,7 @@
         }
 
         .batches-table th, .batches-table td {
-            padding: 6px 4px;
+            padding: 7px 4px;
             border-bottom: 1px solid #f1f5f9;
             text-align: center;
         }
@@ -225,17 +229,80 @@
             font-size: 0.72rem;
         }
 
-        .btn-del-batch {
-            background: #fee2e2;
-            color: #dc2626;
+        .batch-actions {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-edit-batch {
+            background: #fef3c7;
+            color: #d97706;
             border: none;
-            padding: 3px 7px;
+            padding: 4px 7px;
             border-radius: 5px;
             cursor: pointer;
             font-weight: bold;
             font-size: 0.75rem;
         }
 
+        .btn-del-batch {
+            background: #fee2e2;
+            color: #dc2626;
+            border: none;
+            padding: 4px 7px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+
+        /* مربع إضافة مصروفات المكبر */
+        .expense-row {
+            background: #fffbeb;
+            border: 1.5px solid #fde68a;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .expense-row label {
+            color: #b45309;
+            font-size: 0.85rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .expense-row input {
+            flex: 1;
+            min-width: 130px;
+            padding: 9px 10px;
+            border: 1.5px solid #fcd34d;
+            border-radius: 8px;
+            font-size: 0.92rem;
+            font-weight: 800;
+            text-align: center;
+            background: #ffffff;
+            outline: none;
+        }
+
+        .expense-row button {
+            background: #d97706;
+            color: white;
+            border: none;
+            padding: 9px 16px;
+            border-radius: 8px;
+            font-weight: 800;
+            cursor: pointer;
+            font-size: 0.88rem;
+            white-space: nowrap;
+        }
+
+        /* صندوق الفلتر */
         .filter-box {
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -245,6 +312,12 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+
+        .filter-label {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #1e3a8a;
         }
 
         select {
@@ -269,7 +342,7 @@
             background: #64748b;
             color: #ffffff;
             border: none;
-            padding: 9px 14px;
+            padding: 9px 16px;
             border-radius: 8px;
             font-size: 0.85rem;
             font-weight: 700;
@@ -281,7 +354,7 @@
         }
         .btn-reset:hover { background: #475569; }
 
-        input[type="date"] {
+        .date-input {
             flex: 1;
             padding: 9px 10px;
             border-radius: 8px;
@@ -294,8 +367,9 @@
             text-align: center;
         }
 
-        /* تنسيق الجدول بدون سكرول أفقي */
+        /* جدول الإحصائيات (مخفي افتراضياً حتى يتم الاختيار من الفلتر) */
         .table-card {
+            display: none;
             margin-top: 8px;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
@@ -343,29 +417,22 @@
             font-size: 0.74rem;
         }
 
-        /* توزيع عرض الأعمدة السبعة لضمان عدم ظهور سكرول بالعرض */
-        .summary-table th:nth-child(1), .summary-table td:nth-child(1) { width: 18%; } /* الصنف */
-        .summary-table th:nth-child(2), .summary-table td:nth-child(2) { width: 10%; } /* المدة */
-        .summary-table th:nth-child(3), .summary-table td:nth-child(3) { width: 13%; } /* المتاح */
-        .summary-table th:nth-child(4), .summary-table td:nth-child(4) { width: 13%; } /* الممسوح */
-        .summary-table th:nth-child(5), .summary-table td:nth-child(5) { width: 13%; } /* المباع */
-        .summary-table th:nth-child(6), .summary-table td:nth-child(6) { width: 17%; } /* المبيعات */
-        .summary-table th:nth-child(7), .summary-table td:nth-child(7) { width: 16%; } /* الأرباح */
+        .summary-table th:nth-child(1), .summary-table td:nth-child(1) { width: 18%; }
+        .summary-table th:nth-child(2), .summary-table td:nth-child(2) { width: 10%; }
+        .summary-table th:nth-child(3), .summary-table td:nth-child(3) { width: 13%; }
+        .summary-table th:nth-child(4), .summary-table td:nth-child(4) { width: 13%; }
+        .summary-table th:nth-child(5), .summary-table td:nth-child(5) { width: 13%; }
+        .summary-table th:nth-child(6), .summary-table td:nth-child(6) { width: 17%; }
+        .summary-table th:nth-child(7), .summary-table td:nth-child(7) { width: 16%; }
 
         .summary-table tr:last-child td { border-bottom: none; }
 
-        @media (max-width: 520px) {
-            .top-stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .stat-box.debt-box {
-                grid-column: span 2;
-            }
+        @media (max-width: 480px) {
             .summary-table { font-size: 0.72rem; }
             .summary-table th { font-size: 0.68rem; padding: 7px 2px; }
             .summary-table td { padding: 7px 2px; }
             .stat-label { font-size: 0.76rem; }
-            .stat-value { font-size: 1.05rem; }
+            .stat-value { font-size: 1.08rem; }
         }
     </style>
 
@@ -403,16 +470,19 @@
             <span>لوحة المبيعات وإحصائيات المخزون</span>
         </div>
 
-        <!-- إجمالي المبيعات + إجمالي الأرباح + إجمالي مديونيات العملاء -->
+        <!-- 4 مربعات إحصائية بالأعلى -->
         <div class="top-stats-grid">
             <div class="stat-box sales-box">
                 <div class="stat-label">💰 إجمالي المبيعات</div>
                 <div class="stat-value" id="totalSalesValue">0</div>
             </div>
+            <div class="stat-box cost-box">
+                <div class="stat-label">💵 إجمالي التكلفة</div>
+                <div class="stat-value" id="totalCostValue">0</div>
+            </div>
             <div class="stat-box profit-box">
                 <div class="stat-label">📈 إجمالي الأرباح</div>
                 <div class="stat-value" id="totalProfitValue">0</div>
-                <div class="stat-sub" id="totalCostSub">تكلفة المباع: 0</div>
             </div>
             <div class="stat-box debt-box">
                 <div class="stat-label">📋 إجمالي مديونيات العملاء</div>
@@ -420,17 +490,20 @@
             </div>
         </div>
 
-        <!-- زر ولوحة إدارة دفعات التكلفة المتغيرة -->
+        <!-- زر إضافة تكلفة -->
         <button type="button" class="btn-cost-toggle" onclick="toggleCostPanel()">
             <span>💵</span>
-            <span>إضافة دفعة تكلفة جديدة (كمية + سعر) / سجل التكاليف</span>
+            <span>إضافة تكلفة</span>
         </button>
 
+        <!-- لوحة تسجيل التكلفة -->
         <div class="cost-panel" id="costPanel">
             <div class="cost-panel-header">
-                <span>📦 تسجيل دفعة شراء جديدة (حساب تلقائي للأرباح بنظام الدفعات):</span>
+                <span id="costFormTitle">📦 تسجيل</span>
                 <button type="button" onclick="toggleCostPanel()" style="background:#e2e8f0; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:bold;">✕</button>
             </div>
+
+            <input type="hidden" id="editBatchId" value="">
 
             <div class="batch-form-grid">
                 <div class="batch-field full-span">
@@ -438,7 +511,7 @@
                     <select id="batchItemSelect"></select>
                 </div>
                 <div class="batch-field">
-                    <label>الكمية (عدد الشرائح):</label>
+                    <label>الكمية:</label>
                     <input type="number" id="batchQty" step="any" placeholder="مثال: 50" oninput="onBatchQtyOrUnitChange()">
                 </div>
                 <div class="batch-field">
@@ -446,7 +519,7 @@
                     <input type="number" id="batchUnitCost" step="any" placeholder="مثال: 95" oninput="onBatchQtyOrUnitChange()">
                 </div>
                 <div class="batch-field">
-                    <label>إجمالي تكلفة الدفعة (تلقائي/يدوي):</label>
+                    <label>الإجمالي:</label>
                     <input type="number" id="batchTotalCost" step="any" placeholder="0" oninput="onBatchTotalChange()">
                 </div>
                 <div class="batch-field">
@@ -455,16 +528,15 @@
                 </div>
             </div>
 
-            <button type="button" class="btn-add-batch" id="addBatchBtn" onclick="addNewCostBatch()">
-                ➕ إضافة الدفعة وحفظها سحابياً
+            <button type="button" class="btn-add-batch" id="addBatchBtn" onclick="saveCostBatch()">
+                ➕ إضافة
+            </button>
+            <button type="button" class="btn-cancel-batch" id="cancelBatchEditBtn" onclick="cancelBatchEdit()">
+                إلغاء التعديل
             </button>
 
-            <!-- سجل الدفعات المضافة -->
+            <!-- جدول الدفعات بدون شريط العنوان وإجمالي الشراء -->
             <div class="batches-log-box">
-                <div class="batches-log-title">
-                    <span>📜 سجل دفعات التكلفة المضافة</span>
-                    <span id="batchesSummaryTotal">إجمالي الشراء: 0</span>
-                </div>
                 <div class="batches-table-wrap">
                     <table class="batches-table">
                         <thead>
@@ -474,7 +546,7 @@
                                 <th>سعر الحبة</th>
                                 <th>الإجمالي</th>
                                 <th>التاريخ</th>
-                                <th>حذف</th>
+                                <th>تعديل / حذف</th>
                             </tr>
                         </thead>
                         <tbody id="batchesTableBody"></tbody>
@@ -482,30 +554,33 @@
                 </div>
             </div>
 
-            <!-- مصروفات إضافية عامة -->
-            <div class="batch-field" style="background:#fffbeb; border-color:#fde68a; display:flex; align-items:center; gap:8px; justify-content:space-between;">
-                <label style="color:#b45309; margin:0; white-space:nowrap;">💸 مصروفات عامة إضافية:</label>
-                <input type="number" id="extraGeneralCostInput" step="any" placeholder="0" style="max-width:130px;">
-                <button type="button" onclick="saveExtraGeneralCost()" style="background:#d97706; color:white; border:none; padding:7px 12px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.78rem; white-space:nowrap;">حفظ المصروف</button>
+            <!-- إضافة مصروفات -->
+            <div class="expense-row">
+                <label>💸 اضافة مصروفات:</label>
+                <input type="number" id="extraGeneralCostInput" step="any" placeholder="0">
+                <button type="button" onclick="saveExtraGeneralCost()">حفظ</button>
             </div>
         </div>
 
+        <!-- فلتر المبيعات حسب الشركة والمدة -->
         <div class="filter-box">
+            <div class="filter-label">فلتر المبيعات حسب الشركة والمدة</div>
             <select id="itemFilter" onchange="renderDashboard()">
-                <option value="ALL">📦 كل المحلات / الأصناف</option>
+                <option value="">📦 كل المحلات / الأصناف</option>
             </select>
 
             <div class="date-row">
                 <button class="btn-reset" onclick="resetFilters()">
                     <span>🔄</span>
-                    <span>عرض الكل</span>
+                    <span>عرض</span>
                 </button>
-                <input type="date" id="dateFilter" onchange="renderDashboard()">
+                <input type="text" id="dateFilter" class="date-input" placeholder="📅 حدد التاريخ" onfocus="this.type='date'; if(this.showPicker) try{this.showPicker();}catch(e){}" onblur="if(!this.value) this.type='text'" onchange="renderDashboard()">
             </div>
         </div>
 
-        <div class="table-card">
-            <div class="table-title">📊 ملخص المحلات والمدة والأرباح</div>
+        <!-- جدول الإحصائيات (يظهر فقط عند الاختيار من الفلتر) -->
+        <div class="table-card" id="statsTableCard">
+            <div class="table-title">📊 الإحصائيات</div>
             <div class="table-wrap">
                 <table class="summary-table">
                     <thead>
@@ -532,8 +607,8 @@
         let invoicesList = [];
         let stockOffsets = {};
         let deletedStockItems = [];
-        let itemCosts = {}; // للتوافق مع أي تكلفة قديمة مسجلة
-        let costBatches = []; // مصفوفة دفعات التكلفة (كمية + سعر + تاريخ)
+        let itemCosts = {};
+        let costBatches = [];
         let extraGeneralCost = 0;
 
         function getTodayStr() {
@@ -561,9 +636,11 @@
             let html = '';
             categoriesList.forEach(c => {
                 durationsList.forEach(d => {
-                    const key = `${c}_${d}`;
-                    const label = `${c} (${d})`;
-                    html += `<option value="${key}" data-label="${label}">${label}</option>`;
+                    const invKey = `${c} (${d})`;
+                    if (!deletedStockItems.includes(invKey)) {
+                        const key = `${c}_${d}`;
+                        html += `<option value="${key}" data-label="${invKey}">${invKey}</option>`;
+                    }
                 });
             });
             select.innerHTML = html;
@@ -572,7 +649,6 @@
             }
         }
 
-        // حساب الإجمالي تلقائياً عند كتابة الكمية أو سعر الحبة
         function onBatchQtyOrUnitChange() {
             const qty = parseFloat(document.getElementById('batchQty').value);
             const unitCost = parseFloat(document.getElementById('batchUnitCost').value);
@@ -584,7 +660,6 @@
             }
         }
 
-        // حساب سعر الحبة تلقائياً إذا كتب المستخدم إجمالي الفاتورة
         function onBatchTotalChange() {
             const qty = parseFloat(document.getElementById('batchQty').value);
             const totalCost = parseFloat(document.getElementById('batchTotalCost').value);
@@ -612,11 +687,12 @@
                     }, { merge: true });
                 }
             } catch (e) {
-                console.error("خطأ في حفظ دفعات التكلفة سحابياً:", e);
+                console.error("خطأ في حفظ التكلفة سحابياً:", e);
             }
         }
 
-        window.addNewCostBatch = async function() {
+        window.saveCostBatch = async function() {
+            const editId = document.getElementById('editBatchId').value;
             const select = document.getElementById('batchItemSelect');
             const key = select.value;
             const label = select.options[select.selectedIndex]?.getAttribute('data-label') || key.replace('_', ' ');
@@ -631,39 +707,81 @@
 
             const btn = document.getElementById('addBatchBtn');
             btn.disabled = true;
-            btn.textContent = '⏳ جاري الحفظ...';
+            btn.textContent = '⏳...';
 
-            const newBatch = {
-                id: 'batch_' + Date.now(),
-                key: key,
-                label: label,
-                qty: qty,
-                unitCost: unitCost,
-                totalCost: +(qty * unitCost).toFixed(2),
-                date: batchDate,
-                timestamp: Date.now()
-            };
+            if (editId) {
+                const idx = costBatches.findIndex(b => b.id === editId);
+                if (idx !== -1) {
+                    costBatches[idx] = {
+                        ...costBatches[idx],
+                        key: key,
+                        label: label,
+                        qty: qty,
+                        unitCost: unitCost,
+                        totalCost: +(qty * unitCost).toFixed(2),
+                        date: batchDate
+                    };
+                }
+            } else {
+                const newBatch = {
+                    id: 'batch_' + Date.now(),
+                    key: key,
+                    label: label,
+                    qty: qty,
+                    unitCost: unitCost,
+                    totalCost: +(qty * unitCost).toFixed(2),
+                    date: batchDate,
+                    timestamp: Date.now()
+                };
+                costBatches.push(newBatch);
+            }
 
-            costBatches.push(newBatch);
-            // تحديث آخر سعر معروف للصنف أيضاً كمرجع احتياطي
             itemCosts[key] = unitCost;
-
             await syncCostsToCloud();
-
-            document.getElementById('batchQty').value = '';
-            document.getElementById('batchUnitCost').value = '';
-            document.getElementById('batchTotalCost').value = '';
+            cancelBatchEdit();
 
             btn.disabled = false;
-            btn.textContent = '➕ إضافة الدفعة وحفظها سحابياً';
-
             renderBatchesTable();
             renderDashboard();
         };
 
+        window.editCostBatch = function(batchId) {
+            const b = costBatches.find(item => item.id === batchId);
+            if (!b) return;
+
+            document.getElementById('editBatchId').value = b.id;
+            const select = document.getElementById('batchItemSelect');
+            if ([...select.options].some(o => o.value === b.key)) {
+                select.value = b.key;
+            }
+            document.getElementById('batchQty').value = b.qty;
+            document.getElementById('batchUnitCost').value = b.unitCost;
+            document.getElementById('batchTotalCost').value = b.totalCost !== undefined ? b.totalCost : +(b.qty * b.unitCost).toFixed(2);
+            document.getElementById('batchDate').value = b.date || getTodayStr();
+
+            document.getElementById('costFormTitle').textContent = '✏️ تعديل';
+            document.getElementById('addBatchBtn').textContent = '💾 حفظ التعديل';
+            document.getElementById('cancelBatchEditBtn').style.display = 'block';
+            document.getElementById('costPanel').scrollIntoView({ behavior: 'smooth' });
+        };
+
+        window.cancelBatchEdit = function() {
+            document.getElementById('editBatchId').value = '';
+            document.getElementById('batchQty').value = '';
+            document.getElementById('batchUnitCost').value = '';
+            document.getElementById('batchTotalCost').value = '';
+            document.getElementById('batchDate').value = getTodayStr();
+            document.getElementById('costFormTitle').textContent = '📦 تسجيل';
+            document.getElementById('addBatchBtn').textContent = '➕ إضافة';
+            document.getElementById('cancelBatchEditBtn').style.display = 'none';
+        };
+
         window.deleteCostBatch = async function(batchId) {
-            if (!confirm('هل أنت متأكد من حذف دفعة التكلفة هذه؟')) return;
+            if (!confirm('هل أنت متأكد من حذف هذه الدفعة؟')) return;
             costBatches = costBatches.filter(b => b.id !== batchId);
+            if (document.getElementById('editBatchId').value === batchId) {
+                cancelBatchEdit();
+            }
             await syncCostsToCloud();
             renderBatchesTable();
             renderDashboard();
@@ -674,25 +792,21 @@
             extraGeneralCost = (!isNaN(extraVal) && extraVal >= 0) ? extraVal : 0;
             await syncCostsToCloud();
             renderDashboard();
-            alert('✅ تم حفظ المصروفات الإضافية وتحديث الأرباح.');
+            alert('✅ تم الحفظ بنجاح.');
         };
 
         function renderBatchesTable() {
             const tbody = document.getElementById('batchesTableBody');
-            const summarySpan = document.getElementById('batchesSummaryTotal');
 
             if (!Array.isArray(costBatches) || costBatches.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="padding:12px; color:#64748b; font-weight:bold;">لا توجد دفعات مسجلة حالياً. أضف أول دفعة من الأعلى.</td></tr>`;
-                summarySpan.textContent = 'إجمالي الشراء: 0';
+                tbody.innerHTML = `<tr><td colspan="6" style="padding:12px; color:#64748b; font-weight:bold;">لا توجد دفعات تكلفة مسجلة حالياً.</td></tr>`;
                 return;
             }
 
-            let grandPurchaseTotal = 0;
             const sorted = [...costBatches].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
             tbody.innerHTML = sorted.map(b => {
                 const total = b.totalCost !== undefined ? b.totalCost : (b.qty * b.unitCost);
-                grandPurchaseTotal += total;
                 return `
                     <tr>
                         <td style="font-weight:800; color:#1e3a8a;">${b.label || b.key.replace('_', ' ')}</td>
@@ -700,12 +814,15 @@
                         <td style="color:#b45309; font-weight:700;">${b.unitCost}</td>
                         <td style="color:#15803d; font-weight:800;">${total.toLocaleString('en-US')}</td>
                         <td>${b.date || '-'}</td>
-                        <td><button type="button" class="btn-del-batch" onclick="deleteCostBatch('${b.id}')">🗑️</button></td>
+                        <td>
+                            <div class="batch-actions">
+                                <button type="button" class="btn-edit-batch" onclick="editCostBatch('${b.id}')" title="تعديل">✏️</button>
+                                <button type="button" class="btn-del-batch" onclick="deleteCostBatch('${b.id}')" title="حذف">🗑️</button>
+                            </div>
+                        </td>
                     </tr>
                 `;
             }).join('');
-
-            summarySpan.textContent = `إجمالي الشراء: ${grandPurchaseTotal.toLocaleString('en-US')}`;
         }
 
         function parseCompanyAndDuration(rawStr, explicitDur) {
@@ -805,12 +922,19 @@
             return 0;
         }
 
+        // تعبئة الفلتر بالمسميات والمدة مثل Mobily (30) و Mobily (60)
         function populateFilterDropdown() {
             const select = document.getElementById('itemFilter');
-            const currentVal = select.value || 'ALL';
-            let html = `<option value="ALL">📦 كل المحلات / الأصناف</option>`;
-            categoriesList.forEach(cat => {
-                html += `<option value="${cat}">${cat}</option>`;
+            const currentVal = select.value || '';
+            let html = `<option value="">📦 كل المحلات / الأصناف</option>`;
+            categoriesList.forEach(c => {
+                durationsList.forEach(d => {
+                    const invKey = `${c} (${d})`;
+                    if (!deletedStockItems.includes(invKey)) {
+                        const key = `${c}_${d}`;
+                        html += `<option value="${key}">${invKey}</option>`;
+                    }
+                });
             });
             select.innerHTML = html;
             if ([...select.options].some(o => o.value === currentVal)) {
@@ -819,12 +943,13 @@
         }
 
         window.resetFilters = function() {
-            document.getElementById('itemFilter').value = 'ALL';
-            document.getElementById('dateFilter').value = '';
+            document.getElementById('itemFilter').value = '';
+            const dateInput = document.getElementById('dateFilter');
+            dateInput.value = '';
+            dateInput.type = 'text';
             renderDashboard();
         };
 
-        // معادلة حساب التكلفة بنظام الدفعات المتسلسلة (FIFO)
         function consumeCostFromBatches(queuesMap, fallbackCostMap, key, soldQty) {
             const queue = queuesMap[key] || [];
             let remainingToCover = soldQty;
@@ -845,7 +970,6 @@
                 }
             }
 
-            // إذا زادت المبيعات عن مجموع كميات الدفعات المدخلة، نستخدم آخر سعر تكلفة مسجل لهذا الصنف
             if (remainingToCover > 0) {
                 const lastKnownUnitCost = fallbackCostMap[key] || 0;
                 totalCostForSale += remainingToCover * lastKnownUnitCost;
@@ -855,7 +979,7 @@
         }
 
         window.renderDashboard = function() {
-            const selectedCat = document.getElementById('itemFilter').value;
+            const selectedItemKey = document.getElementById('itemFilter').value;
             const selectedDate = document.getElementById('dateFilter').value;
 
             const allScannedMap = {};
@@ -863,9 +987,9 @@
             const filteredScannedMap = {};
             const filteredSoldMap = {};
             const filteredRevenueMap = {};
-            const filteredCostMap = {};
+            const filteredSoldCostMap = {};
+            const filteredBatchesCostMap = {};
 
-            // تجهيز طوابير الدفعات (FIFO Queues) مرتبة من الأقدم للأحدث لكل صنف
             const batchQueuesMap = {};
             const fallbackCostMap = {};
 
@@ -877,7 +1001,8 @@
                     filteredScannedMap[key] = 0;
                     filteredSoldMap[key] = 0;
                     filteredRevenueMap[key] = 0;
-                    filteredCostMap[key] = 0;
+                    filteredSoldCostMap[key] = 0;
+                    filteredBatchesCostMap[key] = 0;
                     batchQueuesMap[key] = [];
                     fallbackCostMap[key] = parseFloat(itemCosts[key]) || 0;
                 });
@@ -893,13 +1018,18 @@
                 if (!batchQueuesMap[b.key]) batchQueuesMap[b.key] = [];
                 const q = parseFloat(b.qty) || 0;
                 const u = parseFloat(b.unitCost) || 0;
+                const bTotal = b.totalCost !== undefined ? parseFloat(b.totalCost) : (q * u);
                 if (q > 0) {
                     batchQueuesMap[b.key].push({ remainingQty: q, unitCost: u });
-                    fallbackCostMap[b.key] = u; // أحدث سعر دفعة يكون هو الاحتياطي بعد نفاد الكميات
+                    fallbackCostMap[b.key] = u;
+                }
+                const bDate = (b.date || '').slice(0, 10);
+                if (!selectedDate || bDate === selectedDate) {
+                    filteredBatchesCostMap[b.key] = (filteredBatchesCostMap[b.key] || 0) + bTotal;
                 }
             });
 
-            // 1. حساب الشرائح الممسوحة لكل شركة ومدة
+            // 1. حساب الشرائح الممسوحة
             simsList.forEach(sim => {
                 const { company, duration } = parseCompanyAndDuration(sim.category || sim.company || '', sim.duration);
                 const key = `${company}_${duration}`;
@@ -911,7 +1041,7 @@
                 }
             });
 
-            // 2. ترتيب الفواتير زمنياً من الأقدم للأحدث لتخصيص دفعات التكلفة بالترتيب الصحيح
+            // 2. حساب المبيعات والمديونيات وتكلفة المباع بالترتيب الزمني
             let totalDebtsSum = 0;
             const chronologicalInvoices = [...invoicesList].sort((a, b) => {
                 const dateDiff = String(a.date || '').localeCompare(String(b.date || ''));
@@ -923,9 +1053,9 @@
                 const items = extractInvoiceItems(inv);
                 const invDate = (inv.date || '').slice(0, 10);
                 const matchesDate = !selectedDate || invDate === selectedDate;
-                const matchesCat = (selectedCat === 'ALL') || items.some(it => it.company === selectedCat);
+                const matchesItem = !selectedItemKey || items.some(it => `${it.company}_${it.duration}` === selectedItemKey);
 
-                if (matchesDate && matchesCat) {
+                if (matchesDate && matchesItem) {
                     totalDebtsSum += getInvoiceDebt(inv);
                 }
 
@@ -933,13 +1063,12 @@
                     const key = `${it.company}_${it.duration}`;
                     allSoldMap[key] = (allSoldMap[key] || 0) + it.qty;
 
-                    // سحب تكلفة هذه البيعة من دفعات الشراء بالترتيب
                     const saleCost = consumeCostFromBatches(batchQueuesMap, fallbackCostMap, key, it.qty);
 
                     if (matchesDate) {
                         filteredSoldMap[key] = (filteredSoldMap[key] || 0) + it.qty;
                         filteredRevenueMap[key] = (filteredRevenueMap[key] || 0) + it.total;
-                        filteredCostMap[key] = (filteredCostMap[key] || 0) + saleCost;
+                        filteredSoldCostMap[key] = (filteredSoldCostMap[key] || 0) + saleCost;
                     }
                 });
             });
@@ -948,35 +1077,44 @@
             categoriesList.forEach(c => {
                 durationsList.forEach(d => {
                     const invKey = `${c} (${d})`;
+                    const key = `${c}_${d}`;
                     if (!deletedStockItems.includes(invKey)) {
-                        activeKeys.push({ company: c, duration: d, key: `${c}_${d}`, invKey: invKey });
+                        activeKeys.push({ company: c, duration: d, key: key, invKey: invKey });
                     }
                 });
             });
 
-            if (selectedCat !== 'ALL') {
-                activeKeys = activeKeys.filter(item => item.company === selectedCat);
+            if (selectedItemKey) {
+                activeKeys = activeKeys.filter(item => item.key === selectedItemKey);
             }
 
-            // حساب إجمالي المبيعات والتكلفة والأرباح للأصناف المعروضة
             let totalSalesSum = 0;
-            let totalItemsCostSum = 0;
+            let totalSoldCostSum = 0;
+            let totalBatchesPurchaseSum = 0;
 
             activeKeys.forEach(item => {
                 totalSalesSum += (filteredRevenueMap[item.key] || 0);
-                totalItemsCostSum += (filteredCostMap[item.key] || 0);
+                totalSoldCostSum += (filteredSoldCostMap[item.key] || 0);
+                totalBatchesPurchaseSum += (filteredBatchesCostMap[item.key] || 0);
             });
 
-            const appliedExtraCost = (selectedCat === 'ALL' && !selectedDate) ? (parseFloat(extraGeneralCost) || 0) : 0;
-            const grandTotalCost = +(totalItemsCostSum + appliedExtraCost).toFixed(2);
-            const totalProfitSum = +(totalSalesSum - grandTotalCost).toFixed(2);
+            const appliedExtraCost = (!selectedItemKey && !selectedDate) ? (parseFloat(extraGeneralCost) || 0) : 0;
+            const displayedTotalCost = +( (totalBatchesPurchaseSum > 0 ? totalBatchesPurchaseSum : totalSoldCostSum) + appliedExtraCost ).toFixed(2);
+            const totalProfitSum = +(totalSalesSum - (totalSoldCostSum + appliedExtraCost)).toFixed(2);
 
             document.getElementById('totalSalesValue').textContent = totalSalesSum.toLocaleString('en-US');
+            document.getElementById('totalCostValue').textContent = displayedTotalCost.toLocaleString('en-US');
             document.getElementById('totalProfitValue').textContent = totalProfitSum.toLocaleString('en-US');
-            document.getElementById('totalCostSub').textContent = `تكلفة المباع: ${grandTotalCost.toLocaleString('en-US')}`;
             document.getElementById('totalDebtValue').textContent = totalDebtsSum.toLocaleString('en-US');
 
-            // تحديث جدول ملخص المحلات والمدة والأرباح
+            // إظهار جدول الإحصائيات فقط عند اختيار صنف من فلتر المبيعات فوق
+            const statsTableCard = document.getElementById('statsTableCard');
+            if (!selectedItemKey) {
+                statsTableCard.style.display = 'none';
+                return;
+            }
+
+            statsTableCard.style.display = 'block';
             const summaryBody = document.getElementById('companySummaryBody');
             summaryBody.innerHTML = activeKeys.map(item => {
                 const baseAuto = (allScannedMap[item.key] || 0) - (allSoldMap[item.key] || 0);
@@ -986,7 +1124,7 @@
                 const scanned = filteredScannedMap[item.key] || 0;
                 const sold = filteredSoldMap[item.key] || 0;
                 const rev = filteredRevenueMap[item.key] || 0;
-                const cost = filteredCostMap[item.key] || 0;
+                const cost = filteredSoldCostMap[item.key] || 0;
                 const itemProfit = +(rev - cost).toFixed(2);
 
                 return `
