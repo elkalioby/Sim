@@ -28,12 +28,12 @@
             gap: 6px;
         }
 
-        /* بطاقات الإجمالي العلوية جنباً إلى جنب */
+        /* بطاقات الإحصائيات العلوية (المبيعات + الأرباح + المديونيات) */
         .top-stats-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .stat-box {
@@ -52,13 +52,18 @@
             border: 1.5px solid #bbf7d0;
         }
 
+        .stat-box.profit-box {
+            background: #eff6ff;
+            border: 1.5px solid #bfdbfe;
+        }
+
         .stat-box.debt-box {
             background: #fef2f2;
             border: 1.5px solid #fecaca;
         }
 
         .stat-label {
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             font-weight: 800;
             color: #334155;
         }
@@ -69,8 +74,101 @@
             direction: ltr;
         }
 
+        .stat-sub {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #64748b;
+        }
+
         .sales-box .stat-value { color: #15803d; }
+        .profit-box .stat-value { color: #1d4ed8; }
         .debt-box .stat-value { color: #dc2626; }
+
+        /* زر وقسم إدارة التكلفة */
+        .btn-cost-toggle {
+            width: 100%;
+            background: #1e3a8a;
+            color: #ffffff;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 800;
+            cursor: pointer;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        .btn-cost-toggle:hover { background: #1d4ed8; }
+
+        .cost-panel {
+            display: none;
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .cost-panel-header {
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: #1e3a8a;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cost-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .cost-item {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px;
+        }
+
+        .cost-item label {
+            display: block;
+            font-size: 0.76rem;
+            font-weight: 800;
+            color: #334155;
+            margin-bottom: 4px;
+        }
+
+        .cost-item input {
+            width: 100%;
+            padding: 7px 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-align: center;
+            outline: none;
+        }
+
+        .cost-item input:focus { border-color: #2563eb; }
+
+        .btn-save-cost {
+            width: 100%;
+            background: #16a34a;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
 
         .filter-box {
             background: #ffffff;
@@ -176,31 +274,38 @@
             background: #1e293b;
             color: #fff;
             font-weight: 700;
-            font-size: 0.76rem;
+            font-size: 0.74rem;
         }
 
-        /* توزيع عرض الأعمدة الستة لضمان عدم ظهور سكرول بالعرض */
-        th:nth-child(1), td:nth-child(1) { width: 22%; } /* المحل / الصنف */
-        th:nth-child(2), td:nth-child(2) { width: 11%; } /* المدة */
-        th:nth-child(3), td:nth-child(3) { width: 16%; } /* الرصيد المتاح */
-        th:nth-child(4), td:nth-child(4) { width: 15%; } /* الممسوح */
-        th:nth-child(5), td:nth-child(5) { width: 16%; } /* المباع */
-        th:nth-child(6), td:nth-child(6) { width: 20%; } /* قيمة المبيعات */
+        /* توزيع عرض الأعمدة السبعة لضمان عدم ظهور سكرول بالعرض */
+        th:nth-child(1), td:nth-child(1) { width: 18%; } /* الصنف */
+        th:nth-child(2), td:nth-child(2) { width: 10%; } /* المدة */
+        th:nth-child(3), td:nth-child(3) { width: 13%; } /* المتاح */
+        th:nth-child(4), td:nth-child(4) { width: 13%; } /* الممسوح */
+        th:nth-child(5), td:nth-child(5) { width: 13%; } /* المباع */
+        th:nth-child(6), td:nth-child(6) { width: 17%; } /* المبيعات */
+        th:nth-child(7), td:nth-child(7) { width: 16%; } /* الأرباح */
 
         tr:last-child td { border-bottom: none; }
 
-        @media (max-width: 420px) {
-            table { font-size: 0.74rem; }
-            th { font-size: 0.7rem; padding: 7px 2px; }
+        @media (max-width: 520px) {
+            .top-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .stat-box.debt-box {
+                grid-column: span 2;
+            }
+            table { font-size: 0.72rem; }
+            th { font-size: 0.68rem; padding: 7px 2px; }
             td { padding: 7px 2px; }
             .stat-label { font-size: 0.76rem; }
-            .stat-value { font-size: 1.02rem; }
+            .stat-value { font-size: 1.05rem; }
         }
     </style>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
@@ -219,6 +324,7 @@
         window.getDocs = getDocs;
         window.doc = doc;
         window.getDoc = getDoc;
+        window.setDoc = setDoc;
 
         if (window.initSalesDashboard) { window.initSalesDashboard(); }
     </script>
@@ -231,16 +337,40 @@
             <span>لوحة المبيعات وإحصائيات المخزون</span>
         </div>
 
-        <!-- إجمالي المبيعات وإجمالي مديونيات العملاء جنباً إلى جنب -->
+        <!-- إجمالي المبيعات + إجمالي الأرباح + إجمالي مديونيات العملاء -->
         <div class="top-stats-grid">
             <div class="stat-box sales-box">
                 <div class="stat-label">💰 إجمالي المبيعات</div>
                 <div class="stat-value" id="totalSalesValue">0</div>
             </div>
+            <div class="stat-box profit-box">
+                <div class="stat-label">📈 إجمالي الأرباح</div>
+                <div class="stat-value" id="totalProfitValue">0</div>
+                <div class="stat-sub" id="totalCostSub">إجمالي التكلفة: 0</div>
+            </div>
             <div class="stat-box debt-box">
                 <div class="stat-label">📋 إجمالي مديونيات العملاء</div>
                 <div class="stat-value" id="totalDebtValue">0</div>
             </div>
+        </div>
+
+        <!-- زر ولوحة إدخال التكلفة لحساب الأرباح -->
+        <button type="button" class="btn-cost-toggle" onclick="toggleCostPanel()">
+            <span>💵</span>
+            <span>إضافة / تعديل التكلفة لحساب الأرباح</span>
+        </button>
+
+        <div class="cost-panel" id="costPanel">
+            <div class="cost-panel-header">
+                <span>⚙️ تحديد تكلفة الحبة لكل صنف أو تكلفة إضافية:</span>
+                <button type="button" onclick="toggleCostPanel()" style="background:#e2e8f0; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:bold;">✕</button>
+            </div>
+            <div class="cost-grid" id="costInputsContainer"></div>
+            <div class="cost-item" style="margin-bottom: 10px; background:#fffbeb; border-color:#fde68a;">
+                <label style="color:#b45309;">💸 تكلفة إضافية / مصروفات عامة (تُخصم من إجمالي الربح):</label>
+                <input type="number" id="extraGeneralCostInput" step="any" placeholder="0">
+            </div>
+            <button type="button" class="btn-save-cost" id="saveCostBtn" onclick="saveCosts()">💾 حفظ التكلفة وتحديث الأرباح</button>
         </div>
 
         <div class="filter-box">
@@ -258,17 +388,18 @@
         </div>
 
         <div class="table-card">
-            <div class="table-title">📊 ملخص المحلات والمدة</div>
+            <div class="table-title">📊 ملخص المحلات والمدة والأرباح</div>
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            <th>المحل / الصنف</th>
+                            <th>الصنف</th>
                             <th>المدة</th>
-                            <th>الرصيد المتاح</th>
+                            <th>المتاح</th>
                             <th>الممسوح</th>
-                            <th>المباع (حبة)</th>
-                            <th>قيمة المبيعات</th>
+                            <th>المباع</th>
+                            <th>المبيعات</th>
+                            <th>الأرباح</th>
                         </tr>
                     </thead>
                     <tbody id="companySummaryBody"></tbody>
@@ -282,8 +413,82 @@
         let durationsList = ['30', '60'];
         let simsList = [];
         let invoicesList = [];
+        let stockOffsets = {};
+        let deletedStockItems = [];
+        let itemCosts = {};
+        let extraGeneralCost = 0;
 
-        // استخراج اسم الشركة والمدة بدقة من النص مثل "Mobily (30)" أو "Mobily (60)"
+        function toggleCostPanel() {
+            const panel = document.getElementById('costPanel');
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                renderCostInputs();
+                panel.style.display = 'block';
+            }
+        }
+
+        function renderCostInputs() {
+            const container = document.getElementById('costInputsContainer');
+            let html = '';
+            categoriesList.forEach(c => {
+                durationsList.forEach(d => {
+                    const key = `${c}_${d}`;
+                    const val = itemCosts[key] !== undefined ? itemCosts[key] : '';
+                    html += `
+                        <div class="cost-item">
+                            <label>تكلفة الحبة: ${c} (${d})</label>
+                            <input type="number" step="any" data-cost-key="${key}" value="${val}" placeholder="0">
+                        </div>
+                    `;
+                });
+            });
+            container.innerHTML = html;
+            document.getElementById('extraGeneralCostInput').value = extraGeneralCost || '';
+        }
+
+        window.saveCosts = async function() {
+            const btn = document.getElementById('saveCostBtn');
+            btn.textContent = '⏳ جاري الحفظ...';
+            btn.disabled = true;
+
+            document.querySelectorAll('[data-cost-key]').forEach(input => {
+                const key = input.getAttribute('data-cost-key');
+                const val = parseFloat(input.value);
+                if (!isNaN(val) && val >= 0) {
+                    itemCosts[key] = val;
+                } else {
+                    delete itemCosts[key];
+                }
+            });
+
+            const extraVal = parseFloat(document.getElementById('extraGeneralCostInput').value);
+            extraGeneralCost = (!isNaN(extraVal) && extraVal >= 0) ? extraVal : 0;
+
+            const appConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            appConfig.itemCosts = itemCosts;
+            appConfig.extraGeneralCost = extraGeneralCost;
+            appConfig.configUpdatedAt = Date.now();
+            localStorage.setItem('app_config', JSON.stringify(appConfig));
+
+            try {
+                if (window.db && window.setDoc) {
+                    await window.setDoc(window.doc(window.db, "settings", "app_config"), {
+                        itemCosts: itemCosts,
+                        extraGeneralCost: extraGeneralCost,
+                        configUpdatedAt: appConfig.configUpdatedAt
+                    }, { merge: true });
+                }
+            } catch (e) {
+                console.error("خطأ في حفظ التكلفة سحابياً:", e);
+            }
+
+            btn.textContent = '💾 حفظ التكلفة وتحديث الأرباح';
+            btn.disabled = false;
+            document.getElementById('costPanel').style.display = 'none';
+            renderDashboard();
+        };
+
         function parseCompanyAndDuration(rawStr, explicitDur) {
             const s = String(rawStr || '').trim();
             let dur = explicitDur ? String(explicitDur).trim() : '';
@@ -363,7 +568,6 @@
             return extracted;
         }
 
-        // حساب المديونية المتبقية على الفاتورة
         function getInvoiceDebt(inv) {
             if (inv.remaining !== undefined && inv.remaining !== null && inv.remaining !== '') {
                 return Math.max(0, parseFloat(inv.remaining) || 0);
@@ -461,7 +665,10 @@
             let activeKeys = [];
             categoriesList.forEach(c => {
                 durationsList.forEach(d => {
-                    activeKeys.push({ company: c, duration: d, key: `${c}_${d}` });
+                    const invKey = `${c} (${d})`;
+                    if (!deletedStockItems.includes(invKey)) {
+                        activeKeys.push({ company: c, duration: d, key: `${c}_${d}`, invKey: invKey });
+                    }
                 });
             });
 
@@ -469,23 +676,41 @@
                 activeKeys = activeKeys.filter(item => item.company === selectedCat);
             }
 
-            // حساب إجمالي المبيعات للأصناف المعروضة
+            // حساب إجمالي المبيعات والتكلفة والأرباح
             let totalSalesSum = 0;
+            let totalItemsCostSum = 0;
+
             activeKeys.forEach(item => {
-                totalSalesSum += (filteredRevenueMap[item.key] || 0);
+                const rev = filteredRevenueMap[item.key] || 0;
+                const soldQty = filteredSoldMap[item.key] || 0;
+                const unitCost = parseFloat(itemCosts[item.key]) || 0;
+
+                totalSalesSum += rev;
+                totalItemsCostSum += (soldQty * unitCost);
             });
 
-            // تحديث بطاقتي إجمالي المبيعات وإجمالي مديونيات العملاء
+            const appliedExtraCost = (selectedCat === 'ALL' && !selectedDate) ? (parseFloat(extraGeneralCost) || 0) : 0;
+            const grandTotalCost = totalItemsCostSum + appliedExtraCost;
+            const totalProfitSum = totalSalesSum - grandTotalCost;
+
             document.getElementById('totalSalesValue').textContent = totalSalesSum.toLocaleString('en-US');
+            document.getElementById('totalProfitValue').textContent = totalProfitSum.toLocaleString('en-US');
+            document.getElementById('totalCostSub').textContent = `التكلفة: ${grandTotalCost.toLocaleString('en-US')}`;
             document.getElementById('totalDebtValue').textContent = totalDebtsSum.toLocaleString('en-US');
 
-            // تحديث جدول ملخص المحلات والمدة
+            // تحديث جدول ملخص المحلات والمدة والأرباح مع ربط الرصيد المتاح بتعديلات الفواتير (stockOffsets)
             const summaryBody = document.getElementById('companySummaryBody');
             summaryBody.innerHTML = activeKeys.map(item => {
-                const availableStock = Math.max(0, (allScannedMap[item.key] || 0) - (allSoldMap[item.key] || 0));
+                const baseAuto = (allScannedMap[item.key] || 0) - (allSoldMap[item.key] || 0);
+                const offset = (stockOffsets && stockOffsets[item.invKey] !== undefined) ? parseFloat(stockOffsets[item.invKey]) : 0;
+                const availableStock = Math.max(0, baseAuto + offset);
+
                 const scanned = filteredScannedMap[item.key] || 0;
                 const sold = filteredSoldMap[item.key] || 0;
                 const rev = filteredRevenueMap[item.key] || 0;
+                const unitCost = parseFloat(itemCosts[item.key]) || 0;
+                const itemProfit = rev - (sold * unitCost);
+
                 return `
                     <tr>
                         <td style="font-weight:800; color:#1e3a8a;">${item.company}</td>
@@ -494,16 +719,21 @@
                         <td>${scanned}</td>
                         <td style="font-weight:800; color:#2563eb;">${sold}</td>
                         <td style="font-weight:700; color:#15803d;">${rev.toLocaleString('en-US')}</td>
+                        <td style="font-weight:800; color:${itemProfit >= 0 ? '#1d4ed8' : '#dc2626'};">${itemProfit.toLocaleString('en-US')}</td>
                     </tr>
                 `;
             }).join('');
         };
 
-        window.initSalesDashboard = async function() {
+        function loadLocalState() {
             const localConfig = JSON.parse(localStorage.getItem('app_config') || 'null');
             if (localConfig) {
                 categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
                 durationsList = localConfig.durationsList || durationsList;
+                stockOffsets = localConfig.stockOffsets || {};
+                deletedStockItems = localConfig.deletedStockItems || [];
+                itemCosts = localConfig.itemCosts || {};
+                extraGeneralCost = localConfig.extraGeneralCost || 0;
             }
 
             const localSims = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
@@ -515,7 +745,10 @@
                 '[]'
             );
             if (Array.isArray(localInvoices)) invoicesList = localInvoices;
+        }
 
+        window.initSalesDashboard = async function() {
+            loadLocalState();
             populateFilterDropdown();
             renderDashboard();
 
@@ -526,6 +759,21 @@
                         const cData = configSnap.data();
                         categoriesList = cData.categoriesList || cData.customItems || categoriesList;
                         durationsList = cData.durationsList || durationsList;
+                        stockOffsets = cData.stockOffsets || stockOffsets;
+                        deletedStockItems = cData.deletedStockItems || deletedStockItems;
+                        itemCosts = cData.itemCosts || itemCosts;
+                        extraGeneralCost = cData.extraGeneralCost !== undefined ? cData.extraGeneralCost : extraGeneralCost;
+
+                        const mergedConfig = {
+                            ...JSON.parse(localStorage.getItem('app_config') || '{}'),
+                            categoriesList,
+                            durationsList,
+                            stockOffsets,
+                            deletedStockItems,
+                            itemCosts,
+                            extraGeneralCost
+                        };
+                        localStorage.setItem('app_config', JSON.stringify(mergedConfig));
                     }
 
                     const simsSnap = await window.getDocs(window.collection(window.db, "scanned_sims"));
@@ -548,7 +796,14 @@
             renderDashboard();
         };
 
+        window.addEventListener('storage', () => {
+            loadLocalState();
+            populateFilterDropdown();
+            renderDashboard();
+        });
+
         window.addEventListener('DOMContentLoaded', () => {
+            loadLocalState();
             populateFilterDropdown();
             renderDashboard();
         });

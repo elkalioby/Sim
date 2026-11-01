@@ -376,7 +376,10 @@
                             deletedStockItems = data.deletedStockItems || deletedStockItems;
                             stockOffsets = data.stockOffsets || stockOffsets;
                             configUpdatedAt = cloudUpdatedAt;
+                            const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
                             localStorage.setItem('app_config', JSON.stringify({
+                                ...existingConfig,
+                                ...data,
                                 marketList: Array.from(mergedMarkets),
                                 stockInventory,
                                 stockOffsets,
@@ -384,7 +387,6 @@
                                 configUpdatedAt
                             }));
                         } else {
-                            // رفع التعديلات المحلية الأحدث إلى السحابة
                             await saveConfig();
                         }
                     }
@@ -463,7 +465,6 @@
                 }
             });
 
-            // دمج الرصيد التلقائي مع التعديلات اليدوية المحفوظة (stockOffsets)
             stockInventory = {};
             const allKeys = new Set([
                 ...Object.keys(autoStockInventory),
@@ -485,6 +486,46 @@
         function loadSavedCustomers() {
             const localCust = JSON.parse(localStorage.getItem('customers_records_offline')) || [];
             savedCustomersList = localCust;
+        }
+
+        // حفظ العميل تلقائياً في دليل العملاء إذا لم يكن مسجلاً من قبل
+        async function ensureCustomerInDirectory(clientName, shopName, marketName, phone, shopImage) {
+            loadSavedCustomers();
+            const cleanClient = (clientName || '').trim();
+            const cleanShop = (shopName || '').trim();
+            const cleanPhone = (phone || '').trim();
+
+            const exists = savedCustomersList.some(c =>
+                (cleanPhone && c.phone === cleanPhone) ||
+                (cleanClient && c.clientName === cleanClient && cleanShop && c.shopName === cleanShop)
+            );
+
+            if (exists) return;
+
+            const newCust = {
+                clientName: cleanClient || cleanShop || 'بدون اسم',
+                shopName: cleanShop,
+                marketName: marketName || '',
+                phone: cleanPhone,
+                location: '',
+                shopImage: shopImage || '',
+                addedBy: currentUser.username || 'admin',
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+
+            try {
+                if (window.db) {
+                    const docRef = await window.addDoc(window.collection(window.db, "customers"), newCust);
+                    savedCustomersList.unshift({ id: docRef.id, ...newCust });
+                } else {
+                    savedCustomersList.unshift({ id: 'local_' + Date.now(), ...newCust });
+                }
+            } catch (e) {
+                savedCustomersList.unshift({ id: 'local_' + Date.now(), ...newCust });
+            }
+
+            localStorage.setItem('customers_records_offline', JSON.stringify(savedCustomersList));
         }
 
         function filterCustomersDropdown() {
@@ -551,7 +592,9 @@
 
         async function saveConfig() {
             configUpdatedAt = Date.now();
+            const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             const dataToSave = {
+                ...existingConfig,
                 marketList,
                 stockInventory,
                 stockOffsets,
@@ -799,13 +842,17 @@
                 });
             }
 
+            const clientNameVal = document.getElementById('clientName').value;
+            const shopNameVal = document.getElementById('shopName').value;
+            const phoneVal = document.getElementById('phone').value;
+
             const recordData = {
                 date: originalDate,
                 timestamp: originalTimestamp,
-                clientName: document.getElementById('clientName').value,
-                shopName: document.getElementById('shopName').value,
+                clientName: clientNameVal,
+                shopName: shopNameVal,
                 marketName: marketVal,
-                phone: document.getElementById('phone').value,
+                phone: phoneVal,
                 employee: currentUser.username,
                 cartItems: currentCart,
                 itemsSummary: currentCart.map(c => `${c.item} (عدد: ${c.qty}، سعر: ${c.price})`).join(' | '),
@@ -820,8 +867,9 @@
             };
 
             try {
+                await ensureCustomerInDirectory(clientNameVal, shopNameVal, marketVal, phoneVal, tempImageBase64);
+
                 if (editId) {
-                    // تحديث السجل في المصفوفة المحلية فوراً
                     records = records.map(r => r.firebaseId === editId ? { ...recordData, firebaseId: editId } : r);
                     localStorage.setItem('sales_records_offline', JSON.stringify(records));
 

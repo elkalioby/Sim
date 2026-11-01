@@ -157,6 +157,7 @@
         let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
         let durationsList = ['30', '60'];
         let stockInventory = {};
+        let scannedCountsByGroup = {};
 
         function getTodayStr() {
             const d = new Date();
@@ -269,6 +270,51 @@
             }
         }
 
+        // إعادة حساب الرصيد الفعلي مع خصم الفواتير المباعة ومراعاة التعديلات اليدوية
+        function recalculateUnifiedStock() {
+            const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            const stockOffsets = existingConfig.stockOffsets || {};
+            const deletedStockItems = existingConfig.deletedStockItems || [];
+            const salesRecords = JSON.parse(localStorage.getItem('sales_records_offline') || '[]');
+
+            scannedCountsByGroup = {};
+            const autoStock = {};
+
+            simsList.forEach(item => {
+                const cat = item.category || item.company || 'Mobily';
+                let dur = item.duration;
+                if (!dur || dur === '-' || dur === 'غير محدد' || dur === '') {
+                    dur = (cat === 'Redbull') ? '30' : '60';
+                    item.duration = dur;
+                }
+                const itemKey = `${cat} (${dur})`;
+                scannedCountsByGroup[itemKey] = (scannedCountsByGroup[itemKey] || 0) + 1;
+                autoStock[itemKey] = (autoStock[itemKey] || 0) + 1;
+            });
+
+            salesRecords.forEach(r => {
+                if (r.cartItems && Array.isArray(r.cartItems)) {
+                    r.cartItems.forEach(ci => {
+                        if (autoStock[ci.item] === undefined) autoStock[ci.item] = 0;
+                        autoStock[ci.item] -= (parseFloat(ci.qty) || 0);
+                    });
+                }
+            });
+
+            stockInventory = {};
+            const allKeys = new Set([...Object.keys(autoStock), ...Object.keys(stockOffsets)]);
+            allKeys.forEach(key => {
+                const base = autoStock[key] || 0;
+                const offset = stockOffsets[key] !== undefined ? parseFloat(stockOffsets[key]) : 0;
+                const finalQty = base + offset;
+                stockInventory[key] = finalQty >= 0 ? finalQty : 0;
+            });
+
+            deletedStockItems.forEach(delItem => {
+                delete stockInventory[delItem];
+            });
+        }
+
         window.addNewCategory = async function() {
             const input = document.getElementById('newCategoryInput');
             const newName = input.value.trim();
@@ -344,11 +390,10 @@
         }
 
         window.initBarcodeApp = async function() {
-            const localConfig = JSON.parse(localStorage.getItem('app_config'));
+            const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             if (localConfig) {
                 categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
                 durationsList = localConfig.durationsList || ['30', '60'];
-                stockInventory = localConfig.stockInventory || {};
             }
 
             const localSims = JSON.parse(localStorage.getItem('scanned_sims_offline'));
@@ -364,7 +409,8 @@
                         const data = configSnap.data();
                         categoriesList = data.categoriesList || data.customItems || categoriesList;
                         durationsList = data.durationsList || durationsList;
-                        stockInventory = data.stockInventory || {};
+                        const merged = { ...JSON.parse(localStorage.getItem('app_config') || '{}'), ...data };
+                        localStorage.setItem('app_config', JSON.stringify(merged));
                     }
 
                     const querySnapshot = await window.getDocs(window.collection(window.db, "scanned_sims"));
@@ -379,33 +425,27 @@
                 console.log("وضع الأوفلاين مفعل.");
             }
 
-            // إعادة حساب رصيد المخزون بناءً على (التصنيف + المدة معاً)
-            stockInventory = {};
-            simsList.forEach(item => {
-                const cat = item.category || item.company || 'Mobily';
-                let dur = item.duration;
-                if (!dur || dur === '-' || dur === 'غير محدد' || dur === '') {
-                    dur = (cat === 'Redbull') ? '30' : '60';
-                    item.duration = dur;
-                }
-                const itemKey = `${cat} (${dur})`;
-                stockInventory[itemKey] = (stockInventory[itemKey] || 0) + 1;
-            });
-
             localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
-            saveConfigAndSync();
+            recalculateUnifiedStock();
+            await saveConfigAndSync();
             renderDropdowns();
             renderTable();
         };
 
         async function saveConfigAndSync() {
-            // حفظ قائمة الأصناف المركبة (الشركة + المدة) في stockInventory ليتم قراءتها في الفواتير
-            const dataToSave = { categoriesList, durationsList, stockInventory };
+            recalculateUnifiedStock();
+            const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            const dataToSave = {
+                ...existingConfig,
+                categoriesList,
+                durationsList,
+                stockInventory
+            };
             localStorage.setItem('app_config', JSON.stringify(dataToSave));
             try {
                 if (window.db) {
                     const configRef = window.doc(window.db, "settings", "app_config");
-                    await window.setDoc(configRef, dataToSave);
+                    await window.setDoc(configRef, { categoriesList, durationsList, stockInventory }, { merge: true });
                 }
             } catch (e) {}
         }
@@ -578,13 +618,12 @@
             localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
             const itemKey = `${category} (${duration})`;
-            stockInventory[itemKey] = (parseFloat(stockInventory[itemKey]) || 0) + 1;
-
             playBeep(true);
             showMessage(`✅ تم إضافة الشريحة (${itemKey}) بنجاح!`);
-            renderTable();
 
             await saveConfigAndSync();
+            renderTable();
+
             try {
                 if (window.db) {
                     await window.setDoc(window.doc(window.db, "scanned_sims", code), newSim);
@@ -600,18 +639,10 @@
                 simsList = simsList.filter(s => s.code !== code);
                 localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-                const cat = target.category || target.company || 'Mobily';
-                const dur = target.duration || '60';
-                const itemKey = `${cat} (${dur})`;
-
-                if (stockInventory[itemKey] !== undefined && stockInventory[itemKey] > 0) {
-                    stockInventory[itemKey] = parseFloat(stockInventory[itemKey]) - 1;
-                }
-
+                await saveConfigAndSync();
                 renderTable();
                 showMessage(`🗑️ تم حذف الشريحة (${code}) وتحديث الرصيد.`);
 
-                await saveConfigAndSync();
                 try {
                     if (window.db) {
                         await window.deleteDoc(window.doc(window.db, "scanned_sims", code));
@@ -635,8 +666,8 @@
             
             const statsDiv = document.getElementById('dynamicStats');
             let statsHtml = `<span class="stat-badge total">إجمالي الممسوح: ${simsList.length}</span>`;
-            Object.keys(stockInventory).forEach(key => {
-                statsHtml += `<span class="stat-badge">${key}: ${stockInventory[key]}</span>`;
+            Object.keys(scannedCountsByGroup).forEach(key => {
+                statsHtml += `<span class="stat-badge">${key}: ${scannedCountsByGroup[key]}</span>`;
             });
             statsDiv.innerHTML = statsHtml;
 

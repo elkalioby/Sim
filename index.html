@@ -20,7 +20,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
-        /* شريط علوي احترافي (Navbar) */
         .navbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
         
         .logo-area { display: flex; align-items: center; }
@@ -31,10 +30,8 @@
         .btn-logout { background: #ffeeec; color: var(--danger); border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: background 0.2s; }
         .btn-logout:hover { background: var(--danger); color: white; }
 
-        /* الحاوية الرئيسية والتنقل (Tabs) */
         .main-container { max-width: 1200px; width: 100%; margin: 12px auto; padding: 0 15px; flex: 1; display: flex; flex-direction: column; gap: 14px; }
         
-        /* ترتيب التابات العلوي بشكل منظم ومتجاوب */
         .tabs-wrapper {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
@@ -69,11 +66,9 @@
             box-shadow: 0 3px 10px rgba(30,58,138,0.22);
         }
 
-        /* إطار عرض الصفحات (Iframe) */
         .frame-wrapper { background: var(--card); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.03); overflow: hidden; flex: 1; display: flex; flex-direction: column; }
         iframe { width: 100%; height: 850px; border: none; flex: 1; }
 
-        /* شاشة ترحيبية احترافية عند الفتح مع ترتيب التابات/الأزرار تحت رسالة الترحيب */
         .welcome-hero { padding: 50px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); flex: 1; border-radius: 16px; }
         .welcome-hero h2 { color: var(--primary); font-size: 1.8rem; font-weight: 700; }
         .welcome-hero p { color: var(--text-light); max-width: 520px; font-size: 1rem; line-height: 1.6; margin-bottom: 6px; }
@@ -158,7 +153,6 @@
 </head>
 <body>
 
-    <!-- شريط التنقل العلوي الاحترافي -->
     <header class="navbar">
         <div class="logo-area">
             <img src="logo.jpg" class="logo-img" alt="شعار سيم" onerror="this.src='https://via.placeholder.com/45?text=SIM'">
@@ -172,7 +166,6 @@
         </div>
     </header>
 
-    <!-- المحتوى الرئيسي والتبويبات المرتبة -->
     <main class="main-container">
         <div class="tabs-wrapper">
             <button class="tab-btn active" id="homeTabBtn" onclick="switchTab('home', this)">
@@ -199,7 +192,6 @@
         </div>
 
         <div class="frame-wrapper" id="frameContainer">
-            <!-- شاشة ترحيبية احترافية مع ترتيب الأقسام بشكل متناسق -->
             <div class="welcome-hero" id="welcomeScreen">
                 <h2>أهلاً بك في متجر سيم</h2>
                 <p>يمكنك إدارة المبيعات، المخزون، العملاء، حفظ المواقع، ومتابعة المديونيات بكل سهولة عبر الأقسام المتاحة.</p>
@@ -236,7 +228,11 @@
 
     <script>
         const loggedUser = JSON.parse(localStorage.getItem('logged_user'));
-        if (!loggedUser) {
+        const expiryTime = localStorage.getItem('session_expiry');
+
+        if (!loggedUser || (expiryTime && Date.now() > parseInt(expiryTime))) {
+            localStorage.removeItem('logged_user');
+            localStorage.removeItem('session_expiry');
             window.location.href = 'login.html';
         } else {
             document.getElementById('loggedUserText').innerText = `${loggedUser.username}`;
@@ -262,12 +258,13 @@
             } else {
                 if (welcomeScreen) welcomeScreen.style.display = 'none';
                 contentFrame.style.display = 'block';
-                contentFrame.src = page;
+                contentFrame.src = page + '?v=' + Date.now();
             }
         }
 
         function logout() {
             localStorage.removeItem('logged_user');
+            localStorage.removeItem('session_expiry');
             window.location.href = 'login.html';
         }
     </script>
