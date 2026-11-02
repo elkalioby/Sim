@@ -466,7 +466,7 @@
             white-space: nowrap;
         }
 
-        /* صندوق الفلتر */
+        /* صناديق الفلاتر */
         .filter-box {
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -478,10 +478,28 @@
             gap: 8px;
         }
 
+        .filter-box.cost-filter-box {
+            border-color: #fde68a;
+            background: #fffdf7;
+        }
+
+        .filter-box.profit-filter-box {
+            border-color: #bfdbfe;
+            background: #f8fbff;
+        }
+
         .filter-label {
             font-size: 0.85rem;
             font-weight: 800;
             color: #1e3a8a;
+        }
+
+        .cost-filter-box .filter-label {
+            color: #b45309;
+        }
+
+        .profit-filter-box .filter-label {
+            color: #1d4ed8;
         }
 
         select {
@@ -777,7 +795,7 @@
             </div>
         </div>
 
-        <!-- فلتر المبيعات حسب الشركة والمدة -->
+        <!-- 1. فلتر المبيعات حسب الشركة والمدة -->
         <div class="filter-box">
             <div class="filter-label">فلتر المبيعات حسب الشركة والمدة</div>
             <select id="itemFilter" onchange="renderDashboard()">
@@ -790,9 +808,49 @@
                     <span>🔄</span>
                     <span>عرض</span>
                 </button>
-                <div class="custom-date-box" onclick="openDatePicker()">
+                <div class="custom-date-box" onclick="openDatePicker('dateFilter')">
                     <span class="custom-date-label" id="dateDisplayText">📅 حدد التاريخ</span>
                     <input type="month" id="dateFilter" onchange="onDateFilterChange()">
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. فلتر إجمالي التكلفة حسب الشركة والمدة -->
+        <div class="filter-box cost-filter-box">
+            <div class="filter-label">فلتر إجمالي التكلفة حسب الشركة والمدة</div>
+            <select id="costItemFilter" onchange="renderDashboard()">
+                <option value="">اختر</option>
+                <option value="ALL">الكل</option>
+            </select>
+
+            <div class="date-row">
+                <button class="btn-reset" onclick="resetCostFilters()">
+                    <span>🔄</span>
+                    <span>عرض</span>
+                </button>
+                <div class="custom-date-box" onclick="openDatePicker('costDateFilter')">
+                    <span class="custom-date-label" id="costDateDisplayText">📅 حدد التاريخ</span>
+                    <input type="month" id="costDateFilter" onchange="onCostDateFilterChange()">
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. فلتر إجمالي الأرباح حسب الشركة والمدة -->
+        <div class="filter-box profit-filter-box">
+            <div class="filter-label">فلتر إجمالي الأرباح حسب الشركة والمدة</div>
+            <select id="profitItemFilter" onchange="renderDashboard()">
+                <option value="">اختر</option>
+                <option value="ALL">الكل</option>
+            </select>
+
+            <div class="date-row">
+                <button class="btn-reset" onclick="resetProfitFilters()">
+                    <span>🔄</span>
+                    <span>عرض</span>
+                </button>
+                <div class="custom-date-box" onclick="openDatePicker('profitDateFilter')">
+                    <span class="custom-date-label" id="profitDateDisplayText">📅 حدد التاريخ</span>
+                    <input type="month" id="profitDateFilter" onchange="onProfitDateFilterChange()">
                 </div>
             </div>
         </div>
@@ -842,6 +900,38 @@
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
+        // دالة حساب الشهر المحاسبي: تقفيل الشهر يمتد حتى يوم 5 من الشهر الجديد
+        // أي تاريخ من يوم 1 إلى يوم 5 في الشهر الجديد يُضم تلقائياً لإحصائيات الشهر السابق
+        function getAccountingMonth(dateStr) {
+            if (!dateStr) return '';
+            const clean = String(dateStr).trim();
+            const parts = clean.split('-');
+            if (parts.length < 2) return clean.slice(0, 7);
+
+            let year = parseInt(parts[0], 10);
+            let month = parseInt(parts[1], 10);
+            const day = parts.length >= 3 ? parseInt(parts[2], 10) : 6;
+
+            if (isNaN(year) || isNaN(month)) return clean.slice(0, 7);
+
+            if (!isNaN(day) && day <= 5) {
+                // استثناء أول 5 أيام من أكتوبر 2026 فقط حتى لا تذهب لشهر سبتمبر الفارغ
+                if (!(year === 2026 && month === 10)) {
+                    month -= 1;
+                    if (month < 1) {
+                        month = 12;
+                        year -= 1;
+                    }
+                }
+            }
+
+            return `${year}-${String(month).padStart(2, '0')}`;
+        }
+
+        function getCurrentMonthStr() {
+            return getAccountingMonth(getTodayStr());
+        }
+
         document.getElementById('batchDate').value = getTodayStr();
 
         function formatMonthDisplay(ym) {
@@ -856,8 +946,8 @@
             return `📅 ${ym}`;
         }
 
-        function openDatePicker() {
-            const dateInput = document.getElementById('dateFilter');
+        function openDatePicker(inputId = 'dateFilter') {
+            const dateInput = document.getElementById(inputId);
             if (dateInput && typeof dateInput.showPicker === 'function') {
                 try { dateInput.showPicker(); } catch (e) {}
             }
@@ -866,11 +956,21 @@
         function onDateFilterChange() {
             const dateInput = document.getElementById('dateFilter');
             const label = document.getElementById('dateDisplayText');
-            if (dateInput.value) {
-                label.textContent = formatMonthDisplay(dateInput.value);
-            } else {
-                label.textContent = '📅 حدد التاريخ';
-            }
+            label.textContent = dateInput.value ? formatMonthDisplay(dateInput.value) : '📅 حدد التاريخ';
+            renderDashboard();
+        }
+
+        function onCostDateFilterChange() {
+            const dateInput = document.getElementById('costDateFilter');
+            const label = document.getElementById('costDateDisplayText');
+            label.textContent = dateInput.value ? formatMonthDisplay(dateInput.value) : '📅 حدد التاريخ';
+            renderDashboard();
+        }
+
+        function onProfitDateFilterChange() {
+            const dateInput = document.getElementById('profitDateFilter');
+            const label = document.getElementById('profitDateDisplayText');
+            label.textContent = dateInput.value ? formatMonthDisplay(dateInput.value) : '📅 حدد التاريخ';
             renderDashboard();
         }
 
@@ -953,7 +1053,6 @@
                 if (coreShop) matchedGroup.coreNames.add(coreShop);
                 if (coreClient) matchedGroup.coreNames.add(coreClient);
 
-                // اختيار الاسم الأوضح والأحدث للعرض
                 if ((inv.timestamp || 0) >= matchedGroup.latestTimestamp) {
                     matchedGroup.latestTimestamp = inv.timestamp || 0;
                     if (inv.date) matchedGroup.latestDate = inv.date;
@@ -1013,7 +1112,6 @@
             }).join('');
         };
 
-        // خصم الدفعة من إجمالي مديونية العميل وتوزيعها على فواتيره من الأقدم للأحدث ومزامنتها مع صفحة الفواتير
         window.payCustomerGroupDebt = async function(groupId) {
             const group = groupedCustomerDebts.find(g => g.groupId === groupId);
             if (!group) return;
@@ -1036,7 +1134,6 @@
                 return;
             }
 
-            // ترتيب فواتير هذا العميل من الأقدم إلى الأحدث لخصم الدفعة منها بالتسلسل
             const sortedInvoices = [...group.invoices].sort((a, b) => {
                 const dateDiff = String(a.date || '').localeCompare(String(b.date || ''));
                 if (dateDiff !== 0) return dateDiff;
@@ -1068,7 +1165,6 @@
                 updatedInvoicesForCloud.push(inv);
             }
 
-            // حفظ التحديثات فوراً في localStorage ليسمع في صفحة الفواتير (invoice.html)
             localStorage.setItem('sales_records_offline', JSON.stringify(invoicesList));
 
             renderDebtsTable();
@@ -1387,9 +1483,8 @@
         }
 
         function populateFilterDropdown() {
-            const select = document.getElementById('itemFilter');
-            const currentVal = select.value || '';
-            let html = `
+            const filterIds = ['itemFilter', 'costItemFilter', 'profitItemFilter'];
+            let optionsHtml = `
                 <option value="">اختر</option>
                 <option value="ALL">الكل</option>
             `;
@@ -1398,14 +1493,20 @@
                     const invKey = `${c} (${d})`;
                     if (!deletedStockItems.includes(invKey)) {
                         const key = `${c}_${d}`;
-                        html += `<option value="${key}">${invKey}</option>`;
+                        optionsHtml += `<option value="${key}">${invKey}</option>`;
                     }
                 });
             });
-            select.innerHTML = html;
-            if ([...select.options].some(o => o.value === currentVal)) {
-                select.value = currentVal;
-            }
+
+            filterIds.forEach(id => {
+                const select = document.getElementById(id);
+                if (!select) return;
+                const currentVal = select.value || '';
+                select.innerHTML = optionsHtml;
+                if ([...select.options].some(o => o.value === currentVal)) {
+                    select.value = currentVal;
+                }
+            });
         }
 
         window.resetFilters = function() {
@@ -1413,6 +1514,22 @@
             const dateInput = document.getElementById('dateFilter');
             dateInput.value = '';
             document.getElementById('dateDisplayText').textContent = '📅 حدد التاريخ';
+            renderDashboard();
+        };
+
+        window.resetCostFilters = function() {
+            document.getElementById('costItemFilter').value = 'ALL';
+            const dateInput = document.getElementById('costDateFilter');
+            dateInput.value = '';
+            document.getElementById('costDateDisplayText').textContent = '📅 حدد التاريخ';
+            renderDashboard();
+        };
+
+        window.resetProfitFilters = function() {
+            document.getElementById('profitItemFilter').value = 'ALL';
+            const dateInput = document.getElementById('profitDateFilter');
+            dateInput.value = '';
+            document.getElementById('profitDateDisplayText').textContent = '📅 حدد التاريخ';
             renderDashboard();
         };
 
@@ -1444,11 +1561,10 @@
             return totalCostForSale;
         }
 
-        window.renderDashboard = function() {
-            const selectedItemKey = document.getElementById('itemFilter').value;
-            const selectedMonth = document.getElementById('dateFilter').value;
+        // دالة موحدة لحساب الإحصائيات لأي فلتر بشكل مستقل تماماً مع تقفيل الشهر يوم 5
+        function calculateMetricsForFilter(selectedItemKey, selectedMonth, explicitDebtMonth = '') {
             const isAllItems = (selectedItemKey === 'ALL');
-            const isSpecificItem = selectedItemKey && !isAllItems;
+            const isSpecificItem = Boolean(selectedItemKey && !isAllItems);
 
             const allScannedMap = {};
             const allSoldMap = {};
@@ -1491,25 +1607,23 @@
                     batchQueuesMap[b.key].push({ remainingQty: q, unitCost: u });
                     fallbackCostMap[b.key] = u;
                 }
-                const bMonth = (b.date || '').slice(0, 7);
+                const bMonth = getAccountingMonth(b.date);
                 if (!selectedMonth || bMonth === selectedMonth) {
                     filteredBatchesCostMap[b.key] = (filteredBatchesCostMap[b.key] || 0) + bTotal;
                 }
             });
 
-            // 1. حساب الشرائح الممسوحة
             simsList.forEach(sim => {
                 const { company, duration } = parseCompanyAndDuration(sim.category || sim.company || '', sim.duration);
                 const key = `${company}_${duration}`;
                 allScannedMap[key] = (allScannedMap[key] || 0) + 1;
 
-                const simMonth = (sim.date || '').slice(0, 7);
+                const simMonth = getAccountingMonth(sim.date);
                 if (!selectedMonth || simMonth === selectedMonth) {
                     filteredScannedMap[key] = (filteredScannedMap[key] || 0) + 1;
                 }
             });
 
-            // 2. حساب المبيعات والمديونيات وتكلفة المباع
             let totalDebtsSum = 0;
             const chronologicalInvoices = [...invoicesList].sort((a, b) => {
                 const dateDiff = String(a.date || '').localeCompare(String(b.date || ''));
@@ -1519,11 +1633,12 @@
 
             chronologicalInvoices.forEach(inv => {
                 const items = extractInvoiceItems(inv);
-                const invMonth = (inv.date || '').slice(0, 7);
+                const invMonth = getAccountingMonth(inv.date);
                 const matchesMonth = !selectedMonth || invMonth === selectedMonth;
+                const matchesDebtMonth = !explicitDebtMonth || invMonth === explicitDebtMonth;
                 const matchesItem = !isSpecificItem || items.some(it => `${it.company}_${it.duration}` === selectedItemKey);
 
-                if (matchesMonth && matchesItem) {
+                if (matchesDebtMonth && matchesItem) {
                     totalDebtsSum += getInvoiceDebt(inv);
                 }
 
@@ -1566,32 +1681,70 @@
                 totalBatchesPurchaseSum += (filteredBatchesCostMap[item.key] || 0);
             });
 
-            const appliedExtraCost = (!isSpecificItem && !selectedMonth) ? (parseFloat(extraGeneralCost) || 0) : 0;
+            const appliedExtraCost = (!isSpecificItem) ? (parseFloat(extraGeneralCost) || 0) : 0;
             const displayedTotalCost = +( (totalBatchesPurchaseSum > 0 ? totalBatchesPurchaseSum : totalSoldCostSum) + appliedExtraCost ).toFixed(2);
             const totalProfitSum = +(totalSalesSum - (totalSoldCostSum + appliedExtraCost)).toFixed(2);
 
-            document.getElementById('totalSalesValue').textContent = totalSalesSum.toLocaleString('en-US');
-            document.getElementById('totalCostValue').textContent = displayedTotalCost.toLocaleString('en-US');
-            document.getElementById('totalProfitValue').textContent = totalProfitSum.toLocaleString('en-US');
-            document.getElementById('totalDebtValue').textContent = totalDebtsSum.toLocaleString('en-US');
+            return {
+                activeKeys,
+                allScannedMap,
+                allSoldMap,
+                filteredScannedMap,
+                filteredSoldMap,
+                filteredRevenueMap,
+                filteredSoldCostMap,
+                totalSalesSum,
+                displayedTotalCost,
+                totalProfitSum,
+                totalDebtsSum
+            };
+        }
 
+        window.renderDashboard = function() {
+            const currentMonth = getCurrentMonthStr();
+
+            // 1. قراءة فلتر المبيعات (يعرض الشهر المحاسبي الحالي تلقائياً إذا لم يتم تحديد شهر)
+            const salesItemKey = document.getElementById('itemFilter').value;
+            const salesMonthInput = document.getElementById('dateFilter').value;
+            const effectiveSalesMonth = salesMonthInput || currentMonth;
+            const salesMetrics = calculateMetricsForFilter(salesItemKey, effectiveSalesMonth, salesMonthInput);
+
+            // 2. قراءة فلتر التكلفة (يعرض الشهر المحاسبي الحالي تلقائياً إذا لم يتم تحديد شهر)
+            const costItemKey = document.getElementById('costItemFilter').value;
+            const costMonthInput = document.getElementById('costDateFilter').value;
+            const effectiveCostMonth = costMonthInput || currentMonth;
+            const costMetrics = calculateMetricsForFilter(costItemKey, effectiveCostMonth);
+
+            // 3. قراءة فلتر الأرباح (يعرض الشهر المحاسبي الحالي تلقائياً إذا لم يتم تحديد شهر)
+            const profitItemKey = document.getElementById('profitItemFilter').value;
+            const profitMonthInput = document.getElementById('profitDateFilter').value;
+            const effectiveProfitMonth = profitMonthInput || currentMonth;
+            const profitMetrics = calculateMetricsForFilter(profitItemKey, effectiveProfitMonth);
+
+            // تحديث البطاقات الأربع العلوية
+            document.getElementById('totalSalesValue').textContent = salesMetrics.totalSalesSum.toLocaleString('en-US');
+            document.getElementById('totalCostValue').textContent = costMetrics.displayedTotalCost.toLocaleString('en-US');
+            document.getElementById('totalProfitValue').textContent = profitMetrics.totalProfitSum.toLocaleString('en-US');
+            document.getElementById('totalDebtValue').textContent = salesMetrics.totalDebtsSum.toLocaleString('en-US');
+
+            // تحديث جدول الإحصائيات بناءً على فلتر المبيعات
             const statsTableCard = document.getElementById('statsTableCard');
-            if (!selectedItemKey && !selectedMonth) {
+            if (!salesItemKey && !salesMonthInput) {
                 statsTableCard.style.display = 'none';
                 return;
             }
 
             statsTableCard.style.display = 'block';
             const summaryBody = document.getElementById('companySummaryBody');
-            summaryBody.innerHTML = activeKeys.map(item => {
-                const baseAuto = (allScannedMap[item.key] || 0) - (allSoldMap[item.key] || 0);
+            summaryBody.innerHTML = salesMetrics.activeKeys.map(item => {
+                const baseAuto = (salesMetrics.allScannedMap[item.key] || 0) - (salesMetrics.allSoldMap[item.key] || 0);
                 const offset = (stockOffsets && stockOffsets[item.invKey] !== undefined) ? parseFloat(stockOffsets[item.invKey]) : 0;
                 const availableStock = Math.max(0, baseAuto + offset);
 
-                const scanned = filteredScannedMap[item.key] || 0;
-                const sold = filteredSoldMap[item.key] || 0;
-                const rev = filteredRevenueMap[item.key] || 0;
-                const cost = filteredSoldCostMap[item.key] || 0;
+                const scanned = salesMetrics.filteredScannedMap[item.key] || 0;
+                const sold = salesMetrics.filteredSoldMap[item.key] || 0;
+                const rev = salesMetrics.filteredRevenueMap[item.key] || 0;
+                const cost = salesMetrics.filteredSoldCostMap[item.key] || 0;
                 const itemProfit = +(rev - cost).toFixed(2);
 
                 return `
