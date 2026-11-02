@@ -3,941 +3,773 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>إدارة المبيعات والأرباح والمديونيات</title>
+  <title>لوحة المبيعات وإحصائيات المخزون</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    :root {
-      --primary: #1e3a8a;
-      --primary-light: #2563eb;
-      --success: #16a34a;
-      --danger: #dc2626;
-      --warning: #d97706;
-      --bg: #f1f5f9;
-      --card-bg: #ffffff;
-      --text: #0f172a;
-      --muted: #64748b;
-      --border: #e2e8f0;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', sans-serif;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
-    body { background-color: var(--bg); color: var(--text); padding: 14px; line-height: 1.6; }
-    .container { max-width: 1200px; margin: 0 auto; }
 
-    .top-nav {
-      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;
-      background: var(--card-bg); padding: 12px 16px; border-radius: 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05); align-items: center; justify-content: space-between;
+    body {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 12px;
+      direction: rtl;
     }
-    .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn {
-      border: none; padding: 9px 15px; border-radius: 10px; font-weight: 700;
-      font-size: 14px; cursor: pointer; transition: 0.2s; text-decoration: none;
-      display: inline-flex; align-items: center; gap: 6px;
-    }
-    .btn-primary { background: var(--primary-light); color: #fff; }
-    .btn-success { background: var(--success); color: #fff; }
-    .btn-warning { background: var(--warning); color: #fff; }
-    .btn-danger { background: var(--danger); color: #fff; }
-    .btn-outline { background: #f8fafc; color: var(--text); border: 1px solid var(--border); }
 
     .main-card {
-      background: var(--card-bg); border-radius: 16px; padding: 18px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px;
-    }
-    .page-header {
-      display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 10px; margin-bottom: 16px; padding-bottom: 12px;
-      border-bottom: 2px solid var(--bg);
-    }
-    .page-header h1 { font-size: 20px; color: var(--primary); font-weight: 800; }
-    .sync-badge {
-      font-size: 13px; padding: 4px 12px; border-radius: 20px;
-      background: #dcfce7; color: #166534; font-weight: 700;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      max-width: 1100px;
+      margin: 0 auto;
     }
 
-    .filter-box {
-      background: #f8fafc; border: 1px solid var(--border); border-radius: 14px;
-      padding: 15px; margin-bottom: 18px;
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: 12px; align-items: end;
+    .page-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #1e3a8a;
+      margin-bottom: 16px;
+      text-align: center;
     }
-    .form-group { display: flex; flex-direction: column; gap: 5px; }
-    .form-group label { font-size: 13px; font-weight: 700; color: var(--muted); }
-    .form-control {
-      padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 10px;
-      font-size: 14px; font-weight: 600; background: #fff; color: var(--text); outline: none;
-    }
-    .period-toggle-group { display: flex; gap: 6px; }
-    .period-btn {
-      flex: 1; padding: 9px; border-radius: 10px; border: 2px solid var(--border);
-      background: #fff; font-weight: 700; font-size: 13px; cursor: pointer; text-align: center;
-    }
-    .period-btn.active { border-color: var(--primary-light); background: #eff6ff; color: var(--primary); }
 
+    /* المربعات الإحصائية العلوية */
     .top-stats-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 14px; margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
     }
-    .stat-card {
-      background: #fff; border-radius: 14px; padding: 16px;
-      border: 1px solid var(--border); position: relative; overflow: hidden;
-    }
-    .stat-card::before {
-      content: ""; position: absolute; top: 0; right: 0; width: 6px; height: 100%;
-    }
-    .stat-card.sales::before { background: var(--primary-light); }
-    .stat-card.cost::before { background: var(--warning); }
-    .stat-card.profit::before { background: var(--success); }
-    .stat-card.debt::before { background: var(--danger); }
 
-    .stat-title {
-      font-size: 14px; color: var(--muted); font-weight: 700;
-      margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;
+    .stat-box {
+      padding: 14px;
+      border-radius: 14px;
+      color: #fff;
+      text-align: center;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
     }
-    .stat-value { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
-    .stat-card.sales .stat-value { color: var(--primary); }
-    .stat-card.cost .stat-value { color: var(--warning); }
-    .stat-card.profit .stat-value { color: var(--success); }
-    .stat-card.debt .stat-value { color: var(--danger); }
-    .stat-sub { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+    .stat-box .stat-label {
+      font-size: 13px;
+      font-weight: 700;
+      opacity: 0.92;
+      margin-bottom: 6px;
+    }
+
+    .stat-box .stat-val {
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .sales-box { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+    .cost-box { background: linear-gradient(135deg, #d97706, #b45309); }
+    .profit-box { background: linear-gradient(135deg, #16a34a, #15803d); }
+    .debt-box { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+
+    /* زر ولوحة إدارة التكلفة */
+    .btn-cost-toggle {
+      width: 100%;
+      background: #f8fafc;
+      color: #1e3a8a;
+      border: 1px solid #cbd5e1;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 14px;
+      transition: 0.2s;
+    }
+
+    .btn-cost-toggle:hover {
+      background: #e2e8f0;
+    }
 
     .cost-panel {
-      display: none; background: #fffbeb; border: 2px solid #fde68a;
-      border-radius: 14px; padding: 16px; margin-bottom: 20px;
-    }
-    .cost-panel.show { display: block; }
-    .cost-panel h3 {
-      color: #92400e; margin-bottom: 12px; font-size: 16px;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .cost-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 10px; align-items: end; margin-bottom: 14px;
+      display: none;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 16px;
     }
 
-    .sold-company-card, .table-card {
-      background: #fff; border: 1px solid var(--border);
-      border-radius: 14px; padding: 15px; margin-bottom: 18px;
+    .cost-panel.active {
+      display: block;
     }
-    .sold-company-card h3, .table-card h3 {
-      font-size: 16px; color: var(--primary); margin-bottom: 12px;
+
+    .cost-panel h3 {
+      font-size: 15px;
+      font-weight: 800;
+      color: #92400e;
+      margin-bottom: 12px;
     }
-    .company-badges {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px;
+
+    .cost-form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+      align-items: end;
     }
-    .company-badge-item {
-      background: #f8fafc; border: 1px solid var(--border);
-      border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 3px;
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; min-width: 600px; }
-    th, td { padding: 10px; text-align: right; border-bottom: 1px solid var(--border); font-size: 13.5px; }
-    th { background: #f8fafc; color: var(--primary); font-weight: 800; }
-    .badge { padding: 3px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; }
-    .badge-green { background: #dcfce7; color: #166534; }
-    .badge-red { background: #fee2e2; color: #991b1b; }
-    .badge-blue { background: #dbeafe; color: #1e40af; }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+    }
+
+    .form-control {
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 600;
+      background: #fff;
+      outline: none;
+    }
+
+    .btn {
+      border: none;
+      padding: 9px 14px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-save { background: #16a34a; color: #fff; }
+    .btn-cancel { background: #dc2626; color: #fff; }
+    .btn-extra { background: #2563eb; color: #fff; }
+
+    /* صندوق الفلتر */
+    .filter-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    /* بطاقة المباع حسب الشركة */
+    .sold-company-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .sold-company-card h3 {
+      font-size: 15px;
+      font-weight: 800;
+      color: #1e3a8a;
+      margin-bottom: 10px;
+    }
+
+    .sold-company-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+    }
+
+    .company-chip {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .company-chip .c-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .company-chip .c-count {
+      font-size: 16px;
+      font-weight: 800;
+      color: #2563eb;
+      margin-top: 4px;
+    }
+
+    /* جدول الإحصائيات */
+    .table-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .table-card h3 {
+      font-size: 15px;
+      font-weight: 800;
+      color: #1e3a8a;
+      margin-bottom: 12px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 520px;
+    }
+
+    th, td {
+      padding: 9px 10px;
+      text-align: center;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 13px;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #1e3a8a;
+      font-weight: 800;
+    }
+
+    .badge-avail {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <nav class="top-nav">
-    <div class="nav-links">
-      <a href="index.html" id="homeTabBtn" class="btn btn-outline">🏠 الرئيسية</a>
-      <a href="invoices.html" id="invoiceTabBtn" class="btn btn-outline">🧾 الفواتير</a>
-      <a href="sales.html" id="salesTabBtn" class="btn btn-primary">📊 الأرباح والتقارير</a>
-    </div>
-    <div style="display:flex; gap:8px; align-items:center;">
-      <span id="syncStatusBadge" class="sync-badge">جاري التحميل...</span>
-      <button type="button" class="btn btn-warning" onclick="toggleCostPanel()">⚙️ إدارة التكلفة والمصاريف</button>
-    </div>
-  </nav>
-
   <div class="main-card">
-    <div class="page-header">
-      <h1>📊 لوحة المبيعات والأرباح ومديونيات العملاء</h1>
-      <span id="activePeriodLabel" class="badge badge-blue" style="font-size:13px; padding:6px 12px;">الفترة: كل المدة</span>
+    <h2 class="page-title">📊 لوحة المبيعات وإحصائيات المخزون</h2>
+
+    <!-- المربعات الإحصائية -->
+    <div class="top-stats-grid">
+      <div class="stat-box sales-box">
+        <div class="stat-label">💰 إجمالي المبيعات</div>
+        <div class="stat-val" id="totalSalesValue">0 ر.س</div>
+      </div>
+      <div class="stat-box cost-box">
+        <div class="stat-label">📦 إجمالي التكلفة</div>
+        <div class="stat-val" id="totalCostValue">0 ر.س</div>
+      </div>
+      <div class="stat-box profit-box">
+        <div class="stat-label">📈 صافي الأرباح</div>
+        <div class="stat-val" id="totalProfitValue">0 ر.س</div>
+      </div>
+      <div class="stat-box debt-box">
+        <div class="stat-label">📒 إجمالي المديونيات</div>
+        <div class="stat-val" id="totalDebtValue">0 ر.س</div>
+      </div>
     </div>
 
-    <!-- لوحة إدارة دفعات التكلفة -->
+    <!-- زر فتح لوحة التكلفة -->
+    <button type="button" class="btn-cost-toggle" onclick="toggleCostPanel()">
+      ⚙️ إدارة دفعات التكلفة والمصروفات (FIFO)
+    </button>
+
+    <!-- لوحة تسجيل دفعات التكلفة -->
     <div id="costPanel" class="cost-panel">
-      <h3>
-        <span>📦 تسجيل دفعات شراء البضاعة (نظام FIFO التلقائي)</span>
-        <button type="button" class="btn btn-outline" onclick="toggleCostPanel()">✖ إغلاق</button>
-      </h3>
+      <h3>📦 إضافة دفعة شراء جديدة (حساب التكلفة بالتسلسل)</h3>
       <input type="hidden" id="editBatchId" value="" />
-      <div class="cost-grid">
+
+      <div class="cost-form-grid">
         <div class="form-group">
-          <label>الصنف / الشركة</label>
+          <label>الصنف والمدة</label>
           <select id="batchItemSelect" class="form-control"></select>
         </div>
         <div class="form-group">
           <label>الكمية</label>
-          <input type="number" id="batchQty" class="form-control" placeholder="50" min="1" oninput="calcBatchTotalFromUnit()" />
+          <input type="number" id="batchQty" class="form-control" placeholder="الكمية" min="1" oninput="handleBatchUnitInput()" />
         </div>
         <div class="form-group">
-          <label>تكلفة الحبة (ريال)</label>
-          <input type="number" id="batchUnitCost" class="form-control" placeholder="110" step="0.01" oninput="calcBatchTotalFromUnit()" />
+          <label>سعر الحبة</label>
+          <input type="number" id="batchUnitCost" class="form-control" placeholder="تكلفة الحبة" step="0.01" oninput="handleBatchUnitInput()" />
         </div>
         <div class="form-group">
-          <label>إجمالي الدفعة (ريال)</label>
-          <input type="number" id="batchTotalCost" class="form-control" step="0.01" oninput="calcBatchUnitFromTotal()" />
+          <label>إجمالي الدفعة</label>
+          <input type="number" id="batchTotalCost" class="form-control" placeholder="الإجمالي" step="0.01" oninput="handleBatchTotalInput()" />
         </div>
         <div class="form-group">
-          <label>تاريخ الشراء</label>
+          <label>التاريخ</label>
           <input type="date" id="batchDate" class="form-control" />
         </div>
         <div class="form-group" style="display:flex; flex-direction:row; gap:6px;">
-          <button type="button" id="saveBatchBtn" class="btn btn-success" style="flex:1;" onclick="saveCostBatch()">💾 حفظ الدفعة</button>
-          <button type="button" id="cancelBatchBtn" class="btn btn-danger" style="display:none;" onclick="cancelBatchEdit()">إلغاء</button>
+          <button type="button" id="addBatchBtn" class="btn btn-save" style="flex:1;" onclick="saveCostBatch()">حفظ الدفعة</button>
+          <button type="button" id="cancelBatchEditBtn" class="btn btn-cancel" style="display:none;" onclick="cancelBatchEdit()">إلغاء</button>
         </div>
       </div>
 
-      <div style="border-top:1px dashed #f59e0b; padding-top:12px; margin-bottom:14px;">
-        <div class="cost-grid" style="margin-bottom:0;">
-          <div class="form-group">
-            <label>مصروفات عامة إضافية (شحن / إيجار / أخرى)</label>
-            <input type="number" id="extraGeneralCostInput" class="form-control" placeholder="0" step="0.01" />
-          </div>
-          <div class="form-group">
-            <button type="button" class="btn btn-primary" onclick="saveExtraGeneralCost()">💾 حفظ المصروفات العامة</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="table-wrap">
+      <div class="table-wrap" style="margin-bottom: 12px;">
         <table>
           <thead>
             <tr>
-              <th>التاريخ</th>
               <th>الصنف</th>
-              <th>الكمية الأساسية</th>
-              <th>المتبقي</th>
-              <th>تكلفة الحبة</th>
+              <th>الكمية</th>
+              <th>سعر الحبة</th>
               <th>الإجمالي</th>
+              <th>التاريخ</th>
               <th>إجراءات</th>
             </tr>
           </thead>
           <tbody id="batchesTableBody"></tbody>
         </table>
       </div>
+
+      <div class="cost-form-grid" style="border-top:1px dashed #f59e0b; padding-top:10px; margin-bottom:0;">
+        <div class="form-group">
+          <label>مصروفات عامة إضافية</label>
+          <input type="number" id="extraGeneralCostInput" class="form-control" placeholder="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <button type="button" class="btn btn-extra" onclick="saveExtraGeneralCost()">حفظ المصروفات</button>
+        </div>
+      </div>
     </div>
 
-    <!-- صندوق الفلاتر (كل المدة / بالشهر) -->
+    <!-- صندوق الفلتر -->
     <div class="filter-box">
       <div class="form-group">
-        <label>📅 نطاق التقرير الزمني</label>
-        <div class="period-toggle-group">
-          <button type="button" id="btnAllTime" class="period-btn active" onclick="setPeriodMode('all')">🌐 كل المدة</button>
-          <button type="button" id="btnByMonth" class="period-btn" onclick="setPeriodMode('month')">📆 بالشهر</button>
-        </div>
+        <label>تصفية حسب المحل / الصنف</label>
+        <select id="itemFilter" class="form-control" onchange="renderDashboard()">
+          <option value="all">الكل</option>
+        </select>
       </div>
-
-      <div class="form-group" id="monthPickerContainer" style="display:none;">
-        <label>اختر الشهر</label>
+      <div class="form-group">
+        <label>تصفية حسب الشهر</label>
         <input type="month" id="dateFilter" class="form-control" onchange="renderDashboard()" />
       </div>
-
-      <div class="form-group">
-        <label>🏢 فلتر الصنف / الشركة</label>
-        <select id="itemFilter" class="form-control" onchange="renderDashboard()">
-          <option value="ALL">كل الأصناف والشركات</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>⏱️ فلتر المدة</label>
-        <select id="durationFilter" class="form-control" onchange="renderDashboard()">
-          <option value="ALL">كل المدد</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <button type="button" class="btn btn-outline" onclick="resetFilters()" style="width:100%; justify-content:center;">🔄 إعادة ضبط</button>
-      </div>
     </div>
 
-    <!-- المربعات الأربعة الرئيسية -->
-    <div class="top-stats-grid">
-      <div class="stat-card sales">
-        <div class="stat-title">
-          <span>💰 إجمالي المبيعات</span>
-          <span id="salesCountBadge" class="badge badge-blue">0 فاتورة</span>
-        </div>
-        <div id="totalSalesValue" class="stat-value">0.00 ريال</div>
-        <div id="salesSubLabel" class="stat-sub">المحصّل نقداً: 0.00 ريال</div>
-      </div>
-
-      <div class="stat-card cost">
-        <div class="stat-title">
-          <span>📦 إجمالي التكلفة</span>
-          <span id="soldUnitsBadge" class="badge badge-blue">0 قطعة</span>
-        </div>
-        <div id="totalCostValue" class="stat-value">0.00 ريال</div>
-        <div id="costSubLabel" class="stat-sub">تكلفة البضاعة المباعة للفترة</div>
-      </div>
-
-      <div class="stat-card profit">
-        <div class="stat-title">
-          <span>📈 إجمالي الأرباح</span>
-          <span id="profitMarginBadge" class="badge badge-green">0%</span>
-        </div>
-        <div id="totalProfitValue" class="stat-value">0.00 ريال</div>
-        <div id="profitSubLabel" class="stat-sub">صافي الربح للفترة المحددة</div>
-      </div>
-
-      <div class="stat-card debt">
-        <div class="stat-title">
-          <span>📒 إجمالي مديونيات العملاء</span>
-          <span id="debtClientsBadge" class="badge badge-red">0 عميل</span>
-        </div>
-        <div id="totalDebtValue" class="stat-value">0.00 ريال</div>
-        <div id="debtSubLabel" class="stat-sub">المديونية الكلية لكل المدة: 0.00 ريال</div>
-      </div>
-    </div>
-
-    <!-- ملخص المباع لكل شركة -->
+    <!-- المباع حسب الشركة -->
     <div class="sold-company-card">
-      <h3>🏷️ ملخص المبيعات والأرباح حسب الشركة</h3>
-      <div id="soldCompanyContainer" class="company-badges"></div>
+      <h3>📦 إجمالي المباع حسب الشركة</h3>
+      <div id="soldByCompanyGrid" class="sold-company-grid"></div>
     </div>
 
-    <!-- جدول الأصناف والأرباح -->
+    <!-- جدول ملخص المحلات والمدة -->
     <div class="table-card">
-      <h3>📋 التقرير التفصيلي للأصناف والمخزون والأرباح</h3>
+      <h3>📊 ملخص المحلات والمدة والأرباح</h3>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>الصنف</th>
+              <th>المحل / الصنف</th>
               <th>المدة</th>
-              <th>المخزون المتاح</th>
-              <th>الكمية المباعة</th>
-              <th>إجمالي المبيعات</th>
-              <th>إجمالي التكلفة</th>
-              <th>صافي الربح</th>
+              <th>الرصيد المتاح</th>
+              <th>الممسوح</th>
+              <th>المباع</th>
+              <th>قيمة المبيعات</th>
             </tr>
           </thead>
           <tbody id="companySummaryBody"></tbody>
         </table>
       </div>
     </div>
-
-    <!-- جدول الفواتير ومديونيات العملاء -->
-    <div class="table-card">
-      <h3>👥 سجل الفواتير ومديونيات العملاء (حسب الفلتر)</h3>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>التاريخ</th>
-              <th>العميل / المحل</th>
-              <th>الأصناف</th>
-              <th>إجمالي الفاتورة</th>
-              <th>المدفوع</th>
-              <th>المتبقي (المديونية)</th>
-              <th>ملاحظات</th>
-            </tr>
-          </thead>
-          <tbody id="filteredInvoicesBody"></tbody>
-        </table>
-      </div>
-    </div>
   </div>
-</div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import {
-    getFirestore, collection, doc, setDoc, onSnapshot
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      doc,
+      getDoc,
+      getDocs,
+      setDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  const savedConfig = JSON.parse(localStorage.getItem("firebase_config_override") || "null");
-  const firebaseConfig = savedConfig || {
-    apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
-    authDomain: "ahmed-hassan-bb80b.firebaseapp.com",
-    projectId: "ahmed-hassan-bb80b",
-    storageBucket: "ahmed-hassan-bb80b.appspot.com",
-    messagingSenderId: "503682153846",
-    appId: "1:503682153846:web:93b3a174ab31e351a04e57"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
+      authDomain: "ahmed-hassan-bb80b.firebaseapp.com",
+      projectId: "ahmed-hassan-bb80b",
+      storageBucket: "ahmed-hassan-bb80b.appspot.com",
+      messagingSenderId: "503682153846",
+      appId: "1:503682153846:web:93b3a174ab31e351a04e57"
+    };
 
-  let db = null;
-  try {
     const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-  } catch (err) {
-    console.warn("Firebase يعمل في الوضع المحلي:", err);
-  }
+    const db = getFirestore(app);
 
-  let periodMode = "all"; // 'all' = كل المدة | 'month' = بالشهر
-  let invoicesList = [];
-  let simsList = [];
-  let categoriesList = ["STC", "موبايلي", "زين", "سلام", "راوتر 5G"];
-  let durationsList = ["شهر", "3 شهور", "6 شهور", "سنة", "مفتوح"];
-  let itemCosts = {};
-  let costBatches = [];
-  let extraGeneralCost = 0;
-  let stockInventory = {};
-  let stockOffsets = {};
-  let deletedStockItems = [];
+    let categoriesList = ["STC", "موبايلي", "زين"];
+    let durationsList = ["شهر", "3 شهور", "6 شهور", "سنة", "مفتوح"];
+    let stockOffsets = {};
+    let deletedStockItems = [];
+    let itemCosts = {};
+    let costBatches = [];
+    let extraGeneralCost = 0;
+    let simsList = [];
+    let invoicesList = [];
 
-  const now = new Date();
-  const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const todayDateStr = `${currentYearMonth}-${String(now.getDate()).padStart(2, "0")}`;
+    document.getElementById("batchDate").value = new Date().toISOString().slice(0, 10);
 
-  document.getElementById("dateFilter").value = currentYearMonth;
-  document.getElementById("batchDate").value = todayDateStr;
+    function loadLocalState() {
+      try {
+        const cfg = JSON.parse(localStorage.getItem("app_config") || "{}");
+        if (Array.isArray(cfg.categoriesList) && cfg.categoriesList.length) categoriesList = cfg.categoriesList;
+        if (Array.isArray(cfg.durationsList) && cfg.durationsList.length) durationsList = cfg.durationsList;
+        if (cfg.stockOffsets) stockOffsets = cfg.stockOffsets;
+        if (Array.isArray(cfg.deletedStockItems)) deletedStockItems = cfg.deletedStockItems;
+        if (cfg.itemCosts) itemCosts = cfg.itemCosts;
+        if (Array.isArray(cfg.costBatches)) costBatches = cfg.costBatches;
+        if (typeof cfg.extraGeneralCost === "number") extraGeneralCost = cfg.extraGeneralCost;
 
-  function loadFromLocalStorage() {
-    try {
-      const localConfig = JSON.parse(localStorage.getItem("app_config") || "{}");
-      if (Array.isArray(localConfig.categoriesList) && localConfig.categoriesList.length) {
-        categoriesList = localConfig.categoriesList;
-      } else if (Array.isArray(localConfig.customItems) && localConfig.customItems.length) {
-        categoriesList = localConfig.customItems;
+        simsList = JSON.parse(localStorage.getItem("scanned_sims_offline") || "[]");
+        invoicesList = JSON.parse(localStorage.getItem("sales_records_offline") || "[]");
+      } catch (e) {
+        console.error(e);
       }
-      if (Array.isArray(localConfig.durationsList) && localConfig.durationsList.length) {
-        durationsList = localConfig.durationsList;
+    }
+
+    async function syncCostsToCloud() {
+      const cfg = JSON.parse(localStorage.getItem("app_config") || "{}");
+      cfg.itemCosts = itemCosts;
+      cfg.costBatches = costBatches;
+      cfg.extraGeneralCost = extraGeneralCost;
+      localStorage.setItem("app_config", JSON.stringify(cfg));
+
+      try {
+        await setDoc(doc(db, "settings", "app_config"), {
+          itemCosts,
+          costBatches,
+          extraGeneralCost
+        }, { merge: true });
+      } catch (e) {
+        console.error("Cloud sync error:", e);
       }
-      if (localConfig.itemCosts) itemCosts = localConfig.itemCosts;
-      if (Array.isArray(localConfig.costBatches)) costBatches = localConfig.costBatches;
-      if (typeof localConfig.extraGeneralCost === "number") extraGeneralCost = localConfig.extraGeneralCost;
-      if (localConfig.stockInventory) stockInventory = localConfig.stockInventory;
-      if (localConfig.stockOffsets) stockOffsets = localConfig.stockOffsets;
-      if (Array.isArray(localConfig.deletedStockItems)) deletedStockItems = localConfig.deletedStockItems;
-
-      const localInvoices = JSON.parse(
-        localStorage.getItem("sales_records_offline") || localStorage.getItem("sales_records") || "[]"
-      );
-      if (Array.isArray(localInvoices)) invoicesList = localInvoices;
-
-      const localSims = JSON.parse(
-        localStorage.getItem("scanned_sims_offline") || localStorage.getItem("scanned_sims") || "[]"
-      );
-      if (Array.isArray(localSims)) simsList = localSims;
-    } catch (e) {
-      console.error(e);
     }
-  }
 
-  function saveConfigToLocal() {
-    localStorage.setItem("app_config", JSON.stringify({
-      categoriesList, customItems: categoriesList, durationsList,
-      itemCosts, costBatches, extraGeneralCost,
-      stockInventory, stockOffsets, deletedStockItems
-    }));
-  }
+    function populateFilterDropdown() {
+      const filterEl = document.getElementById("itemFilter");
+      const currentVal = filterEl.value || "all";
+      filterEl.innerHTML = `<option value="all">الكل</option>`;
 
-  async function syncCostsToCloud() {
-    saveConfigToLocal();
-    if (!db) return;
-    try {
-      document.getElementById("syncStatusBadge").textContent = "⏳ جاري الحفظ...";
-      await setDoc(doc(db, "settings", "app_config"), {
-        categoriesList, customItems: categoriesList, durationsList,
-        itemCosts, costBatches, extraGeneralCost,
-        stockInventory, stockOffsets, deletedStockItems,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-      document.getElementById("syncStatusBadge").textContent = "✅ متصل ومزامن سحابياً";
-    } catch (err) {
-      document.getElementById("syncStatusBadge").textContent = "⚠️ محفوظ محلياً";
-    }
-  }
-
-  function extractInvoiceItems(inv) {
-    if (Array.isArray(inv.cartItems) && inv.cartItems.length > 0) {
-      return inv.cartItems.map(item => ({
-        category: item.category || item.company || item.name || item.item || "عام",
-        duration: item.duration || "غير محدد",
-        qty: Number(item.qty || item.quantity || item.count || 1),
-        price: Number(item.price || item.unitPrice || 0),
-        total: Number(item.total || (Number(item.qty || 1) * Number(item.price || 0)))
-      }));
-    }
-    if (inv.category || inv.company || inv.itemName) {
-      const qty = Number(inv.qty || inv.quantity || 1);
-      const total = Number(inv.total || 0);
-      return [{
-        category: inv.category || inv.company || inv.itemName,
-        duration: inv.duration || "غير محدد",
-        qty, price: qty > 0 ? total / qty : total, total
-      }];
-    }
-    if (typeof inv.itemsSummary === "string" && inv.itemsSummary.trim() !== "") {
-      return [{
-        category: inv.itemsSummary.split("-")[0].trim() || "مبيعات عامة",
-        duration: "متنوع",
-        qty: Number(inv.totalQty || 1),
-        price: Number(inv.total || 0),
-        total: Number(inv.total || 0)
-      }];
-    }
-    return [];
-  }
-
-  function populateSelectOptions() {
-    const catSet = new Set(categoriesList);
-    const durSet = new Set(durationsList);
-
-    invoicesList.forEach(inv => {
-      extractInvoiceItems(inv).forEach(it => {
-        if (it.category) catSet.add(it.category);
-        if (it.duration) durSet.add(it.duration);
+      categoriesList.forEach(cat => {
+        durationsList.forEach(dur => {
+          const key = `${cat}_${dur}`;
+          if (!deletedStockItems.includes(key)) {
+            filterEl.innerHTML += `<option value="${key}">${cat} (${dur})</option>`;
+          }
+        });
       });
-    });
 
-    simsList.forEach(sim => {
-      if (sim.category || sim.company) catSet.add(sim.category || sim.company);
-      if (sim.duration) durSet.add(sim.duration);
-    });
+      filterEl.value = currentVal;
+      populateBatchItemSelect();
+      document.getElementById("extraGeneralCostInput").value = extraGeneralCost || 0;
+    }
 
-    const itemFilterEl = document.getElementById("itemFilter");
-    const curItem = itemFilterEl.value || "ALL";
-    itemFilterEl.innerHTML = `<option value="ALL">كل الأصناف والشركات</option>`;
-    catSet.forEach(c => { itemFilterEl.innerHTML += `<option value="${c}">${c}</option>`; });
-    itemFilterEl.value = catSet.has(curItem) ? curItem : "ALL";
+    function populateBatchItemSelect() {
+      const selectEl = document.getElementById("batchItemSelect");
+      const cur = selectEl.value;
+      selectEl.innerHTML = "";
+      categoriesList.forEach(cat => {
+        durationsList.forEach(dur => {
+          const key = `${cat}_${dur}`;
+          if (!deletedStockItems.includes(key)) {
+            selectEl.innerHTML += `<option value="${key}">${cat} (${dur})</option>`;
+          }
+        });
+      });
+      if (cur) selectEl.value = cur;
+    }
 
-    const durFilterEl = document.getElementById("durationFilter");
-    const curDur = durFilterEl.value || "ALL";
-    durFilterEl.innerHTML = `<option value="ALL">كل المدد</option>`;
-    durSet.forEach(d => { durFilterEl.innerHTML += `<option value="${d}">${d}</option>`; });
-    durFilterEl.value = durSet.has(curDur) ? curDur : "ALL";
+    window.toggleCostPanel = function () {
+      document.getElementById("costPanel").classList.toggle("active");
+    };
 
-    const batchSelectEl = document.getElementById("batchItemSelect");
-    const curBatch = batchSelectEl.value;
-    batchSelectEl.innerHTML = "";
-    catSet.forEach(c => { batchSelectEl.innerHTML += `<option value="${c}">${c}</option>`; });
-    if (curBatch && catSet.has(curBatch)) batchSelectEl.value = curBatch;
-
-    document.getElementById("extraGeneralCostInput").value = extraGeneralCost || 0;
-  }
-
-  function normalizeDateToYYYYMM(dateStr) {
-    if (!dateStr) return "";
-    const clean = String(dateStr).trim();
-    const m1 = clean.match(/^(\d{4})[-/](\d{1,2})/);
-    if (m1) return `${m1[1]}-${String(m1[2]).padStart(2, "0")}`;
-    const m2 = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-    if (m2) return `${m2[3]}-${String(m2[2]).padStart(2, "0")}`;
-    const d = new Date(clean);
-    if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    return "";
-  }
-
-  function computeAllInvoicesFIFOCost() {
-    const workingBatches = costBatches
-      .map(b => ({ ...b, remainingQty: Number(b.qty || 0), unitCost: Number(b.unitCost || 0) }))
-      .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
-
-    const sortedInvoices = [...invoicesList].sort((a, b) =>
-      String(a.date || a.createdAt || "").localeCompare(String(b.date || b.createdAt || ""))
-    );
-
-    const invoiceCostMap = new Map();
-
-    function consumeFromFIFO(categoryName, neededQty) {
-      let qtyToCover = Number(neededQty || 0);
-      let cost = 0;
-      for (const batch of workingBatches) {
-        if (qtyToCover <= 0) break;
-        if (batch.category === categoryName && batch.remainingQty > 0) {
-          const taken = Math.min(batch.remainingQty, qtyToCover);
-          cost += taken * batch.unitCost;
-          batch.remainingQty -= taken;
-          qtyToCover -= taken;
-        }
+    window.handleBatchUnitInput = function () {
+      const q = Number(document.getElementById("batchQty").value || 0);
+      const u = Number(document.getElementById("batchUnitCost").value || 0);
+      if (q > 0 && u >= 0) {
+        document.getElementById("batchTotalCost").value = (q * u).toFixed(2);
       }
-      if (qtyToCover > 0) {
-        cost += qtyToCover * Number(itemCosts[categoryName] || 0);
+    };
+
+    window.handleBatchTotalInput = function () {
+      const q = Number(document.getElementById("batchQty").value || 0);
+      const t = Number(document.getElementById("batchTotalCost").value || 0);
+      if (q > 0 && t >= 0) {
+        document.getElementById("batchUnitCost").value = (t / q).toFixed(2);
+      }
+    };
+
+    window.saveCostBatch = async function () {
+      const itemKey = document.getElementById("batchItemSelect").value;
+      const qty = Number(document.getElementById("batchQty").value || 0);
+      const unitCost = Number(document.getElementById("batchUnitCost").value || 0);
+      const totalCost = Number(document.getElementById("batchTotalCost").value || (qty * unitCost));
+      const date = document.getElementById("batchDate").value || new Date().toISOString().slice(0, 10);
+      const editId = document.getElementById("editBatchId").value;
+
+      if (!itemKey || qty <= 0 || unitCost < 0) {
+        alert("يرجى إدخال البيانات بشكل صحيح");
+        return;
+      }
+
+      if (editId) {
+        const idx = costBatches.findIndex(b => String(b.id) === String(editId));
+        if (idx !== -1) {
+          costBatches[idx] = { ...costBatches[idx], itemKey, qty, unitCost, totalCost, date };
+        }
+      } else {
+        costBatches.push({
+          id: Date.now().toString(),
+          itemKey,
+          qty,
+          unitCost,
+          totalCost,
+          date
+        });
+      }
+
+      itemCosts[itemKey] = unitCost;
+      cancelBatchEdit();
+      await syncCostsToCloud();
+      renderBatchesTable();
+      renderDashboard();
+    };
+
+    window.editCostBatch = function (id) {
+      const b = costBatches.find(x => String(x.id) === String(id));
+      if (!b) return;
+      document.getElementById("editBatchId").value = b.id;
+      document.getElementById("batchItemSelect").value = b.itemKey;
+      document.getElementById("batchQty").value = b.qty;
+      document.getElementById("batchUnitCost").value = b.unitCost;
+      document.getElementById("batchTotalCost").value = b.totalCost;
+      document.getElementById("batchDate").value = b.date;
+      document.getElementById("addBatchBtn").textContent = "تحديث";
+      document.getElementById("cancelBatchEditBtn").style.display = "inline-block";
+    };
+
+    window.cancelBatchEdit = function () {
+      document.getElementById("editBatchId").value = "";
+      document.getElementById("batchQty").value = "";
+      document.getElementById("batchUnitCost").value = "";
+      document.getElementById("batchTotalCost").value = "";
+      document.getElementById("addBatchBtn").textContent = "حفظ الدفعة";
+      document.getElementById("cancelBatchEditBtn").style.display = "none";
+    };
+
+    window.deleteCostBatch = async function (id) {
+      if (!confirm("حذف هذه الدفعة؟")) return;
+      costBatches = costBatches.filter(b => String(b.id) !== String(id));
+      await syncCostsToCloud();
+      renderBatchesTable();
+      renderDashboard();
+    };
+
+    window.saveExtraGeneralCost = async function () {
+      extraGeneralCost = Number(document.getElementById("extraGeneralCostInput").value || 0);
+      await syncCostsToCloud();
+      renderDashboard();
+      alert("تم حفظ المصروفات");
+    };
+
+    function renderBatchesTable() {
+      const tbody = document.getElementById("batchesTableBody");
+      if (!costBatches.length) {
+        tbody.innerHTML = `<tr><td colspan="6">لا توجد دفعات مسجلة</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = costBatches.map(b => {
+        const [cat, dur] = (b.itemKey || "_").split("_");
+        return `
+          <tr>
+            <td>${cat} (${dur || ""})</td>
+            <td>${b.qty}</td>
+            <td>${Number(b.unitCost).toFixed(2)}</td>
+            <td>${Number(b.totalCost).toFixed(2)}</td>
+            <td>${b.date || "-"}</td>
+            <td>
+              <button type="button" class="btn btn-extra" style="padding:3px 7px;" onclick="editCostBatch('${b.id}')">✏️</button>
+              <button type="button" class="btn btn-cancel" style="padding:3px 7px;" onclick="deleteCostBatch('${b.id}')">🗑️</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function consumeCostFromBatches(itemKey, soldQty) {
+      let needed = Number(soldQty || 0);
+      let cost = 0;
+      const itemBatches = costBatches
+        .filter(b => b.itemKey === itemKey)
+        .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+
+      for (const b of itemBatches) {
+        if (needed <= 0) break;
+        const take = Math.min(Number(b.qty || 0), needed);
+        cost += take * Number(b.unitCost || 0);
+        needed -= take;
+      }
+
+      if (needed > 0) {
+        cost += needed * Number(itemCosts[itemKey] || 0);
       }
       return cost;
     }
 
-    sortedInvoices.forEach((inv, idx) => {
-      const invKey = inv.id || `inv_${idx}`;
-      const items = extractInvoiceItems(inv).map(it => ({
-        ...it,
-        cost: consumeFromFIFO(it.category, it.qty)
-      }));
-      invoiceCostMap.set(invKey, items);
-    });
+    window.renderDashboard = function () {
+      const selectedFilter = document.getElementById("itemFilter").value;
+      const selectedMonth = document.getElementById("dateFilter").value;
 
-    return { invoiceCostMap, updatedBatchesState: workingBatches };
-  }
+      const scannedMap = {};
+      const soldQtyMap = {};
+      const salesValMap = {};
+      const companySoldTotals = {};
 
-  window.renderDashboard = function () {
-    const selectedMonth = document.getElementById("dateFilter").value;
-    const selectedItem = document.getElementById("itemFilter").value;
-    const selectedDuration = document.getElementById("durationFilter").value;
+      let totalSales = 0;
+      let totalDebt = 0;
 
-    document.getElementById("activePeriodLabel").textContent =
-      periodMode === "all"
-        ? "🌐 الفترة المعروضة: كل المدة"
-        : `📆 الفترة المعروضة: شهر ${selectedMonth || currentYearMonth}`;
-
-    const { invoiceCostMap, updatedBatchesState } = computeAllInvoicesFIFOCost();
-
-    let filteredSalesTotal = 0;
-    let filteredPaidTotal = 0;
-    let filteredCostTotal = 0;
-    let filteredSoldUnits = 0;
-    let filteredDebtTotal = 0;
-    let allTimeDebtTotal = 0;
-    let matchingInvoicesCount = 0;
-
-    const debtClientsSet = new Set();
-    const companyStatsMap = {};
-    const detailedStatsMap = {};
-    const filteredInvoicesRows = [];
-
-    invoicesList.forEach((inv, idx) => {
-      const invKey = inv.id || `inv_${idx}`;
-      const invMonth = normalizeDateToYYYYMM(inv.date || inv.createdAt);
-      const invTotal = Number(inv.total || 0);
-      const invPaid = Number(inv.paid ?? invTotal);
-      const invRemaining = Math.max(0, Number(inv.remaining ?? (invTotal - invPaid)));
-
-      allTimeDebtTotal += invRemaining;
-
-      const matchesPeriod = (periodMode === "all") || (invMonth === selectedMonth);
-      if (!matchesPeriod) return;
-
-      const itemsWithCost = invoiceCostMap.get(invKey) || [];
-      const matchedItems = itemsWithCost.filter(it => {
-        const mCat = (selectedItem === "ALL") || (it.category === selectedItem);
-        const mDur = (selectedDuration === "ALL") || (it.duration === selectedDuration);
-        return mCat && mDur;
+      simsList.forEach(s => {
+        const cat = s.category || s.company || "";
+        const dur = s.duration || "";
+        if (!cat || !dur) return;
+        const key = `${cat}_${dur}`;
+        scannedMap[key] = (scannedMap[key] || 0) + 1;
       });
 
-      if ((selectedItem !== "ALL" || selectedDuration !== "ALL") && matchedItems.length === 0) return;
+      invoicesList.forEach(inv => {
+        const invDate = String(inv.date || "");
+        if (selectedMonth && !invDate.startsWith(selectedMonth)) return;
 
-      matchingInvoicesCount++;
+        const invRemaining = Number(inv.remaining || 0);
+        if (selectedFilter === "all") {
+          totalDebt += invRemaining;
+        }
 
-      let invSalesPart = (selectedItem === "ALL" && selectedDuration === "ALL")
-        ? invTotal
-        : matchedItems.reduce((s, i) => s + i.total, 0);
-      let invCostPart = matchedItems.reduce((s, i) => s + i.cost, 0);
-      let invUnitsPart = matchedItems.reduce((s, i) => s + i.qty, 0);
+        const items = Array.isArray(inv.cartItems) ? inv.cartItems : [];
+        items.forEach(it => {
+          const cat = it.category || it.company || "";
+          const dur = it.duration || "";
+          const key = `${cat}_${dur}`;
+          const qty = Number(it.qty || it.quantity || 1);
+          const lineTotal = Number(it.total || (qty * Number(it.price || 0)));
 
-      const ratio = invTotal > 0 ? (invSalesPart / invTotal) : 1;
-      const invDebtPart = invRemaining * ratio;
-      const invPaidPart = invPaid * ratio;
+          soldQtyMap[key] = (soldQtyMap[key] || 0) + qty;
+          salesValMap[key] = (salesValMap[key] || 0) + lineTotal;
+          companySoldTotals[cat] = (companySoldTotals[cat] || 0) + qty;
 
-      filteredSalesTotal += invSalesPart;
-      filteredPaidTotal += invPaidPart;
-      filteredCostTotal += invCostPart;
-      filteredSoldUnits += invUnitsPart;
-      filteredDebtTotal += invDebtPart;
+          if (selectedFilter === "all" || selectedFilter === key) {
+            totalSales += lineTotal;
+          }
+        });
+      });
 
-      if (invDebtPart > 0.01) {
-        debtClientsSet.add(inv.clientName || inv.shopName || `عميل #${idx + 1}`);
+      let totalCost = 0;
+      Object.keys(soldQtyMap).forEach(key => {
+        if (selectedFilter === "all" || selectedFilter === key) {
+          totalCost += consumeCostFromBatches(key, soldQtyMap[key]);
+        }
+      });
+
+      if (selectedFilter === "all") {
+        totalCost += Number(extraGeneralCost || 0);
       }
 
-      matchedItems.forEach(it => {
-        if (!companyStatsMap[it.category]) companyStatsMap[it.category] = { qty: 0, sales: 0, cost: 0 };
-        companyStatsMap[it.category].qty += it.qty;
-        companyStatsMap[it.category].sales += it.total;
-        companyStatsMap[it.category].cost += it.cost;
+      const totalProfit = totalSales - totalCost;
 
-        const dKey = `${it.category}___${it.duration}`;
-        if (!detailedStatsMap[dKey]) {
-          detailedStatsMap[dKey] = { category: it.category, duration: it.duration, soldQty: 0, sales: 0, cost: 0 };
-        }
-        detailedStatsMap[dKey].soldQty += it.qty;
-        detailedStatsMap[dKey].sales += it.total;
-        detailedStatsMap[dKey].cost += it.cost;
-      });
+      document.getElementById("totalSalesValue").textContent = `${totalSales.toFixed(2)} ر.س`;
+      document.getElementById("totalCostValue").textContent = `${totalCost.toFixed(2)} ر.س`;
+      document.getElementById("totalProfitValue").textContent = `${totalProfit.toFixed(2)} ر.س`;
+      document.getElementById("totalDebtValue").textContent = `${totalDebt.toFixed(2)} ر.س`;
 
-      filteredInvoicesRows.push({
-        date: inv.date || (inv.createdAt ? inv.createdAt.slice(0, 10) : "-"),
-        client: inv.clientName || inv.shopName || "عميل نقدي",
-        itemsText: matchedItems.map(i => `${i.category} (${i.duration}) × ${i.qty}`).join(" ، ") || inv.itemsSummary || "-",
-        total: invSalesPart,
-        paid: invPaidPart,
-        remaining: invDebtPart,
-        notes: inv.notes || "-"
-      });
-    });
-
-    const appliedExtra = (selectedItem === "ALL" && selectedDuration === "ALL") ? Number(extraGeneralCost || 0) : 0;
-    const finalTotalCost = filteredCostTotal + appliedExtra;
-    const finalNetProfit = filteredSalesTotal - finalTotalCost;
-    const margin = filteredSalesTotal > 0 ? ((finalNetProfit / filteredSalesTotal) * 100).toFixed(1) : 0;
-
-    document.getElementById("totalSalesValue").textContent = `${filteredSalesTotal.toFixed(2)} ريال`;
-    document.getElementById("salesCountBadge").textContent = `${matchingInvoicesCount} فاتورة`;
-    document.getElementById("salesSubLabel").textContent = `المحصّل نقداً: ${filteredPaidTotal.toFixed(2)} ريال`;
-
-    document.getElementById("totalCostValue").textContent = `${finalTotalCost.toFixed(2)} ريال`;
-    document.getElementById("soldUnitsBadge").textContent = `${filteredSoldUnits} قطعة`;
-    document.getElementById("costSubLabel").textContent =
-      periodMode === "all" ? "إجمالي التكلفة لكل المدة" : `إجمالي تكلفة شهر ${selectedMonth}`;
-
-    document.getElementById("totalProfitValue").textContent = `${finalNetProfit.toFixed(2)} ريال`;
-    document.getElementById("profitMarginBadge").textContent = `${margin}%`;
-    document.getElementById("profitSubLabel").textContent =
-      periodMode === "all" ? "صافي الربح لكل المدة" : `صافي ربح شهر ${selectedMonth}`;
-
-    document.getElementById("totalDebtValue").textContent = `${filteredDebtTotal.toFixed(2)} ريال`;
-    document.getElementById("debtClientsBadge").textContent = `${debtClientsSet.size} عميل`;
-    document.getElementById("debtSubLabel").textContent =
-      periodMode === "all"
-        ? "إجمالي مديونيات العملاء عن كل المدة"
-        : `مديونية الشهر (وإجمالي كل المدة: ${allTimeDebtTotal.toFixed(2)} ريال)`;
-
-    renderSoldCompanyBadges(companyStatsMap);
-    renderCompanySummaryTable(detailedStatsMap);
-    renderFilteredInvoicesTable(filteredInvoicesRows);
-    renderBatchesTable(updatedBatchesState);
-  };
-
-  function renderSoldCompanyBadges(companyStatsMap) {
-    const container = document.getElementById("soldCompanyContainer");
-    const keys = Object.keys(companyStatsMap);
-    if (!keys.length) {
-      container.innerHTML = `<div style="color:var(--muted);">لا توجد مبيعات في هذه الفترة.</div>`;
-      return;
-    }
-    container.innerHTML = keys.map(cat => {
-      const st = companyStatsMap[cat];
-      const profit = st.sales - st.cost;
-      return `
-        <div class="company-badge-item">
-          <strong>${cat}</strong>
-          <span>المباع: <b>${st.qty}</b> قطعة</span>
-          <span>المبيعات: <b>${st.sales.toFixed(2)}</b> ريال</span>
-          <span style="color:var(--success);">الربح: <b>${profit.toFixed(2)}</b> ريال</span>
+      // عرض المباع حسب الشركة
+      const companyGrid = document.getElementById("soldByCompanyGrid");
+      companyGrid.innerHTML = categoriesList.map(cat => `
+        <div class="company-chip">
+          <div class="c-title">${cat}</div>
+          <div class="c-count">${companySoldTotals[cat] || 0} شريحة</div>
         </div>
-      `;
-    }).join("");
-  }
+      `).join("");
 
-  function getAvailableStockCount(category, duration) {
-    const scannedAvail = simsList.filter(s => {
-      const sCat = s.category || s.company || "";
-      const sDur = s.duration || "";
-      const isSold = s.status === "sold" || s.sold === true;
-      return sCat === category && (duration === "غير محدد" || sDur === duration) && !isSold;
-    }).length;
-    const key = `${category}_${duration}`;
-    const manual = Number(stockInventory[key] || stockInventory[category] || 0);
-    const offset = Number(stockOffsets[key] || 0);
-    return Math.max(0, scannedAvail + manual + offset);
-  }
+      // عرض جدول الملخص
+      const tbody = document.getElementById("companySummaryBody");
+      let rowsHtml = "";
 
-  function renderCompanySummaryTable(detailedStatsMap) {
-    const tbody = document.getElementById("companySummaryBody");
-    const rows = Object.values(detailedStatsMap);
-    if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted);">لا توجد بيانات مطابقة</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = rows.map(r => {
-      const profit = r.sales - r.cost;
-      const avail = getAvailableStockCount(r.category, r.duration);
-      return `
-        <tr>
-          <td><strong>${r.category}</strong></td>
-          <td>${r.duration}</td>
-          <td><span class="badge badge-blue">${avail}</span></td>
-          <td><strong>${r.soldQty}</strong></td>
-          <td>${r.sales.toFixed(2)} ريال</td>
-          <td>${r.cost.toFixed(2)} ريال</td>
-          <td style="color:${profit >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:800;">${profit.toFixed(2)} ريال</td>
-        </tr>
-      `;
-    }).join("");
-  }
+      categoriesList.forEach(cat => {
+        durationsList.forEach(dur => {
+          const key = `${cat}_${dur}`;
+          if (deletedStockItems.includes(key)) return;
+          if (selectedFilter !== "all" && selectedFilter !== key) return;
 
-  function renderFilteredInvoicesTable(rows) {
-    const tbody = document.getElementById("filteredInvoicesBody");
-    if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted);">لا توجد فواتير في هذه الفترة</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = rows.map(r => `
-      <tr>
-        <td>${r.date}</td>
-        <td><strong>${r.client}</strong></td>
-        <td>${r.itemsText}</td>
-        <td>${r.total.toFixed(2)} ريال</td>
-        <td style="color:var(--success); font-weight:700;">${r.paid.toFixed(2)} ريال</td>
-        <td><span class="badge ${r.remaining > 0.01 ? 'badge-red' : 'badge-green'}">${r.remaining.toFixed(2)} ريال</span></td>
-        <td>${r.notes}</td>
-      </tr>
-    `).join("");
-  }
+          const scanned = scannedMap[key] || 0;
+          const sold = soldQtyMap[key] || 0;
+          const offset = Number(stockOffsets[key] || 0);
+          const available = Math.max(0, scanned - sold + offset);
+          const salesVal = salesValMap[key] || 0;
 
-  window.setPeriodMode = function (mode) {
-    periodMode = mode;
-    document.getElementById("btnAllTime").classList.toggle("active", mode === "all");
-    document.getElementById("btnByMonth").classList.toggle("active", mode === "month");
-    document.getElementById("monthPickerContainer").style.display = mode === "month" ? "flex" : "none";
-    renderDashboard();
-  };
+          rowsHtml += `
+            <tr>
+              <td><strong>${cat}</strong></td>
+              <td>${dur}</td>
+              <td><span class="badge-avail">${available}</span></td>
+              <td>${scanned}</td>
+              <td>${sold}</td>
+              <td>${salesVal.toFixed(2)} ر.س</td>
+            </tr>
+          `;
+        });
+      });
 
-  window.resetFilters = function () {
-    document.getElementById("itemFilter").value = "ALL";
-    document.getElementById("durationFilter").value = "ALL";
-    document.getElementById("dateFilter").value = currentYearMonth;
-    setPeriodMode("all");
-  };
+      tbody.innerHTML = rowsHtml || `<tr><td colspan="6">لا توجد بيانات</td></tr>`;
+    };
 
-  window.toggleCostPanel = function () {
-    document.getElementById("costPanel").classList.toggle("show");
-  };
+    async function initSalesDashboard() {
+      loadLocalState();
+      populateFilterDropdown();
+      renderBatchesTable();
+      renderDashboard();
 
-  window.calcBatchTotalFromUnit = function () {
-    const q = Number(document.getElementById("batchQty").value || 0);
-    const u = Number(document.getElementById("batchUnitCost").value || 0);
-    if (q > 0 && u >= 0) document.getElementById("batchTotalCost").value = (q * u).toFixed(2);
-  };
-
-  window.calcBatchUnitFromTotal = function () {
-    const q = Number(document.getElementById("batchQty").value || 0);
-    const t = Number(document.getElementById("batchTotalCost").value || 0);
-    if (q > 0 && t >= 0) document.getElementById("batchUnitCost").value = (t / q).toFixed(2);
-  };
-
-  window.saveCostBatch = async function () {
-    const category = document.getElementById("batchItemSelect").value;
-    const qty = Number(document.getElementById("batchQty").value || 0);
-    const unitCost = Number(document.getElementById("batchUnitCost").value || 0);
-    const totalCost = Number(document.getElementById("batchTotalCost").value || (qty * unitCost));
-    const date = document.getElementById("batchDate").value || todayDateStr;
-    const editId = document.getElementById("editBatchId").value;
-
-    if (!category || qty <= 0 || unitCost < 0) {
-      alert("يرجى إدخال الصنف والكمية وتكلفة الحبة بشكل صحيح.");
-      return;
-    }
-
-    if (editId) {
-      const idx = costBatches.findIndex(b => String(b.id) === String(editId));
-      if (idx !== -1) costBatches[idx] = { ...costBatches[idx], category, qty, unitCost, totalCost, date };
-    } else {
-      costBatches.push({ id: "batch_" + Date.now(), category, qty, unitCost, totalCost, date });
-    }
-
-    itemCosts[category] = unitCost;
-    cancelBatchEdit();
-    await syncCostsToCloud();
-    renderDashboard();
-  };
-
-  window.editCostBatch = function (id) {
-    const b = costBatches.find(x => String(x.id) === String(id));
-    if (!b) return;
-    document.getElementById("editBatchId").value = b.id;
-    document.getElementById("batchItemSelect").value = b.category;
-    document.getElementById("batchQty").value = b.qty;
-    document.getElementById("batchUnitCost").value = b.unitCost;
-    document.getElementById("batchTotalCost").value = b.totalCost || (b.qty * b.unitCost).toFixed(2);
-    document.getElementById("batchDate").value = b.date || todayDateStr;
-    document.getElementById("saveBatchBtn").textContent = "💾 تحديث";
-    document.getElementById("cancelBatchBtn").style.display = "inline-flex";
-  };
-
-  window.cancelBatchEdit = function () {
-    document.getElementById("editBatchId").value = "";
-    document.getElementById("batchQty").value = "";
-    document.getElementById("batchUnitCost").value = "";
-    document.getElementById("batchTotalCost").value = "";
-    document.getElementById("batchDate").value = todayDateStr;
-    document.getElementById("saveBatchBtn").textContent = "💾 حفظ الدفعة";
-    document.getElementById("cancelBatchBtn").style.display = "none";
-  };
-
-  window.deleteCostBatch = async function (id) {
-    if (!confirm("تأكيد حذف الدفعة؟")) return;
-    costBatches = costBatches.filter(b => String(b.id) !== String(id));
-    await syncCostsToCloud();
-    renderDashboard();
-  };
-
-  window.saveExtraGeneralCost = async function () {
-    extraGeneralCost = Number(document.getElementById("extraGeneralCostInput").value || 0);
-    await syncCostsToCloud();
-    renderDashboard();
-    alert("تم حفظ المصروفات العامة.");
-  };
-
-  window.renderBatchesTable = function (updatedBatchesState = []) {
-    const tbody = document.getElementById("batchesTableBody");
-    if (!costBatches.length) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted);">لم يتم تسجيل دفعات شراء بعد</td></tr>`;
-      return;
-    }
-    const remMap = new Map();
-    updatedBatchesState.forEach(b => remMap.set(String(b.id), b.remainingQty));
-
-    const sorted = [...costBatches].sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
-    tbody.innerHTML = sorted.map(b => {
-      const rem = remMap.has(String(b.id)) ? remMap.get(String(b.id)) : b.qty;
-      return `
-        <tr>
-          <td>${b.date || "-"}</td>
-          <td><strong>${b.category}</strong></td>
-          <td>${b.qty}</td>
-          <td><span class="badge ${rem > 0 ? 'badge-green' : 'badge-red'}">${rem}</span></td>
-          <td>${Number(b.unitCost || 0).toFixed(2)} ريال</td>
-          <td>${Number(b.totalCost || (b.qty * b.unitCost)).toFixed(2)} ريال</td>
-          <td>
-            <button type="button" class="btn btn-outline" style="padding:4px 8px; font-size:12px;" onclick="editCostBatch('${b.id}')">✏️</button>
-            <button type="button" class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteCostBatch('${b.id}')">🗑️</button>
-          </td>
-        </tr>
-      `;
-    }).join("");
-  };
-
-  async function initSalesDashboard() {
-    loadFromLocalStorage();
-    populateSelectOptions();
-    renderDashboard();
-
-    if (!db) return;
-    try {
-      onSnapshot(doc(db, "settings", "app_config"), snap => {
-        if (snap.exists()) {
-          const data = snap.data();
+      try {
+        const cfgSnap = await getDoc(doc(db, "settings", "app_config"));
+        if (cfgSnap.exists()) {
+          const data = cfgSnap.data();
           if (Array.isArray(data.categoriesList)) categoriesList = data.categoriesList;
-          else if (Array.isArray(data.customItems)) categoriesList = data.customItems;
           if (Array.isArray(data.durationsList)) durationsList = data.durationsList;
+          if (data.stockOffsets) stockOffsets = data.stockOffsets;
+          if (Array.isArray(data.deletedStockItems)) deletedStockItems = data.deletedStockItems;
           if (data.itemCosts) itemCosts = data.itemCosts;
           if (Array.isArray(data.costBatches)) costBatches = data.costBatches;
           if (typeof data.extraGeneralCost === "number") extraGeneralCost = data.extraGeneralCost;
-          if (data.stockInventory) stockInventory = data.stockInventory;
-          if (data.stockOffsets) stockOffsets = data.stockOffsets;
-          if (Array.isArray(data.deletedStockItems)) deletedStockItems = data.deletedStockItems;
-          saveConfigToLocal();
-          populateSelectOptions();
-          renderDashboard();
+          localStorage.setItem("app_config", JSON.stringify(data));
         }
-      });
 
-      onSnapshot(collection(db, "sales_records"), snap => {
-        invoicesList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        localStorage.setItem("sales_records_offline", JSON.stringify(invoicesList));
-        populateSelectOptions();
-        renderDashboard();
-        document.getElementById("syncStatusBadge").textContent = "✅ متصل ومزامن سحابياً";
-      });
-
-      onSnapshot(collection(db, "scanned_sims"), snap => {
-        simsList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const simsSnap = await getDocs(collection(db, "scanned_sims"));
+        simsList = simsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         localStorage.setItem("scanned_sims_offline", JSON.stringify(simsList));
-        populateSelectOptions();
-        renderDashboard();
-      });
-    } catch (e) {
-      console.error(e);
-    }
-  }
 
-  initSalesDashboard();
-</script>
+        const invSnap = await getDocs(collection(db, "sales_records"));
+        invoicesList = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        localStorage.setItem("sales_records_offline", JSON.stringify(invoicesList));
+
+        populateFilterDropdown();
+        renderBatchesTable();
+        renderDashboard();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    initSalesDashboard();
+  </script>
 </body>
 </html>
