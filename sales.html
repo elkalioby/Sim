@@ -1,1710 +1,1403 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>المبيعات</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background: #f8fafc; color: #1e293b; padding: 10px; max-width: 900px; margin: 0 auto; }
-
-        .main-card {
-            background: #ffffff;
-            border-radius: 14px;
-            border: 1px solid #e2e8f0;
-            padding: 14px 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-
-        .page-title {
-            text-align: center;
-            color: #1e3a8a;
-            font-size: 1.2rem;
-            font-weight: 800;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        /* 4 بطاقات إحصائيات علوية (2×2) */
-        .top-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .stat-box {
-            border-radius: 12px;
-            padding: 12px 8px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 5px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-        }
-
-        .stat-box.sales-box {
-            background: #f0fdf4;
-            border: 1.5px solid #bbf7d0;
-        }
-
-        .stat-box.cost-box {
-            background: #fffbeb;
-            border: 1.5px solid #fde68a;
-        }
-
-        .stat-box.profit-box {
-            background: #eff6ff;
-            border: 1.5px solid #bfdbfe;
-        }
-
-        .stat-box.debt-box {
-            background: #fef2f2;
-            border: 1.5px solid #fecaca;
-        }
-
-        .stat-label {
-            font-size: 0.82rem;
-            font-weight: 800;
-            color: #334155;
-        }
-
-        .stat-value {
-            font-size: 1.18rem;
-            font-weight: 900;
-            direction: ltr;
-        }
-
-        .sales-box .stat-value { color: #15803d; }
-        .cost-box .stat-value { color: #b45309; }
-        .profit-box .stat-value { color: #1d4ed8; }
-        .debt-box .stat-value { color: #dc2626; }
-
-        /* أزرار التابات (إضافة تكلفة + مديونيات العملاء) */
-        .btn-cost-toggle {
-            width: 100%;
-            background: #1e3a8a;
-            color: #ffffff;
-            border: none;
-            padding: 11px 14px;
-            border-radius: 10px;
-            font-size: 0.92rem;
-            font-weight: 800;
-            cursor: pointer;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            transition: background 0.2s;
-        }
-        .btn-cost-toggle:hover { background: #1d4ed8; }
-
-        .btn-debts-toggle {
-            width: 100%;
-            background: #be123c;
-            color: #ffffff;
-            border: none;
-            padding: 11px 14px;
-            border-radius: 10px;
-            font-size: 0.92rem;
-            font-weight: 800;
-            cursor: pointer;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            transition: background 0.2s;
-        }
-        .btn-debts-toggle:hover { background: #9f1239; }
-
-        .cost-panel, .debts-panel {
-            display: none;
-            background: #f8fafc;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 12px;
-            padding: 10px;
-            margin-bottom: 12px;
-        }
-
-        .cost-panel-header {
-            font-size: 0.95rem;
-            font-weight: 800;
-            color: #1e3a8a;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 8px;
-        }
-
-        .debts-panel-header {
-            font-size: 0.95rem;
-            font-weight: 800;
-            color: #be123c;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #fecdd3;
-            padding-bottom: 8px;
-        }
-
-        .batch-form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-
-        .batch-field {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 8px;
-        }
-
-        .batch-field.full-span {
-            grid-column: span 2;
-        }
-
-        .batch-field label {
-            display: block;
-            font-size: 0.78rem;
-            font-weight: 800;
-            color: #334155;
-            margin-bottom: 4px;
-        }
-
-        .batch-field input, .batch-field select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 0.88rem;
-            font-weight: 700;
-            text-align: center;
-            outline: none;
-            background: #fff;
-        }
-
-        .batch-field input:focus, .batch-field select:focus {
-            border-color: #2563eb;
-        }
-
-        .btn-add-batch {
-            width: 100%;
-            background: #16a34a;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 0.92rem;
-            font-weight: 800;
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
-        .btn-add-batch:hover { background: #15803d; }
-
-        .btn-cancel-batch {
-            width: 100%;
-            background: #e2e8f0;
-            color: #334155;
-            border: none;
-            padding: 8px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 800;
-            cursor: pointer;
-            margin-bottom: 10px;
-            display: none;
-        }
-
-        /* جداول الدفعات والمديونيات المتجاوبة مع الجوال */
-        .batches-log-box {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-
-        .batches-table-wrap {
-            max-height: 320px;
-            overflow-y: auto;
-            overflow-x: hidden;
-        }
-
-        .batches-table {
-            width: 100%;
-            table-layout: fixed;
-            border-collapse: collapse;
-            font-size: 0.76rem;
-        }
-
-        .batches-table th, .batches-table td {
-            padding: 8px 4px;
-            border-bottom: 1px solid #f1f5f9;
-            text-align: center;
-            word-wrap: break-word;
-        }
-
-        .batches-table th {
-            background: #334155;
-            color: #fff;
-            position: sticky;
-            top: 0;
-            font-size: 0.73rem;
-            z-index: 2;
-        }
-
-        /* تنسيق خاص لجدول مديونيات العملاء على الجوال */
-        .debts-mobile-table {
-            width: 100%;
-            table-layout: fixed;
-            border-collapse: collapse;
-        }
-
-        .debts-mobile-table th {
-            background: #1e293b;
-            color: #ffffff;
-            padding: 9px 6px;
-            font-size: 0.76rem;
-            font-weight: 800;
-            position: sticky;
-            top: 0;
-            z-index: 2;
-        }
-
-        .debts-mobile-table td {
-            padding: 10px 6px;
-            border-bottom: 1px solid #e2e8f0;
-            vertical-align: middle;
-        }
-
-        .debts-mobile-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .debts-mobile-table th:nth-child(1),
-        .debts-mobile-table td:nth-child(1) {
-            width: 46%;
-            text-align: right;
-            padding-right: 8px;
-        }
-
-        .debts-mobile-table th:nth-child(2),
-        .debts-mobile-table td:nth-child(2) {
-            width: 25%;
-            text-align: center;
-        }
-
-        .debts-mobile-table th:nth-child(3),
-        .debts-mobile-table td:nth-child(3) {
-            width: 29%;
-            text-align: center;
-        }
-
-        .debt-client-title {
-            font-weight: 800;
-            font-size: 0.86rem;
-            color: #1e3a8a;
-            line-height: 1.35;
-            margin-bottom: 3px;
-        }
-
-        .debt-shop-badge {
-            display: inline-block;
-            background: #eff6ff;
-            color: #1d4ed8;
-            border: 1px solid #bfdbfe;
-            padding: 1px 6px;
-            border-radius: 5px;
-            font-size: 0.72rem;
-            font-weight: 700;
-            margin-bottom: 3px;
-        }
-
-        .debt-meta-info {
-            font-size: 0.7rem;
-            color: #64748b;
-            font-weight: 700;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            align-items: center;
-        }
-
-        .debt-inv-count {
-            background: #fef3c7;
-            color: #b45309;
-            padding: 1px 5px;
-            border-radius: 4px;
-            font-size: 0.68rem;
-            font-weight: 800;
-        }
-
-        .debt-amount-val {
-            font-weight: 900;
-            font-size: 0.95rem;
-            color: #dc2626;
-            direction: ltr;
-            display: inline-block;
-            background: #fef2f2;
-            padding: 4px 7px;
-            border-radius: 6px;
-            border: 1px solid #fecaca;
-        }
-
-        .btn-pay-debt {
-            background: #16a34a;
-            color: #ffffff;
-            border: none;
-            padding: 7px 6px;
-            border-radius: 7px;
-            cursor: pointer;
-            font-weight: 800;
-            font-size: 0.74rem;
-            width: 100%;
-            max-width: 95px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 3px;
-            box-shadow: 0 1px 3px rgba(22, 163, 74, 0.25);
-        }
-        .btn-pay-debt:active { transform: scale(0.97); }
-
-        .batch-actions {
-            display: flex;
-            gap: 4px;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .btn-edit-batch {
-            background: #fef3c7;
-            color: #d97706;
-            border: none;
-            padding: 4px 7px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 0.75rem;
-        }
-
-        .btn-del-batch {
-            background: #fee2e2;
-            color: #dc2626;
-            border: none;
-            padding: 4px 7px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 0.75rem;
-        }
-
-        .debt-search-input {
-            width: 100%;
-            padding: 9px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            margin-bottom: 10px;
-            outline: none;
-            background: #ffffff;
-        }
-        .debt-search-input:focus { border-color: #be123c; }
-
-        /* مربع إضافة مصروفات */
-        .expense-row {
-            background: #fffbeb;
-            border: 1.5px solid #fde68a;
-            border-radius: 10px;
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .expense-row label {
-            color: #b45309;
-            font-size: 0.85rem;
-            font-weight: 800;
-            white-space: nowrap;
-        }
-
-        .expense-row input {
-            flex: 1;
-            min-width: 130px;
-            padding: 9px 10px;
-            border: 1.5px solid #fcd34d;
-            border-radius: 8px;
-            font-size: 0.92rem;
-            font-weight: 800;
-            text-align: center;
-            background: #ffffff;
-            outline: none;
-        }
-
-        .expense-row button {
-            background: #d97706;
-            color: white;
-            border: none;
-            padding: 9px 16px;
-            border-radius: 8px;
-            font-weight: 800;
-            cursor: pointer;
-            font-size: 0.88rem;
-            white-space: nowrap;
-        }
-
-        /* صندوق الفلتر */
-        .filter-box {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 10px;
-            margin-bottom: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .filter-label {
-            font-size: 0.85rem;
-            font-weight: 800;
-            color: #1e3a8a;
-        }
-
-        select {
-            width: 100%;
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1.5px solid #cbd5e1;
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #0f172a;
-            background: #fff;
-            outline: none;
-        }
-
-        .date-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        
-        .btn-reset {
-            background: #64748b;
-            color: #ffffff;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            cursor: pointer;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .btn-reset:hover { background: #475569; }
-
-        /* تصميم مخصص لمربع اختيار الشهر */
-        .custom-date-box {
-            position: relative;
-            flex: 1;
-            height: 40px;
-            border-radius: 8px;
-            border: 1.5px solid #cbd5e1;
-            background: #ffffff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            cursor: pointer;
-        }
-
-        .custom-date-label {
-            font-size: 0.88rem;
-            font-weight: 800;
-            color: #0f172a;
-            pointer-events: none;
-            direction: rtl;
-        }
-
-        .custom-date-box input {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-            border: none;
-        }
-
-        /* جدول الإحصائيات */
-        .table-card {
-            display: none;
-            margin-top: 8px;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #fff;
-        }
-
-        .table-title {
-            background: #f1f5f9;
-            padding: 10px 12px;
-            font-weight: 800;
-            font-size: 0.9rem;
-            color: #1e3a8a;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .table-wrap {
-            width: 100%;
-            overflow-x: hidden;
-        }
-
-        .summary-table {
-            width: 100%;
-            table-layout: fixed;
-            border-collapse: collapse;
-            font-size: 0.8rem;
-        }
-
-        .summary-table th, .summary-table td {
-            border-bottom: 1px solid #e2e8f0;
-            border-left: 1px solid #f1f5f9;
-            padding: 8px 3px;
-            text-align: center;
-            white-space: normal;
-            word-wrap: break-word;
-            line-height: 1.3;
-        }
-
-        .summary-table th:first-child, .summary-table td:first-child { border-left: none; }
-
-        .summary-table th {
-            background: #1e293b;
-            color: #fff;
-            font-weight: 700;
-            font-size: 0.74rem;
-        }
-
-        .summary-table th:nth-child(1), .summary-table td:nth-child(1) { width: 18%; }
-        .summary-table th:nth-child(2), .summary-table td:nth-child(2) { width: 10%; }
-        .summary-table th:nth-child(3), .summary-table td:nth-child(3) { width: 13%; }
-        .summary-table th:nth-child(4), .summary-table td:nth-child(4) { width: 13%; }
-        .summary-table th:nth-child(5), .summary-table td:nth-child(5) { width: 13%; }
-        .summary-table th:nth-child(6), .summary-table td:nth-child(6) { width: 17%; }
-        .summary-table th:nth-child(7), .summary-table td:nth-child(7) { width: 16%; }
-
-        .summary-table tr:last-child td { border-bottom: none; }
-
-        @media (max-width: 480px) {
-            .summary-table { font-size: 0.72rem; }
-            .summary-table th { font-size: 0.68rem; padding: 7px 2px; }
-            .summary-table td { padding: 7px 2px; }
-            .stat-label { font-size: 0.76rem; }
-            .stat-value { font-size: 1.08rem; }
-        }
-    </style>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
-            authDomain: "ahmed-hassan-bb80b.firebaseapp.com",
-            projectId: "ahmed-hassan-bb80b",
-            storageBucket: "ahmed-hassan-bb80b.firebasestorage.app",
-            messagingSenderId: "503682153846",
-            appId: "1:503682153846:web:93b3a174ab31e351a04e57"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        window.db = db;
-        window.collection = collection;
-        window.getDocs = getDocs;
-        window.doc = doc;
-        window.getDoc = getDoc;
-        window.setDoc = setDoc;
-
-        if (window.initSalesDashboard) { window.initSalesDashboard(); }
-    </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إدارة المبيعات والأرباح والمديونيات</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-light: #2563eb;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --purple: #7c3aed;
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 15px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* شريط التنقل العلوي */
+    .top-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 18px;
+      background: var(--card-bg);
+      padding: 12px 16px;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .top-nav .nav-links {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: none;
+      padding: 9px 16px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary { background: var(--primary-light); color: #fff; }
+    .btn-primary:hover { background: var(--primary); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover { opacity: 0.92; }
+    .btn-warning { background: var(--warning); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-outline {
+      background: #f8fafc;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { background: #e2e8f0; }
+
+    .main-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--bg);
+    }
+
+    .page-header h1 {
+      font-size: 22px;
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .sync-badge {
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: #dcfce7;
+      color: #166534;
+      font-weight: 700;
+    }
+
+    /* صندوق الفلاتر */
+    .filter-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      align-items: end;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .form-control {
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+    }
+
+    .period-toggle-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .period-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+      transition: 0.2s;
+    }
+
+    .period-btn.active {
+      border-color: var(--primary-light);
+      background: #eff6ff;
+      color: var(--primary);
+    }
+
+    /* شبكة الإحصائيات العلوية (المربعات الأربعة) */
+    .top-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 6px;
+      height: 100%;
+    }
+
+    .stat-card.sales::before { background: var(--primary-light); }
+    .stat-card.cost::before { background: var(--warning); }
+    .stat-card.profit::before { background: var(--success); }
+    .stat-card.debt::before { background: var(--danger); }
+
+    .stat-title {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .stat-card.sales .stat-value { color: var(--primary); }
+    .stat-card.cost .stat-value { color: var(--warning); }
+    .stat-card.profit .stat-value { color: var(--success); }
+    .stat-card.debt .stat-value { color: var(--danger); }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    /* لوحة إدارة التكلفة (FIFO) */
+    .cost-panel {
+      display: none;
+      background: #fffbeb;
+      border: 2px solid #fde68a;
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 22px;
+    }
+
+    .cost-panel.show {
+      display: block;
+    }
+
+    .cost-panel h3 {
+      color: #92400e;
+      margin-bottom: 14px;
+      font-size: 17px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .cost-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    /* بطاقة المباع حسب الشركة */
+    .sold-company-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .sold-company-card h3 {
+      font-size: 16px;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+
+    .company-badges {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .company-badge-item {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .company-badge-item .c-name {
+      font-weight: 800;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .company-badge-item .c-nums {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    /* الجداول */
+    .table-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .table-card h3 {
+      font-size: 17px;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 650px;
+    }
+
+    th, td {
+      padding: 11px 12px;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    th {
+      background: #f8fafc;
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    tr:hover td {
+      background: #f1f5f9;
+    }
+
+    .badge {
+      padding: 3px 9px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+
+    @media (max-width: 600px) {
+      .stat-value { font-size: 22px; }
+      .page-header h1 { font-size: 18px; }
+    }
+  </style>
 </head>
 <body>
 
-    <div class="main-card">
-        <div class="page-title">
-            <span>📊</span>
-            <span>المبيعات</span>
-        </div>
+<div class="container">
+  <!-- شريط التنقل -->
+  <nav class="top-nav">
+    <div class="nav-links">
+      <a href="index.html" id="homeTabBtn" class="btn btn-outline">🏠 الرئيسية</a>
+      <a href="invoices.html" id="invoiceTabBtn" class="btn btn-outline">🧾 الفواتير والمبيعات</a>
+      <a href="sales.html" id="salesTabBtn" class="btn btn-primary">📊 الأرباح والتقارير</a>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <span id="syncStatusBadge" class="sync-badge">جاري التحميل...</span>
+      <button type="button" class="btn btn-warning" onclick="toggleCostPanel()">⚙️ إدارة دفعات التكلفة والمصاريف</button>
+    </div>
+  </nav>
 
-        <!-- 4 مربعات إحصائية بالأعلى -->
-        <div class="top-stats-grid">
-            <div class="stat-box sales-box">
-                <div class="stat-label">💰 إجمالي المبيعات</div>
-                <div class="stat-value" id="totalSalesValue">0</div>
-            </div>
-            <div class="stat-box cost-box">
-                <div class="stat-label">💵 إجمالي التكلفة</div>
-                <div class="stat-value" id="totalCostValue">0</div>
-            </div>
-            <div class="stat-box profit-box">
-                <div class="stat-label">📈 إجمالي الأرباح</div>
-                <div class="stat-value" id="totalProfitValue">0</div>
-            </div>
-            <div class="stat-box debt-box">
-                <div class="stat-label">📋 إجمالي مديونيات العملاء</div>
-                <div class="stat-value" id="totalDebtValue">0</div>
-            </div>
-        </div>
-
-        <!-- زر إضافة تكلفة -->
-        <button type="button" class="btn-cost-toggle" onclick="toggleCostPanel()">
-            <span>💵</span>
-            <span>إضافة تكلفة</span>
-        </button>
-
-        <!-- لوحة تسجيل التكلفة -->
-        <div class="cost-panel" id="costPanel">
-            <div class="cost-panel-header">
-                <span id="costFormTitle">📦 تسجيل</span>
-                <button type="button" onclick="toggleCostPanel()" style="background:#e2e8f0; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:bold;">✕</button>
-            </div>
-
-            <input type="hidden" id="editBatchId" value="">
-
-            <div class="batch-form-grid">
-                <div class="batch-field full-span">
-                    <label>الصنف والمدة:</label>
-                    <select id="batchItemSelect"></select>
-                </div>
-                <div class="batch-field">
-                    <label>الكمية:</label>
-                    <input type="number" id="batchQty" step="any" placeholder="مثال: 50" oninput="onBatchQtyOrUnitChange()">
-                </div>
-                <div class="batch-field">
-                    <label>تكلفة الحبة الواحدة:</label>
-                    <input type="number" id="batchUnitCost" step="any" placeholder="مثال: 95" oninput="onBatchQtyOrUnitChange()">
-                </div>
-                <div class="batch-field">
-                    <label>الإجمالي:</label>
-                    <input type="number" id="batchTotalCost" step="any" placeholder="0" oninput="onBatchTotalChange()">
-                </div>
-                <div class="batch-field">
-                    <label>تاريخ الدفعة:</label>
-                    <input type="date" id="batchDate">
-                </div>
-            </div>
-
-            <button type="button" class="btn-add-batch" id="addBatchBtn" onclick="saveCostBatch()">
-                ➕ إضافة
-            </button>
-            <button type="button" class="btn-cancel-batch" id="cancelBatchEditBtn" onclick="cancelBatchEdit()">
-                إلغاء التعديل
-            </button>
-
-            <!-- جدول الدفعات -->
-            <div class="batches-log-box">
-                <div class="batches-table-wrap">
-                    <table class="batches-table">
-                        <thead>
-                            <tr>
-                                <th>الصنف</th>
-                                <th>الكمية</th>
-                                <th>سعر الحبة</th>
-                                <th>الإجمالي</th>
-                                <th>التاريخ</th>
-                                <th>تعديل / حذف</th>
-                            </tr>
-                        </thead>
-                        <tbody id="batchesTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- إضافة مصروفات -->
-            <div class="expense-row">
-                <label>💸 اضافة مصروفات:</label>
-                <input type="number" id="extraGeneralCostInput" step="any" placeholder="0">
-                <button type="button" onclick="saveExtraGeneralCost()">حفظ</button>
-            </div>
-        </div>
-
-        <!-- تاب مديونيات العملاء تحت إضافة تكلفة مباشرة -->
-        <button type="button" class="btn-debts-toggle" onclick="toggleDebtsPanel()">
-            <span>📋</span>
-            <span>مديونيات العملاء</span>
-        </button>
-
-        <!-- لوحة وجدول مديونيات العملاء المجمعة والمصممة للجوال -->
-        <div class="debts-panel" id="debtsPanel">
-            <div class="debts-panel-header">
-                <span>📋 مديونيات العملاء المجمعة</span>
-                <button type="button" onclick="toggleDebtsPanel()" style="background:#ffe4e6; color:#be123c; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:bold;">✕</button>
-            </div>
-
-            <input type="text" id="debtSearchInput" class="debt-search-input" placeholder="🔍 ابحث باسم العميل أو المحل أو الجوال..." oninput="renderDebtsTable()">
-
-            <div class="batches-log-box" style="margin-bottom:0;">
-                <div class="batches-table-wrap">
-                    <table class="debts-mobile-table">
-                        <thead>
-                            <tr>
-                                <th>العميل والمحل</th>
-                                <th>المديونية</th>
-                                <th>سداد</th>
-                            </tr>
-                        </thead>
-                        <tbody id="debtsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- فلتر المبيعات حسب الشركة والمدة -->
-        <div class="filter-box">
-            <div class="filter-label">فلتر المبيعات حسب الشركة والمدة</div>
-            <select id="itemFilter" onchange="renderDashboard()">
-                <option value="">اختر</option>
-                <option value="ALL">الكل</option>
-            </select>
-
-            <div class="date-row">
-                <button class="btn-reset" onclick="resetFilters()">
-                    <span>🔄</span>
-                    <span>عرض</span>
-                </button>
-                <div class="custom-date-box" onclick="openDatePicker()">
-                    <span class="custom-date-label" id="dateDisplayText">📅 حدد التاريخ</span>
-                    <input type="month" id="dateFilter" onchange="onDateFilterChange()">
-                </div>
-            </div>
-        </div>
-
-        <!-- جدول الإحصائيات -->
-        <div class="table-card" id="statsTableCard">
-            <div class="table-title">📊 الإحصائيات</div>
-            <div class="table-wrap">
-                <table class="summary-table">
-                    <thead>
-                        <tr>
-                            <th>الصنف</th>
-                            <th>المدة</th>
-                            <th>المتاح</th>
-                            <th>الممسوح</th>
-                            <th>المباع</th>
-                            <th>المبيعات</th>
-                            <th>الأرباح</th>
-                        </tr>
-                    </thead>
-                    <tbody id="companySummaryBody"></tbody>
-                </table>
-            </div>
-        </div>
+  <div class="main-card">
+    <div class="page-header">
+      <h1>📊 لوحة تحليل المبيعات والأرباح ومديونيات العملاء</h1>
+      <span id="activePeriodLabel" class="badge badge-blue" style="font-size:14px; padding:6px 14px;">الفترة المعروضة: كل المدة</span>
     </div>
 
-    <script>
-        let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
-        let durationsList = ['30', '60'];
-        let simsList = [];
-        let invoicesList = [];
-        let stockOffsets = {};
-        let deletedStockItems = [];
-        let itemCosts = {};
-        let costBatches = [];
-        let extraGeneralCost = 0;
-        let groupedCustomerDebts = [];
-        let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
+    <!-- لوحة إدارة التكلفة (تظهر وتختفي بالزر) -->
+    <div id="costPanel" class="cost-panel">
+      <h3>
+        <span>📦 تسجيل دفعات شراء البضاعة (نظام FIFO التلقائي)</span>
+        <button type="button" class="btn btn-outline" onclick="toggleCostPanel()">✖ إغلاق</button>
+      </h3>
 
-        const ARABIC_MONTHS = [
-            'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-            'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
-        ];
+      <input type="hidden" id="editBatchId" value="" />
 
-        function getTodayStr() {
-            const d = new Date();
-            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      <div class="cost-grid">
+        <div class="form-group">
+          <label>الصنف / الشركة</label>
+          <select id="batchItemSelect" class="form-control"></select>
+        </div>
+        <div class="form-group">
+          <label>الكمية المشتراة</label>
+          <input type="number" id="batchQty" class="form-control" placeholder="مثال: 50" min="1" oninput="calcBatchTotalFromUnit()" />
+        </div>
+        <div class="form-group">
+          <label>تكلفة الحبة الواحدة (ريال)</label>
+          <input type="number" id="batchUnitCost" class="form-control" placeholder="مثال: 110" step="0.01" oninput="calcBatchTotalFromUnit()" />
+        </div>
+        <div class="form-group">
+          <label>إجمالي تكلفة الدفعة (ريال)</label>
+          <input type="number" id="batchTotalCost" class="form-control" placeholder="يحسب تلقائياً" step="0.01" oninput="calcBatchUnitFromTotal()" />
+        </div>
+        <div class="form-group">
+          <label>تاريخ الشراء</label>
+          <input type="date" id="batchDate" class="form-control" />
+        </div>
+        <div class="form-group" style="display:flex; flex-direction:row; gap:6px;">
+          <button type="button" id="saveBatchBtn" class="btn btn-success" style="flex:1;" onclick="saveCostBatch()">💾 حفظ الدفعة</button>
+          <button type="button" id="cancelBatchBtn" class="btn btn-danger" style="display:none;" onclick="cancelBatchEdit()">إلغاء</button>
+        </div>
+      </div>
+
+      <!-- مصروفات عامة إضافية -->
+      <div style="border-top:1px dashed #f59e0b; padding-top:14px; margin-top:10px; margin-bottom:16px;">
+        <div class="cost-grid" style="margin-bottom:0;">
+          <div class="form-group">
+            <label>مصروفات عامة إضافية (شحن / إيجار / أخرى)</label>
+            <input type="number" id="extraGeneralCostInput" class="form-control" placeholder="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <button type="button" class="btn btn-primary" onclick="saveExtraGeneralCost()">💾 حفظ المصروفات العامة</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- جدول سجل دفعات التكلفة -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>الصنف</th>
+              <th>الكمية الأساسية</th>
+              <th>المتبقي بالدفعة</th>
+              <th>تكلفة الحبة</th>
+              <th>إجمالي الدفعة</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="batchesTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- صندوق الفلاتر (الشهر / كل المدة / الصنف / المدة) -->
+    <div class="filter-box">
+      <div class="form-group">
+        <label>📅 نطاق التقرير الزمني</label>
+        <div class="period-toggle-group">
+          <button type="button" id="btnAllTime" class="period-btn active" onclick="setPeriodMode('all')">🌐 كل المدة</button>
+          <button type="button" id="btnByMonth" class="period-btn" onclick="setPeriodMode('month')">📆 بالشهر</button>
+        </div>
+      </div>
+
+      <div class="form-group" id="monthPickerContainer" style="display:none;">
+        <label>اختر الشهر والسنة</label>
+        <input type="month" id="dateFilter" class="form-control" onchange="renderDashboard()" />
+      </div>
+
+      <div class="form-group">
+        <label>🏢 فلتر الصنف / الشركة</label>
+        <select id="itemFilter" class="form-control" onchange="renderDashboard()">
+          <option value="ALL">كل الأصناف والشركات</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>⏱️ فلتر مدة الاشتراك</label>
+        <select id="durationFilter" class="form-control" onchange="renderDashboard()">
+          <option value="ALL">كل المدد</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <button type="button" class="btn btn-outline" onclick="resetFilters()" style="width:100%; justify-content:center;">🔄 إعادة ضبط الفلاتر</button>
+      </div>
+    </div>
+
+    <!-- المربعات الإحصائية الأربعة (تتأثر مباشرة بفلتر الشهر أو كل المدة) -->
+    <div class="top-stats-grid">
+      <!-- 1. إجمالي المبيعات -->
+      <div class="stat-card sales">
+        <div class="stat-title">
+          <span>💰 إجمالي المبيعات</span>
+          <span id="salesCountBadge" class="badge badge-blue">0 فاتورة</span>
+        </div>
+        <div id="totalSalesValue" class="stat-value">0.00 ريال</div>
+        <div id="salesSubLabel" class="stat-sub">المحصّل نقداً: 0.00 ريال</div>
+      </div>
+
+      <!-- 2. إجمالي التكلفة -->
+      <div class="stat-card cost">
+        <div class="stat-title">
+          <span>📦 إجمالي التكلفة</span>
+          <span id="soldUnitsBadge" class="badge badge-blue">0 قطعة</span>
+        </div>
+        <div id="totalCostValue" class="stat-value">0.00 ريال</div>
+        <div id="costSubLabel" class="stat-sub">تكلفة البضاعة المباعة للفترة المحددة</div>
+      </div>
+
+      <!-- 3. صافي الأرباح -->
+      <div class="stat-card profit">
+        <div class="stat-title">
+          <span>📈 صافي الأرباح</span>
+          <span id="profitMarginBadge" class="badge badge-green">0%</span>
+        </div>
+        <div id="totalProfitValue" class="stat-value">0.00 ريال</div>
+        <div id="profitSubLabel" class="stat-sub">المبيعات ناقص التكلفة للفترة المحددة</div>
+      </div>
+
+      <!-- 4. إجمالي مديونيات العملاء -->
+      <div class="stat-card debt">
+        <div class="stat-title">
+          <span>📒 إجمالي مديونيات العملاء</span>
+          <span id="debtClientsBadge" class="badge badge-red">0 عميل</span>
+        </div>
+        <div id="totalDebtValue" class="stat-value">0.00 ريال</div>
+        <div id="debtSubLabel" class="stat-sub">المديونية التراكمية لكل المدة: 0.00 ريال</div>
+      </div>
+    </div>
+
+    <!-- ملخص المباع لكل شركة -->
+    <div class="sold-company-card">
+      <h3>🏷️ ملخص القطع المباعة والمبيعات حسب الشركة (في الفترة المحددة)</h3>
+      <div id="soldCompanyContainer" class="company-badges"></div>
+    </div>
+
+    <!-- جدول تفصيل الأصناف والأرباح -->
+    <div class="table-card">
+      <h3>📋 التقرير التفصيلي للأصناف والمخزون والأرباح</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الصنف / الشركة</th>
+              <th>المدة</th>
+              <th>المخزون المتاح حالياً</th>
+              <th>الكمية المباعة (بالفترة)</th>
+              <th>إجمالي المبيعات</th>
+              <th>إجمالي التكلفة (FIFO)</th>
+              <th>صافي الربح</th>
+            </tr>
+          </thead>
+          <tbody id="companySummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- جدول مديونيات العملاء والفواتير في الفترة المحددة -->
+    <div class="table-card">
+      <h3>👥 سجل مديونيات العملاء والفواتير (حسب الفلتر المحدد)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>اسم العميل / المحل</th>
+              <th>الأصناف</th>
+              <th>إجمالي الفاتورة</th>
+              <th>المدفوع</th>
+              <th>المتبقي (المديونية)</th>
+              <th>ملاحظات</th>
+            </tr>
+          </thead>
+          <tbody id="filteredInvoicesBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    setDoc,
+    onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // =========================================================
+  // 1. إعدادات Firebase (ضع مفاتيح مشروعك المعتادة هنا)
+  // =========================================================
+  const savedFirebaseConfig = JSON.parse(localStorage.getItem("firebase_config_override") || "null");
+  const firebaseConfig = savedFirebaseConfig || {
+    apiKey: "PUT_YOUR_FIREBASE_API_KEY_HERE",
+    authDomain: "ahmed-hassan-bb80b.firebaseapp.com",
+    projectId: "ahmed-hassan-bb80b",
+    storageBucket: "ahmed-hassan-bb80b.appspot.com",
+    messagingSenderId: "503682153846",
+    appId: "PUT_YOUR_FIREBASE_APP_ID_HERE"
+  };
+
+  let db = null;
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+  } catch (err) {
+    console.warn("Firebase يعمل في الوضع المحلي مؤقتاً:", err);
+  }
+
+  // =========================================================
+  // 2. المتغيرات العامة للنظام
+  // =========================================================
+  let periodMode = "all"; // 'all' = كل المدة | 'month' = بالشهر
+  let invoicesList = [];
+  let simsList = [];
+  let categoriesList = ["STC", "موبايلي", "زين", "سلام", "راوتر 5G"];
+  let durationsList = ["شهر", "3 شهور", "6 شهور", "سنة", "مفتوح"];
+  let itemCosts = {};         // تكلفة افتراضية لكل صنف عند عدم وجود دفعة
+  let costBatches = [];       // دفعات الشراء بنظام FIFO
+  let extraGeneralCost = 0;   // مصاريف عامة إضافية
+  let stockInventory = {};
+  let stockOffsets = {};
+  let deletedStockItems = [];
+
+  // ضبط الشهر الافتراضي على الشهر الحالي
+  const now = new Date();
+  const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const todayDateStr = `${ currentYearMonth }-${String(now.getDate()).padStart(2, "0")}`;
+
+  document.getElementById("dateFilter").value = currentYearMonth;
+  document.getElementById("batchDate").value = todayDateStr;
+
+  // =========================================================
+  // 3. تحميل البيانات من LocalStorage و Firebase
+  // =========================================================
+  function loadFromLocalStorage() {
+    try {
+      const localConfig = JSON.parse(localStorage.getItem("app_config") || "{}");
+      if (Array.isArray(localConfig.categoriesList) && localConfig.categoriesList.length) {
+        categoriesList = localConfig.categoriesList;
+      } else if (Array.isArray(localConfig.customItems) && localConfig.customItems.length) {
+        categoriesList = localConfig.customItems;
+      }
+      if (Array.isArray(localConfig.durationsList) && localConfig.durationsList.length) {
+        durationsList = localConfig.durationsList;
+      }
+      if (localConfig.itemCosts) itemCosts = localConfig.itemCosts;
+      if (Array.isArray(localConfig.costBatches)) costBatches = localConfig.costBatches;
+      if (typeof localConfig.extraGeneralCost === "number") extraGeneralCost = localConfig.extraGeneralCost;
+      if (localConfig.stockInventory) stockInventory = localConfig.stockInventory;
+      if (localConfig.stockOffsets) stockOffsets = localConfig.stockOffsets;
+      if (Array.isArray(localConfig.deletedStockItems)) deletedStockItems = localConfig.deletedStockItems;
+
+      const localInvoices = JSON.parse(
+        localStorage.getItem("sales_records_offline") ||
+        localStorage.getItem("sales_records") ||
+        "[]"
+      );
+      if (Array.isArray(localInvoices)) invoicesList = localInvoices;
+
+      const localSims = JSON.parse(
+        localStorage.getItem("scanned_sims_offline") ||
+        localStorage.getItem("scanned_sims") ||
+        "[]"
+      );
+      if (Array.isArray(localSims)) simsList = localSims;
+    } catch (e) {
+      console.error("خطأ في قراءة التخزين المحلي:", e);
+    }
+  }
+
+  function saveConfigToLocal() {
+    const configObj = {
+      categoriesList,
+      customItems: categoriesList,
+      durationsList,
+      itemCosts,
+      costBatches,
+      extraGeneralCost,
+      stockInventory,
+      stockOffsets,
+      deletedStockItems
+    };
+    localStorage.setItem("app_config", JSON.stringify(configObj));
+  }
+
+  async function syncCostsToCloud() {
+    saveConfigToLocal();
+    if (!db) return;
+    try {
+      const badge = document.getElementById("syncStatusBadge");
+      badge.textContent = "⏳ جاري الحفظ سحابياً...";
+      await setDoc(
+        doc(db, "settings", "app_config"),
+        {
+          categoriesList,
+          customItems: categoriesList,
+          durationsList,
+          itemCosts,
+          costBatches,
+          extraGeneralCost,
+          stockInventory,
+          stockOffsets,
+          deletedStockItems,
+          updatedAt: new Date().toISOString()
+        },
+        { merge: true }
+      );
+      badge.textContent = "✅ متصل ومزامن سحابياً";
+    } catch (err) {
+      console.error("خطأ في المزامنة السحابية:", err);
+      document.getElementById("syncStatusBadge").textContent = "⚠️ محفوظ محلياً فقط";
+    }
+  }
+
+  // =========================================================
+  // 4. تهيئة القوائم المنسدلة والفلاتر
+  // =========================================================
+  function populateSelectOptions() {
+    // جمع كافة الأصناف والمدد الموجودة في الإعدادات أو الفواتير أو الشرائح
+    const catSet = new Set(categoriesList);
+    const durSet = new Set(durationsList);
+
+    invoicesList.forEach(inv => {
+      const items = extractInvoiceItems(inv);
+      items.forEach(it => {
+        if (it.category) catSet.add(it.category);
+        if (it.duration) durSet.add(it.duration);
+      });
+    });
+
+    simsList.forEach(sim => {
+      if (sim.category || sim.company) catSet.add(sim.category || sim.company);
+      if (sim.duration) durSet.add(sim.duration);
+    });
+
+    const itemFilterEl = document.getElementById("itemFilter");
+    const currentItemVal = itemFilterEl.value || "ALL";
+    itemFilterEl.innerHTML = `<option value="ALL">كل الأصناف والشركات</option>`;
+    Array.from(catSet).forEach(cat => {
+      itemFilterEl.innerHTML += `<option value="${cat}">${cat}</option>`;
+    });
+    itemFilterEl.value = Array.from(catSet).includes(currentItemVal) ? currentItemVal : "ALL";
+
+    const durFilterEl = document.getElementById("durationFilter");
+    const currentDurVal = durFilterEl.value || "ALL";
+    durFilterEl.innerHTML = `<option value="ALL">كل المدد</option>`;
+    Array.from(durSet).forEach(dur => {
+      durFilterEl.innerHTML += `<option value="${dur}">${dur}</option>`;
+    });
+    durFilterEl.value = Array.from(durSet).includes(currentDurVal) ? currentDurVal : "ALL";
+
+    const batchSelectEl = document.getElementById("batchItemSelect");
+    const currentBatchItem = batchSelectEl.value;
+    batchSelectEl.innerHTML = "";
+    Array.from(catSet).forEach(cat => {
+      batchSelectEl.innerHTML += `<option value="${cat}">${cat}</option>`;
+    });
+    if (currentBatchItem && Array.from(catSet).includes(currentBatchItem)) {
+      batchSelectEl.value = currentBatchItem;
+    }
+
+    document.getElementById("extraGeneralCostInput").value = extraGeneralCost || 0;
+  }
+
+  // =========================================================
+  // 5. دوال استخراج الأصناف وحساب التكلفة بنظام FIFO
+  // =========================================================
+  function normalizeDateToYYYYMM(dateStr) {
+    if (!dateStr) return "";
+    const clean = String(dateStr).trim();
+    // إذا كان بصيغة YYYY-MM-DD أو YYYY/MM/DD
+    const matchISO = clean.match(/^(\d{4})[-/](\d{1,2})/);
+    if (matchISO) {
+      return `${matchISO[1]}-${String(matchISO[2]).padStart(2, "0")}`;
+    }
+    // إذا كان بصيغة DD-MM-YYYY أو DD/MM/YYYY
+    const matchDMY = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+    if (matchDMY) {
+      return `${matchDMY[3]}-${String(matchDMY[2]).padStart(2, "0")}`;
+    }
+    const parsed = new Date(clean);
+    if (!isNaN(parsed.getTime())) {
+      return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}`;
+    }
+    return "";
+  }
+
+  function extractInvoiceItems(inv) {
+    if (Array.isArray(inv.cartItems) && inv.cartItems.length > 0) {
+      return inv.cartItems.map(item => ({
+        category: item.category || item.company || item.name || item.item || "عام",
+        duration: item.duration || "غير محدد",
+        qty: Number(item.qty || item.quantity || item.count || 1),
+        price: Number(item.price || item.unitPrice || 0),
+        total: Number(item.total || (Number(item.qty || 1) * Number(item.price || 0)))
+      }));
+    }
+    // في حال كانت الفاتورة تحتوي على صنف مباشر
+    if (inv.category || inv.company || inv.itemName) {
+      const qty = Number(inv.qty || inv.quantity || 1);
+      const total = Number(inv.total || 0);
+      return [{
+        category: inv.category || inv.company || inv.itemName,
+        duration: inv.duration || "غير محدد",
+        qty: qty,
+        price: qty > 0 ? total / qty : total,
+        total: total
+      }];
+    }
+    // محاولة استخراج من itemsSummary النصي إن وجد
+    if (typeof inv.itemsSummary === "string" && inv.itemsSummary.trim() !== "") {
+      return [{
+        category: inv.itemsSummary.split("-")[0].trim() || "مبيعات متنوعة",
+        duration: "متنوع",
+        qty: Number(inv.totalQty || 1),
+        price: Number(inv.total || 0),
+        total: Number(inv.total || 0)
+      }];
+    }
+    return [];
+  }
+
+  // محاكاة استهلاك الدفعات زمنياً (FIFO) من أقدم فاتورة لأحدث فاتورة
+  // لضمان أن تكلفة أي شهر هي التكلفة الفعلية للدفعة التي سُحبت منها البضاعة في ذلك الشهر
+  function computeAllInvoicesFIFOCost() {
+    // نسخ الدفعات وترتيبها من الأقدم للأحدث
+    const workingBatches = costBatches
+      .map(b => ({
+        ...b,
+        remainingQty: Number(b.qty || 0),
+        unitCost: Number(b.unitCost || 0)
+      }))
+      .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+
+    // ترتيب الفواتير من الأقدم للأحدث
+    const sortedInvoices = [...invoicesList].sort((a, b) =>
+      String(a.date || a.createdAt || "").localeCompare(String(b.date || b.createdAt || ""))
+    );
+
+    const invoiceCostMap = new Map();
+
+    function consumeFromFIFO(categoryName, neededQty) {
+      let qtyToCover = Number(neededQty || 0);
+      let accumulatedCost = 0;
+
+      for (const batch of workingBatches) {
+        if (qtyToCover <= 0) break;
+        if (batch.category === categoryName && batch.remainingQty > 0) {
+          const taken = Math.min(batch.remainingQty, qtyToCover);
+          accumulatedCost += taken * batch.unitCost;
+          batch.remainingQty -= taken;
+          qtyToCover -= taken;
         }
+      }
 
-        document.getElementById('batchDate').value = getTodayStr();
+      // إذا زادت الكمية المباعة عن الدفعات المسجلة، نستخدم آخر تكلفة معروفة للصنف أو itemCosts
+      if (qtyToCover > 0) {
+        const fallbackUnitCost = Number(itemCosts[categoryName] || 0);
+        accumulatedCost += qtyToCover * fallbackUnitCost;
+      }
 
-        function formatMonthDisplay(ym) {
-            if (!ym) return '📅 حدد التاريخ';
-            const parts = ym.split('-');
-            if (parts.length === 2) {
-                const year = parts[0];
-                const monthIdx = parseInt(parts[1], 10) - 1;
-                const monthName = ARABIC_MONTHS[monthIdx] || parts[1];
-                return `📅 ${monthName} ${year}`;
-            }
-            return `📅 ${ym}`;
-        }
+      return accumulatedCost;
+    }
 
-        function openDatePicker() {
-            const dateInput = document.getElementById('dateFilter');
-            if (dateInput && typeof dateInput.showPicker === 'function') {
-                try { dateInput.showPicker(); } catch (e) {}
-            }
-        }
-
-        function onDateFilterChange() {
-            const dateInput = document.getElementById('dateFilter');
-            const label = document.getElementById('dateDisplayText');
-            if (dateInput.value) {
-                label.textContent = formatMonthDisplay(dateInput.value);
-            } else {
-                label.textContent = '📅 حدد التاريخ';
-            }
-            renderDashboard();
-        }
-
-        function toggleCostPanel() {
-            const panel = document.getElementById('costPanel');
-            if (panel.style.display === 'block') {
-                panel.style.display = 'none';
-            } else {
-                populateBatchItemSelect();
-                renderBatchesTable();
-                document.getElementById('extraGeneralCostInput').value = extraGeneralCost || '';
-                panel.style.display = 'block';
-            }
-        }
-
-        function toggleDebtsPanel() {
-            const panel = document.getElementById('debtsPanel');
-            if (panel.style.display === 'block') {
-                panel.style.display = 'none';
-            } else {
-                renderDebtsTable();
-                panel.style.display = 'block';
-            }
-        }
-
-        // دالة ذكية لتوحيد اسم العميل/المحل وتجاهل الكلمات الزائدة مثل (محل، للاتصال، للاتصالات) لدمج فواتير نفس العميل
-        function normalizeCoreIdentity(text) {
-            if (!text) return '';
-            return String(text)
-                .toLowerCase()
-                .replace(/[\u064B-\u065F\u0670]/g, '')
-                .replace(/[أإآٱ]/g, 'ا')
-                .replace(/ة/g, 'ه')
-                .replace(/ى/g, 'ي')
-                .replace(/(^|\s)(محل|مؤسسه|موسسه|شركه|فرع|للاتصالات|للاتصال|اتصالات|جوالات)(\s|$)/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
-        }
-
-        // تجميع كل الفواتير غير المسددة لنفس العميل في عنصر واحد
-        function buildGroupedDebts() {
-            const groups = [];
-
-            invoicesList.forEach(inv => {
-                const debt = getInvoiceDebt(inv);
-                if (debt <= 0) return;
-
-                const cleanPhone = String(inv.phone || '').replace(/\D/g, '');
-                const validPhone = cleanPhone.length >= 8 ? cleanPhone : '';
-                const coreClient = normalizeCoreIdentity(inv.clientName);
-                const coreShop = normalizeCoreIdentity(inv.shopName);
-
-                let matchedGroup = groups.find(g => {
-                    if (validPhone && g.phones.has(validPhone)) return true;
-                    if (coreShop && g.coreNames.has(coreShop)) return true;
-                    if (coreClient && g.coreNames.has(coreClient)) return true;
-                    return false;
-                });
-
-                if (!matchedGroup) {
-                    matchedGroup = {
-                        groupId: 'grp_' + groups.length,
-                        clientName: (inv.clientName || '').trim() || (inv.shopName || '').trim() || 'بدون اسم',
-                        shopName: (inv.shopName || '').trim(),
-                        phone: (inv.phone || '').trim(),
-                        totalDebt: 0,
-                        latestDate: inv.date || '',
-                        latestTimestamp: inv.timestamp || 0,
-                        invoices: [],
-                        phones: new Set(),
-                        coreNames: new Set()
-                    };
-                    groups.push(matchedGroup);
-                }
-
-                matchedGroup.totalDebt = +(matchedGroup.totalDebt + debt).toFixed(2);
-                matchedGroup.invoices.push(inv);
-
-                if (validPhone) matchedGroup.phones.add(validPhone);
-                if (coreShop) matchedGroup.coreNames.add(coreShop);
-                if (coreClient) matchedGroup.coreNames.add(coreClient);
-
-                // اختيار الاسم الأوضح والأحدث للعرض
-                if ((inv.timestamp || 0) >= matchedGroup.latestTimestamp) {
-                    matchedGroup.latestTimestamp = inv.timestamp || 0;
-                    if (inv.date) matchedGroup.latestDate = inv.date;
-                    if (inv.clientName && inv.clientName.trim()) matchedGroup.clientName = inv.clientName.trim();
-                    if (inv.shopName && inv.shopName.trim()) matchedGroup.shopName = inv.shopName.trim();
-                }
-            });
-
-            groups.sort((a, b) => (b.latestTimestamp || 0) - (a.latestTimestamp || 0));
-            groupedCustomerDebts = groups;
-            return groups;
-        }
-
-        window.renderDebtsTable = function() {
-            const tbody = document.getElementById('debtsTableBody');
-            const search = (document.getElementById('debtSearchInput')?.value || '').trim().toLowerCase();
-
-            const groups = buildGroupedDebts().filter(g => {
-                if (!search) return true;
-                return (
-                    (g.clientName && g.clientName.toLowerCase().includes(search)) ||
-                    (g.shopName && g.shopName.toLowerCase().includes(search)) ||
-                    (g.phone && g.phone.includes(search))
-                );
-            });
-
-            if (groups.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" style="padding:16px; color:#64748b; font-weight:bold; text-align:center;">لا توجد مديونيات مسجلة على العملاء حالياً.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = groups.map(g => {
-                const sameName = normalizeCoreIdentity(g.clientName) === normalizeCoreIdentity(g.shopName);
-                const showShopBadge = g.shopName && !sameName;
-                const invCount = g.invoices.length;
-
-                return `
-                    <tr>
-                        <td>
-                            <div class="debt-client-title">👤 ${g.clientName}</div>
-                            ${showShopBadge ? `<div class="debt-shop-badge">🏪 ${g.shopName}</div>` : ''}
-                            <div class="debt-meta-info">
-                                <span>📅 ${g.latestDate || '-'}</span>
-                                ${invCount > 1 ? `<span class="debt-inv-count">${invCount} فواتير</span>` : ''}
-                            </div>
-                        </td>
-                        <td>
-                            <span class="debt-amount-val">${g.totalDebt.toLocaleString('en-US')}</span>
-                        </td>
-                        <td>
-                            <button type="button" class="btn-pay-debt" onclick="payCustomerGroupDebt('${g.groupId}')">
-                                💵 دفعة
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+    sortedInvoices.forEach((inv, idx) => {
+      const invKey = inv.id || `inv_${idx}`;
+      const items = extractInvoiceItems(inv);
+      const itemBreakdowns = items.map(it => {
+        const cogs = consumeFromFIFO(it.category, it.qty);
+        return {
+          ...it,
+          cost: cogs
         };
+      });
+      invoiceCostMap.set(invKey, itemBreakdowns);
+    });
 
-        // خصم الدفعة من إجمالي مديونية العميل وتوزيعها على فواتيره من الأقدم للأحدث ومزامنتها مع صفحة الفواتير
-        window.payCustomerGroupDebt = async function(groupId) {
-            const group = groupedCustomerDebts.find(g => g.groupId === groupId);
-            if (!group) return;
+    return { invoiceCostMap, updatedBatchesState: workingBatches };
+  }
 
-            const currentTotalDebt = group.totalDebt;
-            const displayTitle = group.shopName && normalizeCoreIdentity(group.shopName) !== normalizeCoreIdentity(group.clientName)
-                ? `${group.clientName} - ${group.shopName}`
-                : group.clientName;
+  // =========================================================
+  // 6. الدالة الرئيسية لتحديث اللوحة والفلاتر (renderDashboard)
+  // =========================================================
+  window.renderDashboard = function () {
+    const selectedMonth = document.getElementById("dateFilter").value; // YYYY-MM
+    const selectedItem = document.getElementById("itemFilter").value;   // ALL or category
+    const selectedDuration = document.getElementById("durationFilter").value; // ALL or duration
 
-            const addPayStr = prompt(`إجمالي المديونية على (${displayTitle}): ${currentTotalDebt.toLocaleString('en-US')}\nأدخل المبلغ المراد سداده الآن:`);
-            if (!addPayStr) return;
+    // تحديث شارة الفترة الزمنية النشطة
+    const periodLabelEl = document.getElementById("activePeriodLabel");
+    if (periodMode === "all") {
+      periodLabelEl.textContent = "🌐 الفترة المعروضة: كل المدة (شامل منذ البداية)";
+    } else {
+      periodLabelEl.textContent = `📆 الفترة المعروضة: شهر ${selectedMonth || currentYearMonth}`;
+    }
 
-            const addPay = parseFloat(addPayStr);
-            if (isNaN(addPay) || addPay <= 0) {
-                alert('⚠️ يرجى إدخال مبلغ صحيح أكبر من الصفر.');
-                return;
-            }
-            if (addPay > currentTotalDebt) {
-                alert(`⚠️ المبلغ المدخل (${addPay}) أكبر من إجمالي المديونية المتبقية (${currentTotalDebt})!`);
-                return;
-            }
+    // حساب تكاليف FIFO لجميع الفواتير بالترتيب الزمني
+    const { invoiceCostMap, updatedBatchesState } = computeAllInvoicesFIFOCost();
 
-            // ترتيب فواتير هذا العميل من الأقدم إلى الأحدث لخصم الدفعة منها بالتسلسل
-            const sortedInvoices = [...group.invoices].sort((a, b) => {
-                const dateDiff = String(a.date || '').localeCompare(String(b.date || ''));
-                if (dateDiff !== 0) return dateDiff;
-                return (a.timestamp || 0) - (b.timestamp || 0);
-            });
+    let filteredSalesTotal = 0;
+    let filteredPaidTotal = 0;
+    let filteredCostTotal = 0;
+    let filteredSoldUnits = 0;
+    let filteredDebtTotal = 0;
+    let allTimeDebtTotal = 0;
 
-            let remainingPaymentToApply = addPay;
-            const updatedInvoicesForCloud = [];
-            const today = getTodayStr();
+    let matchingInvoicesCount = 0;
+    const debtClientsSet = new Set();
+    const companyStatsMap = {};
+    const detailedStatsMap = {};
+    const filteredInvoicesRows = [];
 
-            for (const inv of sortedInvoices) {
-                if (remainingPaymentToApply <= 0) break;
-                const invDebt = getInvoiceDebt(inv);
-                if (invDebt <= 0) continue;
+    invoicesList.forEach((inv, idx) => {
+      const invKey = inv.id || `inv_${idx}`;
+      const invMonth = normalizeDateToYYYYMM(inv.date || inv.createdAt);
+      const invTotal = Number(inv.total || 0);
+      const invPaid = Number(inv.paid ?? invTotal);
+      const invRemaining = Math.max(0, Number(inv.remaining ?? (invTotal - invPaid)));
 
-                const deductNow = +(Math.min(invDebt, remainingPaymentToApply)).toFixed(2);
-                inv.paid = +( (parseFloat(inv.paid) || 0) + deductNow ).toFixed(2);
-                inv.remaining = +( invDebt - deductNow ).toFixed(2);
-                remainingPaymentToApply = +( remainingPaymentToApply - deductNow ).toFixed(2);
+      // حساب إجمالي الديون التراكمي لكل المدة دائماً كمرجع
+      allTimeDebtTotal += invRemaining;
 
-                if (!Array.isArray(inv.paymentsHistory)) inv.paymentsHistory = [];
-                inv.paymentsHistory.push({
-                    date: today,
-                    amount: deductNow,
-                    employee: currentUser.username || 'admin'
-                });
+      // 1. التحقق من فلتر الشهر أو كل المدة
+      const matchesPeriod = (periodMode === "all") || (invMonth === selectedMonth);
+      if (!matchesPeriod) return;
 
-                inv.notes = (inv.notes || '') + `\n[سداد دفعة بقيمة ${deductNow} بواسطة ${currentUser.username || 'admin'}]`;
-                updatedInvoicesForCloud.push(inv);
-            }
+      const itemsWithCost = invoiceCostMap.get(invKey) || [];
 
-            // حفظ التحديثات فوراً في localStorage ليسمع في صفحة الفواتير (invoice.html)
-            localStorage.setItem('sales_records_offline', JSON.stringify(invoicesList));
+      // فلترة الأصناف داخل الفاتورة حسب الصنف والمدة المختارين
+      const matchedItems = itemsWithCost.filter(it => {
+        const matchCat = (selectedItem === "ALL") || (it.category === selectedItem);
+        const matchDur = (selectedDuration === "ALL") || (it.duration === selectedDuration);
+        return matchCat && matchDur;
+      });
 
-            renderDebtsTable();
-            renderDashboard();
+      // إذا كان المستخدم يفلتر بصنف معين أو مدة معينة ولم توجد في الفاتورة، نتخطاها
+      if ((selectedItem !== "ALL" || selectedDuration !== "ALL") && matchedItems.length === 0) {
+        return;
+      }
 
-            try {
-                if (window.db) {
-                    for (const inv of updatedInvoicesForCloud) {
-                        const cloudDocId = inv.firebaseId || inv.id;
-                        if (cloudDocId && !String(cloudDocId).startsWith('local_')) {
-                            await window.setDoc(window.doc(window.db, "sales_records", String(cloudDocId)), {
-                                paid: inv.paid,
-                                remaining: inv.remaining,
-                                paymentsHistory: inv.paymentsHistory,
-                                notes: inv.notes
-                            }, { merge: true });
-                        }
-                    }
-                }
-                alert('✅ تم تسجيل الدفعة وخصمها من مديونية العميل في المبيعات والفواتير بنجاح!');
-            } catch (e) {
-                alert('✅ تم تسجيل الدفعة محلياً وسيتم مزامنتها عند توفر الإنترنت.');
-            }
+      matchingInvoicesCount++;
+
+      // حساب نسبة الأصناف المطابقة من إجمالي الفاتورة في حال تم اختيار فلتر صنف محدد
+      let invoiceSalesContribution = 0;
+      let invoiceCostContribution = 0;
+      let invoiceUnitsContribution = 0;
+
+      if (selectedItem === "ALL" && selectedDuration === "ALL") {
+        invoiceSalesContribution = invTotal;
+        invoiceCostContribution = matchedItems.reduce((sum, i) => sum + i.cost, 0);
+        invoiceUnitsContribution = matchedItems.reduce((sum, i) => sum + i.qty, 0);
+      } else {
+        invoiceSalesContribution = matchedItems.reduce((sum, i) => sum + i.total, 0);
+        invoiceCostContribution = matchedItems.reduce((sum, i) => sum + i.cost, 0);
+        invoiceUnitsContribution = matchedItems.reduce((sum, i) => sum + i.qty, 0);
+      }
+
+      // نسبة المديونية والمدفوع للفاتورة
+      const ratio = invTotal > 0 ? (invoiceSalesContribution / invTotal) : 1;
+      const invoiceDebtContribution = invRemaining * ratio;
+      const invoicePaidContribution = invPaid * ratio;
+
+      filteredSalesTotal += invoiceSalesContribution;
+      filteredPaidTotal += invoicePaidContribution;
+      filteredCostTotal += invoiceCostContribution;
+      filteredSoldUnits += invoiceUnitsContribution;
+      filteredDebtTotal += invoiceDebtContribution;
+
+      if (invoiceDebtContribution > 0.01) {
+        debtClientsSet.add(inv.clientName || inv.shopName || `عميل #${idx + 1}`);
+      }
+
+      // تجميع بيانات الشركات والجدول التفصيلي
+      matchedItems.forEach(it => {
+        if (!companyStatsMap[it.category]) {
+          companyStatsMap[it.category] = { qty: 0, sales: 0, cost: 0 };
+        }
+        companyStatsMap[it.category].qty += it.qty;
+        companyStatsMap[it.category].sales += it.total;
+        companyStatsMap[it.category].cost += it.cost;
+
+        const detailKey = `${it.category}___${it.duration}`;
+        if (!detailedStatsMap[detailKey]) {
+          detailedStatsMap[detailKey] = {
+            category: it.category,
+            duration: it.duration,
+            soldQty: 0,
+            sales: 0,
+            cost: 0
+          };
+        }
+        detailedStatsMap[detailKey].soldQty += it.qty;
+        detailedStatsMap[detailKey].sales += it.total;
+        detailedStatsMap[detailKey].cost += it.cost;
+      });
+
+      filteredInvoicesRows.push({
+        date: inv.date || (inv.createdAt ? inv.createdAt.slice(0, 10) : "-"),
+        client: inv.clientName || inv.shopName || "عميل نقدي",
+        itemsText: matchedItems.map(i => `${i.category} (${i.duration}) × ${i.qty}`).join(" ، ") || inv.itemsSummary || "-",
+        total: invoiceSalesContribution,
+        paid: invoicePaidContribution,
+        remaining: invoiceDebtContribution,
+        notes: inv.notes || "-"
+      });
+    });
+
+    // إضافة المصروفات العامة الإضافية (إذا كان الفلتر على كل الأصناف)
+    const appliedExtraCost = (selectedItem === "ALL" && selectedDuration === "ALL") ? Number(extraGeneralCost || 0) : 0;
+    const finalTotalCost = filteredCostTotal + appliedExtraCost;
+    const finalNetProfit = filteredSalesTotal - finalTotalCost;
+    const profitMargin = filteredSalesTotal > 0 ? ((finalNetProfit / filteredSalesTotal) * 100).toFixed(1) : 0;
+
+    // 1. تحديث بطاقة إجمالي المبيعات
+    document.getElementById("totalSalesValue").textContent = `${filteredSalesTotal.toFixed(2)} ريال`;
+    document.getElementById("salesCountBadge").textContent = `${matchingInvoicesCount} فاتورة`;
+    document.getElementById("salesSubLabel").textContent = `المحصّل نقداً: ${filteredPaidTotal.toFixed(2)} ريال`;
+
+    // 2. تحديث بطاقة إجمالي التكلفة
+    document.getElementById("totalCostValue").textContent = `${finalTotalCost.toFixed(2)} ريال`;
+    document.getElementById("soldUnitsBadge").textContent = `${filteredSoldUnits} قطعة`;
+    document.getElementById("costSubLabel").textContent =
+      appliedExtraCost > 0
+        ? `تكلفة بضاعة: ${filteredCostTotal.toFixed(2)} + مصاريف: ${appliedExtraCost.toFixed(2)}`
+        : (periodMode === "all" ? "إجمالي التكلفة لكل المدة" : `إجمالي تكلفة شهر ${selectedMonth}`);
+
+    // 3. تحديث بطاقة صافي الأرباح
+    document.getElementById("totalProfitValue").textContent = `${finalNetProfit.toFixed(2)} ريال`;
+    document.getElementById("profitMarginBadge").textContent = `${profitMargin}%`;
+    document.getElementById("profitSubLabel").textContent =
+      periodMode === "all" ? "صافي الربح التراكمي لكل المدة" : `صافي ربح شهر ${selectedMonth}`;
+
+    // 4. تحديث بطاقة إجمالي مديونيات العملاء
+    document.getElementById("totalDebtValue").textContent = `${filteredDebtTotal.toFixed(2)} ريال`;
+    document.getElementById("debtClientsBadge").textContent = `${debtClientsSet.size} عميل`;
+    document.getElementById("debtSubLabel").textContent =
+      periodMode === "all"
+        ? "إجمالي المديونيات المتبقية عن كل المدة"
+        : `مديونية هذا الشهر (والتراكمي الكلي: ${allTimeDebtTotal.toFixed(2)} ريال)`;
+
+    // تحديث بطاقة المباع حسب الشركة
+    renderSoldCompanyBadges(companyStatsMap);
+
+    // تحديث جدول التقرير التفصيلي للأصناف
+    renderCompanySummaryTable(detailedStatsMap);
+
+    // تحديث جدول الفواتير ومديونيات العملاء
+    renderFilteredInvoicesTable(filteredInvoicesRows);
+
+    // تحديث جدول دفعات الشراء (FIFO) مع المتبقي من كل دفعة
+    renderBatchesTable(updatedBatchesState);
+  };
+
+  // =========================================================
+  // 7. دوال عرض الجداول والبطاقات الفرعية
+  // =========================================================
+  function renderSoldCompanyBadges(companyStatsMap) {
+    const container = document.getElementById("soldCompanyContainer");
+    const keys = Object.keys(companyStatsMap);
+    if (keys.length === 0) {
+      container.innerHTML = `<div style="color:var(--muted); font-weight:600;">لا توجد مبيعات مسجلة في هذه الفترة.</div>`;
+      return;
+    }
+    container.innerHTML = keys
+      .map(cat => {
+        const st = companyStatsMap[cat];
+        const profit = st.sales - st.cost;
+        return `
+          <div class="company-badge-item">
+            <div class="c-name">${cat}</div>
+            <div class="c-nums">المباع: <strong>${st.qty}</strong> قطعة</div>
+            <div class="c-nums">المبيعات: <strong>${st.sales.toFixed(2)}</strong> ريال</div>
+            <div class="c-nums" style="color:var(--success);">الربح: <strong>${profit.toFixed(2)}</strong> ريال</div>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  function getAvailableStockCount(category, duration) {
+    // حساب المتاح من الشرائح الممسوحة أو المخزون المسجل
+    const scannedAvailable = simsList.filter(s => {
+      const sCat = s.category || s.company || "";
+      const sDur = s.duration || "";
+      const isSold = s.status === "sold" || s.sold === true;
+      return sCat === category && (duration === "غير محدد" || sDur === duration) && !isSold;
+    }).length;
+
+    const invKey = `${category}_${duration}`;
+    const manualStock = Number(stockInventory[invKey] || stockInventory[category] || 0);
+    const offset = Number(stockOffsets[invKey] || 0);
+    return Math.max(0, scannedAvailable + manualStock + offset);
+  }
+
+  function renderCompanySummaryTable(detailedStatsMap) {
+    const tbody = document.getElementById("companySummaryBody");
+    const rows = Object.values(detailedStatsMap);
+    if (rows.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted);">لا توجد بيانات مطابقة للفلتر المحدد</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows
+      .map(r => {
+        const profit = r.sales - r.cost;
+        const available = getAvailableStockCount(r.category, r.duration);
+        return `
+          <tr>
+            <td><strong>${r.category}</strong></td>
+            <td>${r.duration}</td>
+            <td><span class="badge badge-blue">${available}</span></td>
+            <td><strong>${r.soldQty}</strong></td>
+            <td>${r.sales.toFixed(2)} ريال</td>
+            <td>${r.cost.toFixed(2)} ريال</td>
+            <td style="color:${profit >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:800;">
+              ${profit.toFixed(2)} ريال
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
+  }
+
+  function renderFilteredInvoicesTable(rows) {
+    const tbody = document.getElementById("filteredInvoicesBody");
+    if (rows.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted);">لا توجد فواتير في هذه الفترة</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows
+      .map(r => `
+        <tr>
+          <td>${r.date}</td>
+          <td><strong>${r.client}</strong></td>
+          <td>${r.itemsText}</td>
+          <td>${r.total.toFixed(2)} ريال</td>
+          <td style="color:var(--success); font-weight:700;">${r.paid.toFixed(2)} ريال</td>
+          <td>
+            <span class="badge ${r.remaining > 0.01 ? 'badge-red' : 'badge-green'}">
+              ${r.remaining.toFixed(2)} ريال
+            </span>
+          </td>
+          <td>${r.notes}</td>
+        </tr>
+      `)
+      .join("");
+  }
+
+  // =========================================================
+  // 8. دوال التحكم في الفلتر الزمني (كل المدة / بالشهر)
+  // =========================================================
+  window.setPeriodMode = function (mode) {
+    periodMode = mode;
+    const btnAll = document.getElementById("btnAllTime");
+    const btnMonth = document.getElementById("btnByMonth");
+    const monthPickerBox = document.getElementById("monthPickerContainer");
+
+    if (mode === "all") {
+      btnAll.classList.add("active");
+      btnMonth.classList.remove("active");
+      monthPickerBox.style.display = "none";
+    } else {
+      btnMonth.classList.add("active");
+      btnAll.classList.remove("active");
+      monthPickerBox.style.display = "flex";
+      if (!document.getElementById("dateFilter").value) {
+        document.getElementById("dateFilter").value = currentYearMonth;
+      }
+    }
+    renderDashboard();
+  };
+
+  window.resetFilters = function () {
+    document.getElementById("itemFilter").value = "ALL";
+    document.getElementById("durationFilter").value = "ALL";
+    document.getElementById("dateFilter").value = currentYearMonth;
+    setPeriodMode("all");
+  };
+
+  // =========================================================
+  // 9. دوال إدارة دفعات التكلفة (FIFO) والمصاريف العامة
+  // =========================================================
+  window.toggleCostPanel = function () {
+    const panel = document.getElementById("costPanel");
+    panel.classList.toggle("show");
+  };
+
+  window.calcBatchTotalFromUnit = function () {
+    const qty = Number(document.getElementById("batchQty").value || 0);
+    const unit = Number(document.getElementById("batchUnitCost").value || 0);
+    if (qty > 0 && unit >= 0) {
+      document.getElementById("batchTotalCost").value = (qty * unit).toFixed(2);
+    }
+  };
+
+  window.calcBatchUnitFromTotal = function () {
+    const qty = Number(document.getElementById("batchQty").value || 0);
+    const total = Number(document.getElementById("batchTotalCost").value || 0);
+    if (qty > 0 && total >= 0) {
+      document.getElementById("batchUnitCost").value = (total / qty).toFixed(2);
+    }
+  };
+
+  window.saveCostBatch = async function () {
+    const category = document.getElementById("batchItemSelect").value;
+    const qty = Number(document.getElementById("batchQty").value || 0);
+    const unitCost = Number(document.getElementById("batchUnitCost").value || 0);
+    const totalCost = Number(document.getElementById("batchTotalCost").value || (qty * unitCost));
+    const date = document.getElementById("batchDate").value || todayDateStr;
+    const editId = document.getElementById("editBatchId").value;
+
+    if (!category || qty <= 0 || unitCost < 0) {
+      alert("يرجى إدخال الصنف والكمية وتكلفة الحبة بشكل صحيح.");
+      return;
+    }
+
+    if (editId) {
+      const index = costBatches.findIndex(b => String(b.id) === String(editId));
+      if (index !== -1) {
+        costBatches[index] = {
+          ...costBatches[index],
+          category,
+          qty,
+          unitCost,
+          totalCost,
+          date
         };
+      }
+    } else {
+      costBatches.push({
+        id: "batch_" + Date.now(),
+        category,
+        qty,
+        unitCost,
+        totalCost,
+        date
+      });
+    }
 
-        function populateBatchItemSelect() {
-            const select = document.getElementById('batchItemSelect');
-            const currentVal = select.value;
-            let html = '';
-            categoriesList.forEach(c => {
-                durationsList.forEach(d => {
-                    const invKey = `${c} (${d})`;
-                    if (!deletedStockItems.includes(invKey)) {
-                        const key = `${c}_${d}`;
-                        html += `<option value="${key}" data-label="${invKey}">${invKey}</option>`;
-                    }
-                });
-            });
-            select.innerHTML = html;
-            if (currentVal && [...select.options].some(o => o.value === currentVal)) {
-                select.value = currentVal;
-            }
+    // تحديث آخر سعر تكلفة معروف للصنف كمرجع احتياطي
+    itemCosts[category] = unitCost;
+
+    cancelBatchEdit();
+    await syncCostsToCloud();
+    renderDashboard();
+  };
+
+  window.editCostBatch = function (batchId) {
+    const batch = costBatches.find(b => String(b.id) === String(batchId));
+    if (!batch) return;
+    document.getElementById("editBatchId").value = batch.id;
+    document.getElementById("batchItemSelect").value = batch.category;
+    document.getElementById("batchQty").value = batch.qty;
+    document.getElementById("batchUnitCost").value = batch.unitCost;
+    document.getElementById("batchTotalCost").value = batch.totalCost || (batch.qty * batch.unitCost).toFixed(2);
+    document.getElementById("batchDate").value = batch.date || todayDateStr;
+    document.getElementById("saveBatchBtn").textContent = "💾 تحديث الدفعة";
+    document.getElementById("cancelBatchBtn").style.display = "inline-flex";
+  };
+
+  window.cancelBatchEdit = function () {
+    document.getElementById("editBatchId").value = "";
+    document.getElementById("batchQty").value = "";
+    document.getElementById("batchUnitCost").value = "";
+    document.getElementById("batchTotalCost").value = "";
+    document.getElementById("batchDate").value = todayDateStr;
+    document.getElementById("saveBatchBtn").textContent = "💾 حفظ الدفعة";
+    document.getElementById("cancelBatchBtn").style.display = "none";
+  };
+
+  window.deleteCostBatch = async function (batchId) {
+    if (!confirm("هل أنت متأكد من حذف دفعة التكلفة هذه؟")) return;
+    costBatches = costBatches.filter(b => String(b.id) !== String(batchId));
+    await syncCostsToCloud();
+    renderDashboard();
+  };
+
+  window.saveExtraGeneralCost = async function () {
+    extraGeneralCost = Number(document.getElementById("extraGeneralCostInput").value || 0);
+    await syncCostsToCloud();
+    renderDashboard();
+    alert("تم حفظ المصروفات العامة بنجاح.");
+  };
+
+  window.renderBatchesTable = function (updatedBatchesState = []) {
+    const tbody = document.getElementById("batchesTableBody");
+    if (!Array.isArray(costBatches) || costBatches.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted);">لم يتم تسجيل دفعات شراء بعد</td></tr>`;
+      return;
+    }
+
+    const remMap = new Map();
+    updatedBatchesState.forEach(b => remMap.set(String(b.id), b.remainingQty));
+
+    const sorted = [...costBatches].sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+    tbody.innerHTML = sorted
+      .map(b => {
+        const rem = remMap.has(String(b.id)) ? remMap.get(String(b.id)) : b.qty;
+        return `
+          <tr>
+            <td>${b.date || "-"}</td>
+            <td><strong>${b.category}</strong></td>
+            <td>${b.qty}</td>
+            <td>
+              <span class="badge ${rem > 0 ? 'badge-green' : 'badge-red'}">
+                ${rem} متبقي
+              </span>
+            </td>
+            <td>${Number(b.unitCost || 0).toFixed(2)} ريال</td>
+            <td>${Number(b.totalCost || (b.qty * b.unitCost)).toFixed(2)} ريال</td>
+            <td>
+              <button type="button" class="btn btn-outline" style="padding:4px 8px; font-size:12px;" onclick="editCostBatch('${b.id}')">✏️ تعديل</button>
+              <button type="button" class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteCostBatch('${b.id}')">🗑️ حذف</button>
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
+  };
+
+  // =========================================================
+  // 10. تشغيل اللوحة والربط اللحظي مع Firebase
+  // =========================================================
+  async function initSalesDashboard() {
+    loadFromLocalStorage();
+    populateSelectOptions();
+    renderDashboard();
+
+    if (!db) {
+      document.getElementById("syncStatusBadge").textContent = "📂 وضع محلي (LocalStorage)";
+      return;
+    }
+
+    try {
+      // 1. الاستماع لإعدادات النظام والدفعات
+      onSnapshot(doc(db, "settings", "app_config"), snap => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (Array.isArray(data.categoriesList)) categoriesList = data.categoriesList;
+          else if (Array.isArray(data.customItems)) categoriesList = data.customItems;
+          if (Array.isArray(data.durationsList)) durationsList = data.durationsList;
+          if (data.itemCosts) itemCosts = data.itemCosts;
+          if (Array.isArray(data.costBatches)) costBatches = data.costBatches;
+          if (typeof data.extraGeneralCost === "number") extraGeneralCost = data.extraGeneralCost;
+          if (data.stockInventory) stockInventory = data.stockInventory;
+          if (data.stockOffsets) stockOffsets = data.stockOffsets;
+          if (Array.isArray(data.deletedStockItems)) deletedStockItems = data.deletedStockItems;
+
+          saveConfigToLocal();
+          populateSelectOptions();
+          renderDashboard();
         }
-
-        function onBatchQtyOrUnitChange() {
-            const qty = parseFloat(document.getElementById('batchQty').value);
-            const unitCost = parseFloat(document.getElementById('batchUnitCost').value);
-            const totalInput = document.getElementById('batchTotalCost');
-            if (!isNaN(qty) && qty > 0 && !isNaN(unitCost) && unitCost >= 0) {
-                totalInput.value = +(qty * unitCost).toFixed(2);
-            } else {
-                totalInput.value = '';
-            }
-        }
-
-        function onBatchTotalChange() {
-            const qty = parseFloat(document.getElementById('batchQty').value);
-            const totalCost = parseFloat(document.getElementById('batchTotalCost').value);
-            const unitInput = document.getElementById('batchUnitCost');
-            if (!isNaN(qty) && qty > 0 && !isNaN(totalCost) && totalCost >= 0) {
-                unitInput.value = +(totalCost / qty).toFixed(2);
-            }
-        }
-
-        async function syncCostsToCloud() {
-            const appConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
-            appConfig.costBatches = costBatches;
-            appConfig.itemCosts = itemCosts;
-            appConfig.extraGeneralCost = extraGeneralCost;
-            appConfig.configUpdatedAt = Date.now();
-            localStorage.setItem('app_config', JSON.stringify(appConfig));
-
-            try {
-                if (window.db && window.setDoc) {
-                    await window.setDoc(window.doc(window.db, "settings", "app_config"), {
-                        costBatches: costBatches,
-                        itemCosts: itemCosts,
-                        extraGeneralCost: extraGeneralCost,
-                        configUpdatedAt: appConfig.configUpdatedAt
-                    }, { merge: true });
-                }
-            } catch (e) {
-                console.error("خطأ في حفظ التكلفة سحابياً:", e);
-            }
-        }
-
-        window.saveCostBatch = async function() {
-            const editId = document.getElementById('editBatchId').value;
-            const select = document.getElementById('batchItemSelect');
-            const key = select.value;
-            const label = select.options[select.selectedIndex]?.getAttribute('data-label') || key.replace('_', ' ');
-            const qty = parseFloat(document.getElementById('batchQty').value);
-            const unitCost = parseFloat(document.getElementById('batchUnitCost').value);
-            const batchDate = document.getElementById('batchDate').value || getTodayStr();
-
-            if (!key || isNaN(qty) || qty <= 0 || isNaN(unitCost) || unitCost < 0) {
-                alert('⚠️ يرجى إدخال كمية صحيحة وتكلفة صحيحة للحبة.');
-                return;
-            }
-
-            const btn = document.getElementById('addBatchBtn');
-            btn.disabled = true;
-            btn.textContent = '⏳...';
-
-            if (editId) {
-                const idx = costBatches.findIndex(b => b.id === editId);
-                if (idx !== -1) {
-                    costBatches[idx] = {
-                        ...costBatches[idx],
-                        key: key,
-                        label: label,
-                        qty: qty,
-                        unitCost: unitCost,
-                        totalCost: +(qty * unitCost).toFixed(2),
-                        date: batchDate
-                    };
-                }
-            } else {
-                const newBatch = {
-                    id: 'batch_' + Date.now(),
-                    key: key,
-                    label: label,
-                    qty: qty,
-                    unitCost: unitCost,
-                    totalCost: +(qty * unitCost).toFixed(2),
-                    date: batchDate,
-                    timestamp: Date.now()
-                };
-                costBatches.push(newBatch);
-            }
-
-            itemCosts[key] = unitCost;
-            await syncCostsToCloud();
-            cancelBatchEdit();
-
-            btn.disabled = false;
-            renderBatchesTable();
-            renderDashboard();
-        };
-
-        window.editCostBatch = function(batchId) {
-            const b = costBatches.find(item => item.id === batchId);
-            if (!b) return;
-
-            document.getElementById('editBatchId').value = b.id;
-            const select = document.getElementById('batchItemSelect');
-            if ([...select.options].some(o => o.value === b.key)) {
-                select.value = b.key;
-            }
-            document.getElementById('batchQty').value = b.qty;
-            document.getElementById('batchUnitCost').value = b.unitCost;
-            document.getElementById('batchTotalCost').value = b.totalCost !== undefined ? b.totalCost : +(b.qty * b.unitCost).toFixed(2);
-            document.getElementById('batchDate').value = b.date || getTodayStr();
-
-            document.getElementById('costFormTitle').textContent = '✏️ تعديل';
-            document.getElementById('addBatchBtn').textContent = '💾 حفظ التعديل';
-            document.getElementById('cancelBatchEditBtn').style.display = 'block';
-            document.getElementById('costPanel').scrollIntoView({ behavior: 'smooth' });
-        };
-
-        window.cancelBatchEdit = function() {
-            document.getElementById('editBatchId').value = '';
-            document.getElementById('batchQty').value = '';
-            document.getElementById('batchUnitCost').value = '';
-            document.getElementById('batchTotalCost').value = '';
-            document.getElementById('batchDate').value = getTodayStr();
-            document.getElementById('costFormTitle').textContent = '📦 تسجيل';
-            document.getElementById('addBatchBtn').textContent = '➕ إضافة';
-            document.getElementById('cancelBatchEditBtn').style.display = 'none';
-        };
-
-        window.deleteCostBatch = async function(batchId) {
-            if (!confirm('هل أنت متأكد من حذف هذه الدفعة؟')) return;
-            costBatches = costBatches.filter(b => b.id !== batchId);
-            if (document.getElementById('editBatchId').value === batchId) {
-                cancelBatchEdit();
-            }
-            await syncCostsToCloud();
-            renderBatchesTable();
-            renderDashboard();
-        };
-
-        window.saveExtraGeneralCost = async function() {
-            const extraVal = parseFloat(document.getElementById('extraGeneralCostInput').value);
-            extraGeneralCost = (!isNaN(extraVal) && extraVal >= 0) ? extraVal : 0;
-            await syncCostsToCloud();
-            renderDashboard();
-            alert('✅ تم الحفظ بنجاح.');
-        };
-
-        function renderBatchesTable() {
-            const tbody = document.getElementById('batchesTableBody');
-
-            if (!Array.isArray(costBatches) || costBatches.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="padding:12px; color:#64748b; font-weight:bold;">لا توجد دفعات تكلفة مسجلة حالياً.</td></tr>`;
-                return;
-            }
-
-            const sorted = [...costBatches].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-            tbody.innerHTML = sorted.map(b => {
-                const total = b.totalCost !== undefined ? b.totalCost : (b.qty * b.unitCost);
-                return `
-                    <tr>
-                        <td style="font-weight:800; color:#1e3a8a;">${b.label || b.key.replace('_', ' ')}</td>
-                        <td style="font-weight:700;">${b.qty}</td>
-                        <td style="color:#b45309; font-weight:700;">${b.unitCost}</td>
-                        <td style="color:#15803d; font-weight:800;">${total.toLocaleString('en-US')}</td>
-                        <td>${b.date || '-'}</td>
-                        <td>
-                            <div class="batch-actions">
-                                <button type="button" class="btn-edit-batch" onclick="editCostBatch('${b.id}')" title="تعديل">✏️</button>
-                                <button type="button" class="btn-del-batch" onclick="deleteCostBatch('${b.id}')" title="حذف">🗑️</button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function parseCompanyAndDuration(rawStr, explicitDur) {
-            const s = String(rawStr || '').trim();
-            let dur = explicitDur ? String(explicitDur).trim() : '';
-
-            const parenMatch = s.match(/\((\d+)\)/);
-            if (!dur && parenMatch) {
-                dur = parenMatch[1];
-            } else if (!dur) {
-                const numMatch = s.match(/ (30|60|90|180|365) /);
-                if (numMatch) dur = numMatch[1];
-            }
-
-            const cleanName = s.replace(/\(\d+\)/g, '').replace(/ (30|60|90) /g, '').trim();
-            const lower = cleanName.toLowerCase();
-
-            let company = cleanName || 'Mobily';
-            if (lower.includes('mobily') || lower.includes('موبايلي')) company = 'Mobily';
-            else if (lower.includes('stc') || lower.includes('اس تي سي') || lower.includes('إس تي سي') || lower.includes('سوا')) company = 'STC';
-            else if (lower.includes('zain') || lower.includes('زين')) company = 'Zain';
-            else if (lower.includes('redbull') || lower.includes('red bull') || lower.includes('ريد بل') || lower.includes('ريدبل')) company = 'Redbull';
-            else {
-                for (const cat of categoriesList) {
-                    if (lower === cat.toLowerCase() || lower.includes(cat.toLowerCase())) {
-                        company = cat;
-                        break;
-                    }
-                }
-            }
-
-            if (!dur || dur === '-' || dur === 'غير محدد') {
-                dur = (company === 'Redbull') ? '30' : '60';
-            }
-
-            return { company, duration: dur };
-        }
-
-        function extractInvoiceItems(inv) {
-            const extracted = [];
-
-            if (Array.isArray(inv.cartItems) && inv.cartItems.length > 0) {
-                inv.cartItems.forEach(it => {
-                    const rawCat = it.item || it.category || it.company || it.name || '';
-                    const { company, duration } = parseCompanyAndDuration(rawCat, it.duration || it.dur);
-                    const qty = parseFloat(it.qty ?? it.quantity ?? it.count ?? 0) || 0;
-                    const price = parseFloat(it.price ?? 0) || 0;
-                    const total = parseFloat(it.total ?? (qty * price) ?? 0) || 0;
-                    if (company || qty > 0) {
-                        extracted.push({ company, duration, qty, total });
-                    }
-                });
-                return extracted;
-            }
-
-            const altArray = inv.items || inv.products;
-            if (Array.isArray(altArray) && altArray.length > 0) {
-                altArray.forEach(it => {
-                    const rawCat = it.item || it.category || it.company || it.name || '';
-                    const { company, duration } = parseCompanyAndDuration(rawCat, it.duration || it.dur);
-                    const qty = parseFloat(it.qty ?? it.quantity ?? it.count ?? 0) || 0;
-                    const price = parseFloat(it.price ?? 0) || 0;
-                    const total = parseFloat(it.total ?? (qty * price) ?? 0) || 0;
-                    if (company || qty > 0) {
-                        extracted.push({ company, duration, qty, total });
-                    }
-                });
-                return extracted;
-            }
-
-            const rawCat = inv.item || inv.category || inv.company || inv.simType || '';
-            const { company, duration } = parseCompanyAndDuration(rawCat, inv.duration);
-            const qty = parseFloat(inv.qty ?? inv.quantity ?? inv.count ?? inv.totalQty ?? 0) || 0;
-            const total = parseFloat(inv.total ?? inv.totalAmount ?? 0) || 0;
-            if (company || qty > 0) {
-                extracted.push({ company, duration, qty, total });
-            }
-
-            return extracted;
-        }
-
-        function getInvoiceDebt(inv) {
-            if (inv.remaining !== undefined && inv.remaining !== null && inv.remaining !== '') {
-                return Math.max(0, parseFloat(inv.remaining) || 0);
-            }
-            if (inv.remainingAmount !== undefined && inv.remainingAmount !== null && inv.remainingAmount !== '') {
-                return Math.max(0, parseFloat(inv.remainingAmount) || 0);
-            }
-            if (inv.debt !== undefined && inv.debt !== null && inv.debt !== '') {
-                return Math.max(0, parseFloat(inv.debt) || 0);
-            }
-            const total = parseFloat(inv.total ?? inv.totalAmount ?? 0) || 0;
-            if (inv.paid !== undefined && inv.paid !== null && inv.paid !== '') {
-                const paid = parseFloat(inv.paid) || 0;
-                return Math.max(0, total - paid);
-            }
-            return 0;
-        }
-
-        function populateFilterDropdown() {
-            const select = document.getElementById('itemFilter');
-            const currentVal = select.value || '';
-            let html = `
-                <option value="">اختر</option>
-                <option value="ALL">الكل</option>
-            `;
-            categoriesList.forEach(c => {
-                durationsList.forEach(d => {
-                    const invKey = `${c} (${d})`;
-                    if (!deletedStockItems.includes(invKey)) {
-                        const key = `${c}_${d}`;
-                        html += `<option value="${key}">${invKey}</option>`;
-                    }
-                });
-            });
-            select.innerHTML = html;
-            if ([...select.options].some(o => o.value === currentVal)) {
-                select.value = currentVal;
-            }
-        }
-
-        window.resetFilters = function() {
-            document.getElementById('itemFilter').value = 'ALL';
-            const dateInput = document.getElementById('dateFilter');
-            dateInput.value = '';
-            document.getElementById('dateDisplayText').textContent = '📅 حدد التاريخ';
-            renderDashboard();
-        };
-
-        function consumeCostFromBatches(queuesMap, fallbackCostMap, key, soldQty) {
-            const queue = queuesMap[key] || [];
-            let remainingToCover = soldQty;
-            let totalCostForSale = 0;
-
-            while (remainingToCover > 0 && queue.length > 0) {
-                const currentBatch = queue[0];
-                if (currentBatch.remainingQty <= 0) {
-                    queue.shift();
-                    continue;
-                }
-                const take = Math.min(remainingToCover, currentBatch.remainingQty);
-                totalCostForSale += take * currentBatch.unitCost;
-                currentBatch.remainingQty -= take;
-                remainingToCover -= take;
-                if (currentBatch.remainingQty <= 0) {
-                    queue.shift();
-                }
-            }
-
-            if (remainingToCover > 0) {
-                const lastKnownUnitCost = fallbackCostMap[key] || 0;
-                totalCostForSale += remainingToCover * lastKnownUnitCost;
-            }
-
-            return totalCostForSale;
-        }
-
-        window.renderDashboard = function() {
-            const selectedItemKey = document.getElementById('itemFilter').value;
-            const selectedMonth = document.getElementById('dateFilter').value;
-            const isAllItems = (selectedItemKey === 'ALL');
-            const isSpecificItem = selectedItemKey && !isAllItems;
-
-            const allScannedMap = {};
-            const allSoldMap = {};
-            const filteredScannedMap = {};
-            const filteredSoldMap = {};
-            const filteredRevenueMap = {};
-            const filteredSoldCostMap = {};
-            const filteredBatchesCostMap = {};
-
-            const batchQueuesMap = {};
-            const fallbackCostMap = {};
-
-            categoriesList.forEach(c => {
-                durationsList.forEach(d => {
-                    const key = `${c}_${d}`;
-                    allScannedMap[key] = 0;
-                    allSoldMap[key] = 0;
-                    filteredScannedMap[key] = 0;
-                    filteredSoldMap[key] = 0;
-                    filteredRevenueMap[key] = 0;
-                    filteredSoldCostMap[key] = 0;
-                    filteredBatchesCostMap[key] = 0;
-                    batchQueuesMap[key] = [];
-                    fallbackCostMap[key] = parseFloat(itemCosts[key]) || 0;
-                });
-            });
-
-            const sortedBatches = [...costBatches].sort((a, b) => {
-                const dateDiff = String(a.date || '').localeCompare(String(b.date || ''));
-                if (dateDiff !== 0) return dateDiff;
-                return (a.timestamp || 0) - (b.timestamp || 0);
-            });
-
-            sortedBatches.forEach(b => {
-                if (!batchQueuesMap[b.key]) batchQueuesMap[b.key] = [];
-                const q = parseFloat(b.qty) || 0;
-                const u = parseFloat(b.unitCost) || 0;
-                const bTotal = b.totalCost !== undefined ? parseFloat(b.totalCost) : (q * u);
-                if (q > 0) {
-                    batchQueuesMap[b.key].push({ remainingQty: q, unitCost: u });
-                    fallbackCostMap[b.key] = u;
-                }
-                const bMonth = (b.date || '').slice(0, 7);
-                if (!selectedMonth || bMonth === selectedMonth) {
-                    filteredBatchesCostMap[b.key] = (filteredBatchesCostMap[b.key] || 0) + bTotal;
-                }
-            });
-
-            // 1. حساب الشرائح الممسوحة
-            simsList.forEach(sim => {
-                const { company, duration } = parseCompanyAndDuration(sim.category || sim.company || '', sim.duration);
-                const key = `${company}_${duration}`;
-                allScannedMap[key] = (allScannedMap[key] || 0) + 1;
-
-                const simMonth = (sim.date || '').slice(0, 7);
-                if (!selectedMonth || simMonth === selectedMonth) {
-                    filteredScannedMap[key] = (filteredScannedMap[key] || 0) + 1;
-                }
-            });
-
-            // 2. حساب المبيعات والمديونيات وتكلفة المباع
-            let totalDebtsSum = 0;
-            const chronologicalInvoices = [...invoicesList].sort((a, b) => {
-                const dateDiff = String(a.date || '').localeCompare(String(b.date || ''));
-                if (dateDiff !== 0) return dateDiff;
-                return (a.timestamp || 0) - (b.timestamp || 0);
-            });
-
-            chronologicalInvoices.forEach(inv => {
-                const items = extractInvoiceItems(inv);
-                const invMonth = (inv.date || '').slice(0, 7);
-                const matchesMonth = !selectedMonth || invMonth === selectedMonth;
-                const matchesItem = !isSpecificItem || items.some(it => `${it.company}_${it.duration}` === selectedItemKey);
-
-                if (matchesMonth && matchesItem) {
-                    totalDebtsSum += getInvoiceDebt(inv);
-                }
-
-                items.forEach(it => {
-                    const key = `${it.company}_${it.duration}`;
-                    allSoldMap[key] = (allSoldMap[key] || 0) + it.qty;
-
-                    const saleCost = consumeCostFromBatches(batchQueuesMap, fallbackCostMap, key, it.qty);
-
-                    if (matchesMonth) {
-                        filteredSoldMap[key] = (filteredSoldMap[key] || 0) + it.qty;
-                        filteredRevenueMap[key] = (filteredRevenueMap[key] || 0) + it.total;
-                        filteredSoldCostMap[key] = (filteredSoldCostMap[key] || 0) + saleCost;
-                    }
-                });
-            });
-
-            let activeKeys = [];
-            categoriesList.forEach(c => {
-                durationsList.forEach(d => {
-                    const invKey = `${c} (${d})`;
-                    const key = `${c}_${d}`;
-                    if (!deletedStockItems.includes(invKey)) {
-                        activeKeys.push({ company: c, duration: d, key: key, invKey: invKey });
-                    }
-                });
-            });
-
-            if (isSpecificItem) {
-                activeKeys = activeKeys.filter(item => item.key === selectedItemKey);
-            }
-
-            let totalSalesSum = 0;
-            let totalSoldCostSum = 0;
-            let totalBatchesPurchaseSum = 0;
-
-            activeKeys.forEach(item => {
-                totalSalesSum += (filteredRevenueMap[item.key] || 0);
-                totalSoldCostSum += (filteredSoldCostMap[item.key] || 0);
-                totalBatchesPurchaseSum += (filteredBatchesCostMap[item.key] || 0);
-            });
-
-            const appliedExtraCost = (!isSpecificItem && !selectedMonth) ? (parseFloat(extraGeneralCost) || 0) : 0;
-            const displayedTotalCost = +( (totalBatchesPurchaseSum > 0 ? totalBatchesPurchaseSum : totalSoldCostSum) + appliedExtraCost ).toFixed(2);
-            const totalProfitSum = +(totalSalesSum - (totalSoldCostSum + appliedExtraCost)).toFixed(2);
-
-            document.getElementById('totalSalesValue').textContent = totalSalesSum.toLocaleString('en-US');
-            document.getElementById('totalCostValue').textContent = displayedTotalCost.toLocaleString('en-US');
-            document.getElementById('totalProfitValue').textContent = totalProfitSum.toLocaleString('en-US');
-            document.getElementById('totalDebtValue').textContent = totalDebtsSum.toLocaleString('en-US');
-
-            const statsTableCard = document.getElementById('statsTableCard');
-            if (!selectedItemKey && !selectedMonth) {
-                statsTableCard.style.display = 'none';
-                return;
-            }
-
-            statsTableCard.style.display = 'block';
-            const summaryBody = document.getElementById('companySummaryBody');
-            summaryBody.innerHTML = activeKeys.map(item => {
-                const baseAuto = (allScannedMap[item.key] || 0) - (allSoldMap[item.key] || 0);
-                const offset = (stockOffsets && stockOffsets[item.invKey] !== undefined) ? parseFloat(stockOffsets[item.invKey]) : 0;
-                const availableStock = Math.max(0, baseAuto + offset);
-
-                const scanned = filteredScannedMap[item.key] || 0;
-                const sold = filteredSoldMap[item.key] || 0;
-                const rev = filteredRevenueMap[item.key] || 0;
-                const cost = filteredSoldCostMap[item.key] || 0;
-                const itemProfit = +(rev - cost).toFixed(2);
-
-                return `
-                    <tr>
-                        <td style="font-weight:800; color:#1e3a8a;">${item.company}</td>
-                        <td style="font-weight:700; color:#b45309;">${item.duration}</td>
-                        <td style="font-weight:700;">${availableStock}</td>
-                        <td>${scanned}</td>
-                        <td style="font-weight:800; color:#2563eb;">${sold}</td>
-                        <td style="font-weight:700; color:#15803d;">${rev.toLocaleString('en-US')}</td>
-                        <td style="font-weight:800; color:${itemProfit >= 0 ? '#1d4ed8' : '#dc2626'};">${itemProfit.toLocaleString('en-US')}</td>
-                    </tr>
-                `;
-            }).join('');
-        };
-
-        function loadLocalState() {
-            const localConfig = JSON.parse(localStorage.getItem('app_config') || 'null');
-            if (localConfig) {
-                categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
-                durationsList = localConfig.durationsList || durationsList;
-                stockOffsets = localConfig.stockOffsets || {};
-                deletedStockItems = localConfig.deletedStockItems || [];
-                itemCosts = localConfig.itemCosts || {};
-                costBatches = Array.isArray(localConfig.costBatches) ? localConfig.costBatches : [];
-                extraGeneralCost = localConfig.extraGeneralCost || 0;
-            }
-
-            const localSims = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
-            if (Array.isArray(localSims)) simsList = localSims;
-
-            const localInvoices = JSON.parse(
-                localStorage.getItem('sales_records_offline') ||
-                localStorage.getItem('sales_records') ||
-                '[]'
-            );
-            if (Array.isArray(localInvoices)) invoicesList = localInvoices;
-        }
-
-        window.initSalesDashboard = async function() {
-            loadLocalState();
-            populateFilterDropdown();
-            populateBatchItemSelect();
-            renderBatchesTable();
-            renderDebtsTable();
-            renderDashboard();
-
-            try {
-                if (window.db) {
-                    const configSnap = await window.getDoc(window.doc(window.db, "settings", "app_config"));
-                    if (configSnap.exists()) {
-                        const cData = configSnap.data();
-                        categoriesList = cData.categoriesList || cData.customItems || categoriesList;
-                        durationsList = cData.durationsList || durationsList;
-                        stockOffsets = cData.stockOffsets || stockOffsets;
-                        deletedStockItems = cData.deletedStockItems || deletedStockItems;
-                        itemCosts = cData.itemCosts || itemCosts;
-                        if (Array.isArray(cData.costBatches)) costBatches = cData.costBatches;
-                        extraGeneralCost = cData.extraGeneralCost !== undefined ? cData.extraGeneralCost : extraGeneralCost;
-
-                        const mergedConfig = {
-                            ...JSON.parse(localStorage.getItem('app_config') || '{}'),
-                            categoriesList,
-                            durationsList,
-                            stockOffsets,
-                            deletedStockItems,
-                            itemCosts,
-                            costBatches,
-                            extraGeneralCost
-                        };
-                        localStorage.setItem('app_config', JSON.stringify(mergedConfig));
-                    }
-
-                    const simsSnap = await window.getDocs(window.collection(window.db, "scanned_sims"));
-                    simsList = [];
-                    simsSnap.forEach(d => simsList.push(d.data()));
-                    localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
-
-                    const recordsSnap = await window.getDocs(window.collection(window.db, "sales_records"));
-                    invoicesList = [];
-                    recordsSnap.forEach(docSnap => {
-                        invoicesList.push({ id: docSnap.id, firebaseId: docSnap.id, ...docSnap.data() });
-                    });
-                    localStorage.setItem('sales_records_offline', JSON.stringify(invoicesList));
-                }
-            } catch (e) {
-                console.log("وضع الأوفلاين مفعل:", e);
-            }
-
-            populateFilterDropdown();
-            populateBatchItemSelect();
-            renderBatchesTable();
-            renderDebtsTable();
-            renderDashboard();
-        };
-
-        window.addEventListener('storage', () => {
-            loadLocalState();
-            populateFilterDropdown();
-            populateBatchItemSelect();
-            renderBatchesTable();
-            renderDebtsTable();
-            renderDashboard();
-        });
-
-        window.addEventListener('DOMContentLoaded', () => {
-            loadLocalState();
-            populateFilterDropdown();
-            populateBatchItemSelect();
-            renderBatchesTable();
-            renderDebtsTable();
-            renderDashboard();
-        });
-    </script>
+      });
+
+      // 2. الاستماع لسجل الفواتير والمبيعات
+      onSnapshot(collection(db, "sales_records"), snap => {
+        invoicesList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        localStorage.setItem("sales_records_offline", JSON.stringify(invoicesList));
+        populateSelectOptions();
+        renderDashboard();
+        document.getElementById("syncStatusBadge").textContent = "✅ متصل ومزامن سحابياً";
+      });
+
+      // 3. الاستماع للشرائح الممسوحة
+      onSnapshot(collection(db, "scanned_sims"), snap => {
+        simsList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        localStorage.setItem("scanned_sims_offline", JSON.stringify(simsList));
+        populateSelectOptions();
+        renderDashboard();
+      });
+    } catch (err) {
+      console.error("تعذر الاتصال اللحظي بقاعدة البيانات:", err);
+      document.getElementById("syncStatusBadge").textContent = "⚠️ يعمل بالبيانات المحلية";
+    }
+  }
+
+  initSalesDashboard();
+</script>
 </body>
 </html>
