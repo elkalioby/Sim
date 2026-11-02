@@ -12,418 +12,176 @@
       --success: #16a34a;
       --danger: #dc2626;
       --warning: #d97706;
-      --purple: #7c3aed;
       --bg: #f1f5f9;
       --card-bg: #ffffff;
       --text: #0f172a;
       --muted: #64748b;
       --border: #e2e8f0;
     }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 14px; line-height: 1.6; }
+    .container { max-width: 1200px; margin: 0 auto; }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Cairo', sans-serif;
-    }
-
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      padding: 15px;
-      line-height: 1.6;
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    /* شريط التنقل العلوي */
     .top-nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 18px;
-      background: var(--card-bg);
-      padding: 12px 16px;
-      border-radius: 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      align-items: center;
-      justify-content: space-between;
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;
+      background: var(--card-bg); padding: 12px 16px; border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05); align-items: center; justify-content: space-between;
     }
-
-    .top-nav .nav-links {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
+    .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
     .btn {
-      border: none;
-      padding: 9px 16px;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      border: none; padding: 9px 15px; border-radius: 10px; font-weight: 700;
+      font-size: 14px; cursor: pointer; transition: 0.2s; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 6px;
     }
-
     .btn-primary { background: var(--primary-light); color: #fff; }
-    .btn-primary:hover { background: var(--primary); }
     .btn-success { background: var(--success); color: #fff; }
-    .btn-success:hover { opacity: 0.92; }
     .btn-warning { background: var(--warning); color: #fff; }
     .btn-danger { background: var(--danger); color: #fff; }
-    .btn-outline {
-      background: #f8fafc;
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-    .btn-outline:hover { background: #e2e8f0; }
+    .btn-outline { background: #f8fafc; color: var(--text); border: 1px solid var(--border); }
 
     .main-card {
-      background: var(--card-bg);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      margin-bottom: 20px;
+      background: var(--card-bg); border-radius: 16px; padding: 18px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px;
     }
-
     .page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 18px;
-      padding-bottom: 12px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; margin-bottom: 16px; padding-bottom: 12px;
       border-bottom: 2px solid var(--bg);
     }
-
-    .page-header h1 {
-      font-size: 22px;
-      color: var(--primary);
-      font-weight: 800;
-    }
-
+    .page-header h1 { font-size: 20px; color: var(--primary); font-weight: 800; }
     .sync-badge {
-      font-size: 13px;
-      padding: 5px 12px;
-      border-radius: 20px;
-      background: #dcfce7;
-      color: #166534;
-      font-weight: 700;
+      font-size: 13px; padding: 4px 12px; border-radius: 20px;
+      background: #dcfce7; color: #166534; font-weight: 700;
     }
 
-    /* صندوق الفلاتر */
     .filter-box {
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 20px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 14px;
-      align-items: end;
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 14px;
+      padding: 15px; margin-bottom: 18px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px; align-items: end;
     }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .form-group label {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--muted);
-    }
-
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 13px; font-weight: 700; color: var(--muted); }
     .form-control {
-      padding: 10px 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      background: #fff;
-      color: var(--text);
-      outline: none;
+      padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 10px;
+      font-size: 14px; font-weight: 600; background: #fff; color: var(--text); outline: none;
     }
-
-    .form-control:focus {
-      border-color: var(--primary-light);
-      box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
-    }
-
-    .period-toggle-group {
-      display: flex;
-      gap: 8px;
-    }
-
+    .period-toggle-group { display: flex; gap: 6px; }
     .period-btn {
-      flex: 1;
-      padding: 10px;
-      border-radius: 10px;
-      border: 2px solid var(--border);
-      background: #fff;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-      text-align: center;
-      transition: 0.2s;
+      flex: 1; padding: 9px; border-radius: 10px; border: 2px solid var(--border);
+      background: #fff; font-weight: 700; font-size: 13px; cursor: pointer; text-align: center;
     }
+    .period-btn.active { border-color: var(--primary-light); background: #eff6ff; color: var(--primary); }
 
-    .period-btn.active {
-      border-color: var(--primary-light);
-      background: #eff6ff;
-      color: var(--primary);
-    }
-
-    /* شبكة الإحصائيات العلوية (المربعات الأربعة) */
     .top-stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-      gap: 16px;
-      margin-bottom: 22px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px; margin-bottom: 20px;
     }
-
     .stat-card {
-      background: #fff;
-      border-radius: 14px;
-      padding: 18px;
-      border: 1px solid var(--border);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-      position: relative;
-      overflow: hidden;
+      background: #fff; border-radius: 14px; padding: 16px;
+      border: 1px solid var(--border); position: relative; overflow: hidden;
     }
-
     .stat-card::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 6px;
-      height: 100%;
+      content: ""; position: absolute; top: 0; right: 0; width: 6px; height: 100%;
     }
-
     .stat-card.sales::before { background: var(--primary-light); }
     .stat-card.cost::before { background: var(--warning); }
     .stat-card.profit::before { background: var(--success); }
     .stat-card.debt::before { background: var(--danger); }
 
     .stat-title {
-      font-size: 14px;
-      color: var(--muted);
-      font-weight: 700;
-      margin-bottom: 6px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      font-size: 14px; color: var(--muted); font-weight: 700;
+      margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;
     }
-
-    .stat-value {
-      font-size: 26px;
-      font-weight: 800;
-      margin-bottom: 4px;
-    }
-
+    .stat-value { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
     .stat-card.sales .stat-value { color: var(--primary); }
     .stat-card.cost .stat-value { color: var(--warning); }
     .stat-card.profit .stat-value { color: var(--success); }
     .stat-card.debt .stat-value { color: var(--danger); }
+    .stat-sub { font-size: 12px; color: var(--muted); font-weight: 600; }
 
-    .stat-sub {
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 600;
-    }
-
-    /* لوحة إدارة التكلفة (FIFO) */
     .cost-panel {
-      display: none;
-      background: #fffbeb;
-      border: 2px solid #fde68a;
-      border-radius: 14px;
-      padding: 18px;
-      margin-bottom: 22px;
+      display: none; background: #fffbeb; border: 2px solid #fde68a;
+      border-radius: 14px; padding: 16px; margin-bottom: 20px;
     }
-
-    .cost-panel.show {
-      display: block;
-    }
-
+    .cost-panel.show { display: block; }
     .cost-panel h3 {
-      color: #92400e;
-      margin-bottom: 14px;
-      font-size: 17px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      color: #92400e; margin-bottom: 12px; font-size: 16px;
+      display: flex; justify-content: space-between; align-items: center;
     }
-
     .cost-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 12px;
-      align-items: end;
-      margin-bottom: 16px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px; align-items: end; margin-bottom: 14px;
     }
 
-    /* بطاقة المباع حسب الشركة */
-    .sold-company-card {
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 20px;
+    .sold-company-card, .table-card {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 14px; padding: 15px; margin-bottom: 18px;
     }
-
-    .sold-company-card h3 {
-      font-size: 16px;
-      color: var(--primary);
-      margin-bottom: 12px;
+    .sold-company-card h3, .table-card h3 {
+      font-size: 16px; color: var(--primary); margin-bottom: 12px;
     }
-
     .company-badges {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px;
     }
-
     .company-badge-item {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      background: #f8fafc; border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 3px;
     }
-
-    .company-badge-item .c-name {
-      font-weight: 800;
-      color: var(--text);
-      font-size: 15px;
-    }
-
-    .company-badge-item .c-nums {
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 600;
-    }
-
-    /* الجداول */
-    .table-card {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-
-    .table-card h3 {
-      font-size: 17px;
-      color: var(--primary);
-      margin-bottom: 12px;
-    }
-
-    .table-wrap {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 650px;
-    }
-
-    th, td {
-      padding: 11px 12px;
-      text-align: right;
-      border-bottom: 1px solid var(--border);
-      font-size: 14px;
-    }
-
-    th {
-      background: #f8fafc;
-      color: var(--primary);
-      font-weight: 800;
-    }
-
-    tr:hover td {
-      background: #f1f5f9;
-    }
-
-    .badge {
-      padding: 3px 9px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    th, td { padding: 10px; text-align: right; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+    th { background: #f8fafc; color: var(--primary); font-weight: 800; }
+    .badge { padding: 3px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; }
     .badge-green { background: #dcfce7; color: #166534; }
     .badge-red { background: #fee2e2; color: #991b1b; }
     .badge-blue { background: #dbeafe; color: #1e40af; }
-
-    @media (max-width: 600px) {
-      .stat-value { font-size: 22px; }
-      .page-header h1 { font-size: 18px; }
-    }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <!-- شريط التنقل -->
   <nav class="top-nav">
     <div class="nav-links">
       <a href="index.html" id="homeTabBtn" class="btn btn-outline">🏠 الرئيسية</a>
-      <a href="invoices.html" id="invoiceTabBtn" class="btn btn-outline">🧾 الفواتير والمبيعات</a>
+      <a href="invoices.html" id="invoiceTabBtn" class="btn btn-outline">🧾 الفواتير</a>
       <a href="sales.html" id="salesTabBtn" class="btn btn-primary">📊 الأرباح والتقارير</a>
     </div>
     <div style="display:flex; gap:8px; align-items:center;">
       <span id="syncStatusBadge" class="sync-badge">جاري التحميل...</span>
-      <button type="button" class="btn btn-warning" onclick="toggleCostPanel()">⚙️ إدارة دفعات التكلفة والمصاريف</button>
+      <button type="button" class="btn btn-warning" onclick="toggleCostPanel()">⚙️ إدارة التكلفة والمصاريف</button>
     </div>
   </nav>
 
   <div class="main-card">
     <div class="page-header">
-      <h1>📊 لوحة تحليل المبيعات والأرباح ومديونيات العملاء</h1>
-      <span id="activePeriodLabel" class="badge badge-blue" style="font-size:14px; padding:6px 14px;">الفترة المعروضة: كل المدة</span>
+      <h1>📊 لوحة المبيعات والأرباح ومديونيات العملاء</h1>
+      <span id="activePeriodLabel" class="badge badge-blue" style="font-size:13px; padding:6px 12px;">الفترة: كل المدة</span>
     </div>
 
-    <!-- لوحة إدارة التكلفة (تظهر وتختفي بالزر) -->
+    <!-- لوحة إدارة دفعات التكلفة -->
     <div id="costPanel" class="cost-panel">
       <h3>
         <span>📦 تسجيل دفعات شراء البضاعة (نظام FIFO التلقائي)</span>
         <button type="button" class="btn btn-outline" onclick="toggleCostPanel()">✖ إغلاق</button>
       </h3>
-
       <input type="hidden" id="editBatchId" value="" />
-
       <div class="cost-grid">
         <div class="form-group">
           <label>الصنف / الشركة</label>
           <select id="batchItemSelect" class="form-control"></select>
         </div>
         <div class="form-group">
-          <label>الكمية المشتراة</label>
-          <input type="number" id="batchQty" class="form-control" placeholder="مثال: 50" min="1" oninput="calcBatchTotalFromUnit()" />
+          <label>الكمية</label>
+          <input type="number" id="batchQty" class="form-control" placeholder="50" min="1" oninput="calcBatchTotalFromUnit()" />
         </div>
         <div class="form-group">
-          <label>تكلفة الحبة الواحدة (ريال)</label>
-          <input type="number" id="batchUnitCost" class="form-control" placeholder="مثال: 110" step="0.01" oninput="calcBatchTotalFromUnit()" />
+          <label>تكلفة الحبة (ريال)</label>
+          <input type="number" id="batchUnitCost" class="form-control" placeholder="110" step="0.01" oninput="calcBatchTotalFromUnit()" />
         </div>
         <div class="form-group">
-          <label>إجمالي تكلفة الدفعة (ريال)</label>
-          <input type="number" id="batchTotalCost" class="form-control" placeholder="يحسب تلقائياً" step="0.01" oninput="calcBatchUnitFromTotal()" />
+          <label>إجمالي الدفعة (ريال)</label>
+          <input type="number" id="batchTotalCost" class="form-control" step="0.01" oninput="calcBatchUnitFromTotal()" />
         </div>
         <div class="form-group">
           <label>تاريخ الشراء</label>
@@ -435,8 +193,7 @@
         </div>
       </div>
 
-      <!-- مصروفات عامة إضافية -->
-      <div style="border-top:1px dashed #f59e0b; padding-top:14px; margin-top:10px; margin-bottom:16px;">
+      <div style="border-top:1px dashed #f59e0b; padding-top:12px; margin-bottom:14px;">
         <div class="cost-grid" style="margin-bottom:0;">
           <div class="form-group">
             <label>مصروفات عامة إضافية (شحن / إيجار / أخرى)</label>
@@ -448,7 +205,6 @@
         </div>
       </div>
 
-      <!-- جدول سجل دفعات التكلفة -->
       <div class="table-wrap">
         <table>
           <thead>
@@ -456,9 +212,9 @@
               <th>التاريخ</th>
               <th>الصنف</th>
               <th>الكمية الأساسية</th>
-              <th>المتبقي بالدفعة</th>
+              <th>المتبقي</th>
               <th>تكلفة الحبة</th>
-              <th>إجمالي الدفعة</th>
+              <th>الإجمالي</th>
               <th>إجراءات</th>
             </tr>
           </thead>
@@ -467,7 +223,7 @@
       </div>
     </div>
 
-    <!-- صندوق الفلاتر (الشهر / كل المدة / الصنف / المدة) -->
+    <!-- صندوق الفلاتر (كل المدة / بالشهر) -->
     <div class="filter-box">
       <div class="form-group">
         <label>📅 نطاق التقرير الزمني</label>
@@ -478,7 +234,7 @@
       </div>
 
       <div class="form-group" id="monthPickerContainer" style="display:none;">
-        <label>اختر الشهر والسنة</label>
+        <label>اختر الشهر</label>
         <input type="month" id="dateFilter" class="form-control" onchange="renderDashboard()" />
       </div>
 
@@ -490,20 +246,19 @@
       </div>
 
       <div class="form-group">
-        <label>⏱️ فلتر مدة الاشتراك</label>
+        <label>⏱️ فلتر المدة</label>
         <select id="durationFilter" class="form-control" onchange="renderDashboard()">
           <option value="ALL">كل المدد</option>
         </select>
       </div>
 
       <div class="form-group">
-        <button type="button" class="btn btn-outline" onclick="resetFilters()" style="width:100%; justify-content:center;">🔄 إعادة ضبط الفلاتر</button>
+        <button type="button" class="btn btn-outline" onclick="resetFilters()" style="width:100%; justify-content:center;">🔄 إعادة ضبط</button>
       </div>
     </div>
 
-    <!-- المربعات الإحصائية الأربعة (تتأثر مباشرة بفلتر الشهر أو كل المدة) -->
+    <!-- المربعات الأربعة الرئيسية -->
     <div class="top-stats-grid">
-      <!-- 1. إجمالي المبيعات -->
       <div class="stat-card sales">
         <div class="stat-title">
           <span>💰 إجمالي المبيعات</span>
@@ -513,56 +268,53 @@
         <div id="salesSubLabel" class="stat-sub">المحصّل نقداً: 0.00 ريال</div>
       </div>
 
-      <!-- 2. إجمالي التكلفة -->
       <div class="stat-card cost">
         <div class="stat-title">
           <span>📦 إجمالي التكلفة</span>
           <span id="soldUnitsBadge" class="badge badge-blue">0 قطعة</span>
         </div>
         <div id="totalCostValue" class="stat-value">0.00 ريال</div>
-        <div id="costSubLabel" class="stat-sub">تكلفة البضاعة المباعة للفترة المحددة</div>
+        <div id="costSubLabel" class="stat-sub">تكلفة البضاعة المباعة للفترة</div>
       </div>
 
-      <!-- 3. صافي الأرباح -->
       <div class="stat-card profit">
         <div class="stat-title">
-          <span>📈 صافي الأرباح</span>
+          <span>📈 إجمالي الأرباح</span>
           <span id="profitMarginBadge" class="badge badge-green">0%</span>
         </div>
         <div id="totalProfitValue" class="stat-value">0.00 ريال</div>
-        <div id="profitSubLabel" class="stat-sub">المبيعات ناقص التكلفة للفترة المحددة</div>
+        <div id="profitSubLabel" class="stat-sub">صافي الربح للفترة المحددة</div>
       </div>
 
-      <!-- 4. إجمالي مديونيات العملاء -->
       <div class="stat-card debt">
         <div class="stat-title">
           <span>📒 إجمالي مديونيات العملاء</span>
           <span id="debtClientsBadge" class="badge badge-red">0 عميل</span>
         </div>
         <div id="totalDebtValue" class="stat-value">0.00 ريال</div>
-        <div id="debtSubLabel" class="stat-sub">المديونية التراكمية لكل المدة: 0.00 ريال</div>
+        <div id="debtSubLabel" class="stat-sub">المديونية الكلية لكل المدة: 0.00 ريال</div>
       </div>
     </div>
 
     <!-- ملخص المباع لكل شركة -->
     <div class="sold-company-card">
-      <h3>🏷️ ملخص القطع المباعة والمبيعات حسب الشركة (في الفترة المحددة)</h3>
+      <h3>🏷️ ملخص المبيعات والأرباح حسب الشركة</h3>
       <div id="soldCompanyContainer" class="company-badges"></div>
     </div>
 
-    <!-- جدول تفصيل الأصناف والأرباح -->
+    <!-- جدول الأصناف والأرباح -->
     <div class="table-card">
       <h3>📋 التقرير التفصيلي للأصناف والمخزون والأرباح</h3>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>الصنف / الشركة</th>
+              <th>الصنف</th>
               <th>المدة</th>
-              <th>المخزون المتاح حالياً</th>
-              <th>الكمية المباعة (بالفترة)</th>
+              <th>المخزون المتاح</th>
+              <th>الكمية المباعة</th>
               <th>إجمالي المبيعات</th>
-              <th>إجمالي التكلفة (FIFO)</th>
+              <th>إجمالي التكلفة</th>
               <th>صافي الربح</th>
             </tr>
           </thead>
@@ -571,15 +323,15 @@
       </div>
     </div>
 
-    <!-- جدول مديونيات العملاء والفواتير في الفترة المحددة -->
+    <!-- جدول الفواتير ومديونيات العملاء -->
     <div class="table-card">
-      <h3>👥 سجل مديونيات العملاء والفواتير (حسب الفلتر المحدد)</h3>
+      <h3>👥 سجل الفواتير ومديونيات العملاء (حسب الفلتر)</h3>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>التاريخ</th>
-              <th>اسم العميل / المحل</th>
+              <th>العميل / المحل</th>
               <th>الأصناف</th>
               <th>إجمالي الفاتورة</th>
               <th>المدفوع</th>
@@ -591,33 +343,23 @@
         </table>
       </div>
     </div>
-
   </div>
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
-    getFirestore,
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    setDoc,
-    onSnapshot
+    getFirestore, collection, doc, setDoc, onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // =========================================================
-  // 1. إعدادات Firebase (ضع مفاتيح مشروعك المعتادة هنا)
-  // =========================================================
-  const savedFirebaseConfig = JSON.parse(localStorage.getItem("firebase_config_override") || "null");
-  const firebaseConfig = savedFirebaseConfig || {
-    apiKey: "PUT_YOUR_FIREBASE_API_KEY_HERE",
+  const savedConfig = JSON.parse(localStorage.getItem("firebase_config_override") || "null");
+  const firebaseConfig = savedConfig || {
+    apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
     authDomain: "ahmed-hassan-bb80b.firebaseapp.com",
     projectId: "ahmed-hassan-bb80b",
     storageBucket: "ahmed-hassan-bb80b.appspot.com",
     messagingSenderId: "503682153846",
-    appId: "PUT_YOUR_FIREBASE_APP_ID_HERE"
+    appId: "1:503682153846:web:93b3a174ab31e351a04e57"
   };
 
   let db = null;
@@ -625,35 +367,28 @@
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
   } catch (err) {
-    console.warn("Firebase يعمل في الوضع المحلي مؤقتاً:", err);
+    console.warn("Firebase يعمل في الوضع المحلي:", err);
   }
 
-  // =========================================================
-  // 2. المتغيرات العامة للنظام
-  // =========================================================
   let periodMode = "all"; // 'all' = كل المدة | 'month' = بالشهر
   let invoicesList = [];
   let simsList = [];
   let categoriesList = ["STC", "موبايلي", "زين", "سلام", "راوتر 5G"];
   let durationsList = ["شهر", "3 شهور", "6 شهور", "سنة", "مفتوح"];
-  let itemCosts = {};         // تكلفة افتراضية لكل صنف عند عدم وجود دفعة
-  let costBatches = [];       // دفعات الشراء بنظام FIFO
-  let extraGeneralCost = 0;   // مصاريف عامة إضافية
+  let itemCosts = {};
+  let costBatches = [];
+  let extraGeneralCost = 0;
   let stockInventory = {};
   let stockOffsets = {};
   let deletedStockItems = [];
 
-  // ضبط الشهر الافتراضي على الشهر الحالي
   const now = new Date();
   const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const todayDateStr = `${ currentYearMonth }-${String(now.getDate()).padStart(2, "0")}`;
+  const todayDateStr = `${currentYearMonth}-${String(now.getDate()).padStart(2, "0")}`;
 
   document.getElementById("dateFilter").value = currentYearMonth;
   document.getElementById("batchDate").value = todayDateStr;
 
-  // =========================================================
-  // 3. تحميل البيانات من LocalStorage و Firebase
-  // =========================================================
   function loadFromLocalStorage() {
     try {
       const localConfig = JSON.parse(localStorage.getItem("app_config") || "{}");
@@ -673,138 +408,42 @@
       if (Array.isArray(localConfig.deletedStockItems)) deletedStockItems = localConfig.deletedStockItems;
 
       const localInvoices = JSON.parse(
-        localStorage.getItem("sales_records_offline") ||
-        localStorage.getItem("sales_records") ||
-        "[]"
+        localStorage.getItem("sales_records_offline") || localStorage.getItem("sales_records") || "[]"
       );
       if (Array.isArray(localInvoices)) invoicesList = localInvoices;
 
       const localSims = JSON.parse(
-        localStorage.getItem("scanned_sims_offline") ||
-        localStorage.getItem("scanned_sims") ||
-        "[]"
+        localStorage.getItem("scanned_sims_offline") || localStorage.getItem("scanned_sims") || "[]"
       );
       if (Array.isArray(localSims)) simsList = localSims;
     } catch (e) {
-      console.error("خطأ في قراءة التخزين المحلي:", e);
+      console.error(e);
     }
   }
 
   function saveConfigToLocal() {
-    const configObj = {
-      categoriesList,
-      customItems: categoriesList,
-      durationsList,
-      itemCosts,
-      costBatches,
-      extraGeneralCost,
-      stockInventory,
-      stockOffsets,
-      deletedStockItems
-    };
-    localStorage.setItem("app_config", JSON.stringify(configObj));
+    localStorage.setItem("app_config", JSON.stringify({
+      categoriesList, customItems: categoriesList, durationsList,
+      itemCosts, costBatches, extraGeneralCost,
+      stockInventory, stockOffsets, deletedStockItems
+    }));
   }
 
   async function syncCostsToCloud() {
     saveConfigToLocal();
     if (!db) return;
     try {
-      const badge = document.getElementById("syncStatusBadge");
-      badge.textContent = "⏳ جاري الحفظ سحابياً...";
-      await setDoc(
-        doc(db, "settings", "app_config"),
-        {
-          categoriesList,
-          customItems: categoriesList,
-          durationsList,
-          itemCosts,
-          costBatches,
-          extraGeneralCost,
-          stockInventory,
-          stockOffsets,
-          deletedStockItems,
-          updatedAt: new Date().toISOString()
-        },
-        { merge: true }
-      );
-      badge.textContent = "✅ متصل ومزامن سحابياً";
+      document.getElementById("syncStatusBadge").textContent = "⏳ جاري الحفظ...";
+      await setDoc(doc(db, "settings", "app_config"), {
+        categoriesList, customItems: categoriesList, durationsList,
+        itemCosts, costBatches, extraGeneralCost,
+        stockInventory, stockOffsets, deletedStockItems,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      document.getElementById("syncStatusBadge").textContent = "✅ متصل ومزامن سحابياً";
     } catch (err) {
-      console.error("خطأ في المزامنة السحابية:", err);
-      document.getElementById("syncStatusBadge").textContent = "⚠️ محفوظ محلياً فقط";
+      document.getElementById("syncStatusBadge").textContent = "⚠️ محفوظ محلياً";
     }
-  }
-
-  // =========================================================
-  // 4. تهيئة القوائم المنسدلة والفلاتر
-  // =========================================================
-  function populateSelectOptions() {
-    // جمع كافة الأصناف والمدد الموجودة في الإعدادات أو الفواتير أو الشرائح
-    const catSet = new Set(categoriesList);
-    const durSet = new Set(durationsList);
-
-    invoicesList.forEach(inv => {
-      const items = extractInvoiceItems(inv);
-      items.forEach(it => {
-        if (it.category) catSet.add(it.category);
-        if (it.duration) durSet.add(it.duration);
-      });
-    });
-
-    simsList.forEach(sim => {
-      if (sim.category || sim.company) catSet.add(sim.category || sim.company);
-      if (sim.duration) durSet.add(sim.duration);
-    });
-
-    const itemFilterEl = document.getElementById("itemFilter");
-    const currentItemVal = itemFilterEl.value || "ALL";
-    itemFilterEl.innerHTML = `<option value="ALL">كل الأصناف والشركات</option>`;
-    Array.from(catSet).forEach(cat => {
-      itemFilterEl.innerHTML += `<option value="${cat}">${cat}</option>`;
-    });
-    itemFilterEl.value = Array.from(catSet).includes(currentItemVal) ? currentItemVal : "ALL";
-
-    const durFilterEl = document.getElementById("durationFilter");
-    const currentDurVal = durFilterEl.value || "ALL";
-    durFilterEl.innerHTML = `<option value="ALL">كل المدد</option>`;
-    Array.from(durSet).forEach(dur => {
-      durFilterEl.innerHTML += `<option value="${dur}">${dur}</option>`;
-    });
-    durFilterEl.value = Array.from(durSet).includes(currentDurVal) ? currentDurVal : "ALL";
-
-    const batchSelectEl = document.getElementById("batchItemSelect");
-    const currentBatchItem = batchSelectEl.value;
-    batchSelectEl.innerHTML = "";
-    Array.from(catSet).forEach(cat => {
-      batchSelectEl.innerHTML += `<option value="${cat}">${cat}</option>`;
-    });
-    if (currentBatchItem && Array.from(catSet).includes(currentBatchItem)) {
-      batchSelectEl.value = currentBatchItem;
-    }
-
-    document.getElementById("extraGeneralCostInput").value = extraGeneralCost || 0;
-  }
-
-  // =========================================================
-  // 5. دوال استخراج الأصناف وحساب التكلفة بنظام FIFO
-  // =========================================================
-  function normalizeDateToYYYYMM(dateStr) {
-    if (!dateStr) return "";
-    const clean = String(dateStr).trim();
-    // إذا كان بصيغة YYYY-MM-DD أو YYYY/MM/DD
-    const matchISO = clean.match(/^(\d{4})[-/](\d{1,2})/);
-    if (matchISO) {
-      return `${matchISO[1]}-${String(matchISO[2]).padStart(2, "0")}`;
-    }
-    // إذا كان بصيغة DD-MM-YYYY أو DD/MM/YYYY
-    const matchDMY = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-    if (matchDMY) {
-      return `${matchDMY[3]}-${String(matchDMY[2]).padStart(2, "0")}`;
-    }
-    const parsed = new Date(clean);
-    if (!isNaN(parsed.getTime())) {
-      return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}`;
-    }
-    return "";
   }
 
   function extractInvoiceItems(inv) {
@@ -817,22 +456,18 @@
         total: Number(item.total || (Number(item.qty || 1) * Number(item.price || 0)))
       }));
     }
-    // في حال كانت الفاتورة تحتوي على صنف مباشر
     if (inv.category || inv.company || inv.itemName) {
       const qty = Number(inv.qty || inv.quantity || 1);
       const total = Number(inv.total || 0);
       return [{
         category: inv.category || inv.company || inv.itemName,
         duration: inv.duration || "غير محدد",
-        qty: qty,
-        price: qty > 0 ? total / qty : total,
-        total: total
+        qty, price: qty > 0 ? total / qty : total, total
       }];
     }
-    // محاولة استخراج من itemsSummary النصي إن وجد
     if (typeof inv.itemsSummary === "string" && inv.itemsSummary.trim() !== "") {
       return [{
-        category: inv.itemsSummary.split("-")[0].trim() || "مبيعات متنوعة",
+        category: inv.itemsSummary.split("-")[0].trim() || "مبيعات عامة",
         duration: "متنوع",
         qty: Number(inv.totalQty || 1),
         price: Number(inv.total || 0),
@@ -842,19 +477,60 @@
     return [];
   }
 
-  // محاكاة استهلاك الدفعات زمنياً (FIFO) من أقدم فاتورة لأحدث فاتورة
-  // لضمان أن تكلفة أي شهر هي التكلفة الفعلية للدفعة التي سُحبت منها البضاعة في ذلك الشهر
+  function populateSelectOptions() {
+    const catSet = new Set(categoriesList);
+    const durSet = new Set(durationsList);
+
+    invoicesList.forEach(inv => {
+      extractInvoiceItems(inv).forEach(it => {
+        if (it.category) catSet.add(it.category);
+        if (it.duration) durSet.add(it.duration);
+      });
+    });
+
+    simsList.forEach(sim => {
+      if (sim.category || sim.company) catSet.add(sim.category || sim.company);
+      if (sim.duration) durSet.add(sim.duration);
+    });
+
+    const itemFilterEl = document.getElementById("itemFilter");
+    const curItem = itemFilterEl.value || "ALL";
+    itemFilterEl.innerHTML = `<option value="ALL">كل الأصناف والشركات</option>`;
+    catSet.forEach(c => { itemFilterEl.innerHTML += `<option value="${c}">${c}</option>`; });
+    itemFilterEl.value = catSet.has(curItem) ? curItem : "ALL";
+
+    const durFilterEl = document.getElementById("durationFilter");
+    const curDur = durFilterEl.value || "ALL";
+    durFilterEl.innerHTML = `<option value="ALL">كل المدد</option>`;
+    durSet.forEach(d => { durFilterEl.innerHTML += `<option value="${d}">${d}</option>`; });
+    durFilterEl.value = durSet.has(curDur) ? curDur : "ALL";
+
+    const batchSelectEl = document.getElementById("batchItemSelect");
+    const curBatch = batchSelectEl.value;
+    batchSelectEl.innerHTML = "";
+    catSet.forEach(c => { batchSelectEl.innerHTML += `<option value="${c}">${c}</option>`; });
+    if (curBatch && catSet.has(curBatch)) batchSelectEl.value = curBatch;
+
+    document.getElementById("extraGeneralCostInput").value = extraGeneralCost || 0;
+  }
+
+  function normalizeDateToYYYYMM(dateStr) {
+    if (!dateStr) return "";
+    const clean = String(dateStr).trim();
+    const m1 = clean.match(/^(\d{4})[-/](\d{1,2})/);
+    if (m1) return `${m1[1]}-${String(m1[2]).padStart(2, "0")}`;
+    const m2 = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+    if (m2) return `${m2[3]}-${String(m2[2]).padStart(2, "0")}`;
+    const d = new Date(clean);
+    if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    return "";
+  }
+
   function computeAllInvoicesFIFOCost() {
-    // نسخ الدفعات وترتيبها من الأقدم للأحدث
     const workingBatches = costBatches
-      .map(b => ({
-        ...b,
-        remainingQty: Number(b.qty || 0),
-        unitCost: Number(b.unitCost || 0)
-      }))
+      .map(b => ({ ...b, remainingQty: Number(b.qty || 0), unitCost: Number(b.unitCost || 0) }))
       .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
 
-    // ترتيب الفواتير من الأقدم للأحدث
     const sortedInvoices = [...invoicesList].sort((a, b) =>
       String(a.date || a.createdAt || "").localeCompare(String(b.date || b.createdAt || ""))
     );
@@ -863,60 +539,44 @@
 
     function consumeFromFIFO(categoryName, neededQty) {
       let qtyToCover = Number(neededQty || 0);
-      let accumulatedCost = 0;
-
+      let cost = 0;
       for (const batch of workingBatches) {
         if (qtyToCover <= 0) break;
         if (batch.category === categoryName && batch.remainingQty > 0) {
           const taken = Math.min(batch.remainingQty, qtyToCover);
-          accumulatedCost += taken * batch.unitCost;
+          cost += taken * batch.unitCost;
           batch.remainingQty -= taken;
           qtyToCover -= taken;
         }
       }
-
-      // إذا زادت الكمية المباعة عن الدفعات المسجلة، نستخدم آخر تكلفة معروفة للصنف أو itemCosts
       if (qtyToCover > 0) {
-        const fallbackUnitCost = Number(itemCosts[categoryName] || 0);
-        accumulatedCost += qtyToCover * fallbackUnitCost;
+        cost += qtyToCover * Number(itemCosts[categoryName] || 0);
       }
-
-      return accumulatedCost;
+      return cost;
     }
 
     sortedInvoices.forEach((inv, idx) => {
       const invKey = inv.id || `inv_${idx}`;
-      const items = extractInvoiceItems(inv);
-      const itemBreakdowns = items.map(it => {
-        const cogs = consumeFromFIFO(it.category, it.qty);
-        return {
-          ...it,
-          cost: cogs
-        };
-      });
-      invoiceCostMap.set(invKey, itemBreakdowns);
+      const items = extractInvoiceItems(inv).map(it => ({
+        ...it,
+        cost: consumeFromFIFO(it.category, it.qty)
+      }));
+      invoiceCostMap.set(invKey, items);
     });
 
     return { invoiceCostMap, updatedBatchesState: workingBatches };
   }
 
-  // =========================================================
-  // 6. الدالة الرئيسية لتحديث اللوحة والفلاتر (renderDashboard)
-  // =========================================================
   window.renderDashboard = function () {
-    const selectedMonth = document.getElementById("dateFilter").value; // YYYY-MM
-    const selectedItem = document.getElementById("itemFilter").value;   // ALL or category
-    const selectedDuration = document.getElementById("durationFilter").value; // ALL or duration
+    const selectedMonth = document.getElementById("dateFilter").value;
+    const selectedItem = document.getElementById("itemFilter").value;
+    const selectedDuration = document.getElementById("durationFilter").value;
 
-    // تحديث شارة الفترة الزمنية النشطة
-    const periodLabelEl = document.getElementById("activePeriodLabel");
-    if (periodMode === "all") {
-      periodLabelEl.textContent = "🌐 الفترة المعروضة: كل المدة (شامل منذ البداية)";
-    } else {
-      periodLabelEl.textContent = `📆 الفترة المعروضة: شهر ${selectedMonth || currentYearMonth}`;
-    }
+    document.getElementById("activePeriodLabel").textContent =
+      periodMode === "all"
+        ? "🌐 الفترة المعروضة: كل المدة"
+        : `📆 الفترة المعروضة: شهر ${selectedMonth || currentYearMonth}`;
 
-    // حساب تكاليف FIFO لجميع الفواتير بالترتيب الزمني
     const { invoiceCostMap, updatedBatchesState } = computeAllInvoicesFIFOCost();
 
     let filteredSalesTotal = 0;
@@ -925,8 +585,8 @@
     let filteredSoldUnits = 0;
     let filteredDebtTotal = 0;
     let allTimeDebtTotal = 0;
-
     let matchingInvoicesCount = 0;
+
     const debtClientsSet = new Set();
     const companyStatsMap = {};
     const detailedStatsMap = {};
@@ -939,257 +599,182 @@
       const invPaid = Number(inv.paid ?? invTotal);
       const invRemaining = Math.max(0, Number(inv.remaining ?? (invTotal - invPaid)));
 
-      // حساب إجمالي الديون التراكمي لكل المدة دائماً كمرجع
       allTimeDebtTotal += invRemaining;
 
-      // 1. التحقق من فلتر الشهر أو كل المدة
       const matchesPeriod = (periodMode === "all") || (invMonth === selectedMonth);
       if (!matchesPeriod) return;
 
       const itemsWithCost = invoiceCostMap.get(invKey) || [];
-
-      // فلترة الأصناف داخل الفاتورة حسب الصنف والمدة المختارين
       const matchedItems = itemsWithCost.filter(it => {
-        const matchCat = (selectedItem === "ALL") || (it.category === selectedItem);
-        const matchDur = (selectedDuration === "ALL") || (it.duration === selectedDuration);
-        return matchCat && matchDur;
+        const mCat = (selectedItem === "ALL") || (it.category === selectedItem);
+        const mDur = (selectedDuration === "ALL") || (it.duration === selectedDuration);
+        return mCat && mDur;
       });
 
-      // إذا كان المستخدم يفلتر بصنف معين أو مدة معينة ولم توجد في الفاتورة، نتخطاها
-      if ((selectedItem !== "ALL" || selectedDuration !== "ALL") && matchedItems.length === 0) {
-        return;
-      }
+      if ((selectedItem !== "ALL" || selectedDuration !== "ALL") && matchedItems.length === 0) return;
 
       matchingInvoicesCount++;
 
-      // حساب نسبة الأصناف المطابقة من إجمالي الفاتورة في حال تم اختيار فلتر صنف محدد
-      let invoiceSalesContribution = 0;
-      let invoiceCostContribution = 0;
-      let invoiceUnitsContribution = 0;
+      let invSalesPart = (selectedItem === "ALL" && selectedDuration === "ALL")
+        ? invTotal
+        : matchedItems.reduce((s, i) => s + i.total, 0);
+      let invCostPart = matchedItems.reduce((s, i) => s + i.cost, 0);
+      let invUnitsPart = matchedItems.reduce((s, i) => s + i.qty, 0);
 
-      if (selectedItem === "ALL" && selectedDuration === "ALL") {
-        invoiceSalesContribution = invTotal;
-        invoiceCostContribution = matchedItems.reduce((sum, i) => sum + i.cost, 0);
-        invoiceUnitsContribution = matchedItems.reduce((sum, i) => sum + i.qty, 0);
-      } else {
-        invoiceSalesContribution = matchedItems.reduce((sum, i) => sum + i.total, 0);
-        invoiceCostContribution = matchedItems.reduce((sum, i) => sum + i.cost, 0);
-        invoiceUnitsContribution = matchedItems.reduce((sum, i) => sum + i.qty, 0);
-      }
+      const ratio = invTotal > 0 ? (invSalesPart / invTotal) : 1;
+      const invDebtPart = invRemaining * ratio;
+      const invPaidPart = invPaid * ratio;
 
-      // نسبة المديونية والمدفوع للفاتورة
-      const ratio = invTotal > 0 ? (invoiceSalesContribution / invTotal) : 1;
-      const invoiceDebtContribution = invRemaining * ratio;
-      const invoicePaidContribution = invPaid * ratio;
+      filteredSalesTotal += invSalesPart;
+      filteredPaidTotal += invPaidPart;
+      filteredCostTotal += invCostPart;
+      filteredSoldUnits += invUnitsPart;
+      filteredDebtTotal += invDebtPart;
 
-      filteredSalesTotal += invoiceSalesContribution;
-      filteredPaidTotal += invoicePaidContribution;
-      filteredCostTotal += invoiceCostContribution;
-      filteredSoldUnits += invoiceUnitsContribution;
-      filteredDebtTotal += invoiceDebtContribution;
-
-      if (invoiceDebtContribution > 0.01) {
+      if (invDebtPart > 0.01) {
         debtClientsSet.add(inv.clientName || inv.shopName || `عميل #${idx + 1}`);
       }
 
-      // تجميع بيانات الشركات والجدول التفصيلي
       matchedItems.forEach(it => {
-        if (!companyStatsMap[it.category]) {
-          companyStatsMap[it.category] = { qty: 0, sales: 0, cost: 0 };
-        }
+        if (!companyStatsMap[it.category]) companyStatsMap[it.category] = { qty: 0, sales: 0, cost: 0 };
         companyStatsMap[it.category].qty += it.qty;
         companyStatsMap[it.category].sales += it.total;
         companyStatsMap[it.category].cost += it.cost;
 
-        const detailKey = `${it.category}___${it.duration}`;
-        if (!detailedStatsMap[detailKey]) {
-          detailedStatsMap[detailKey] = {
-            category: it.category,
-            duration: it.duration,
-            soldQty: 0,
-            sales: 0,
-            cost: 0
-          };
+        const dKey = `${it.category}___${it.duration}`;
+        if (!detailedStatsMap[dKey]) {
+          detailedStatsMap[dKey] = { category: it.category, duration: it.duration, soldQty: 0, sales: 0, cost: 0 };
         }
-        detailedStatsMap[detailKey].soldQty += it.qty;
-        detailedStatsMap[detailKey].sales += it.total;
-        detailedStatsMap[detailKey].cost += it.cost;
+        detailedStatsMap[dKey].soldQty += it.qty;
+        detailedStatsMap[dKey].sales += it.total;
+        detailedStatsMap[dKey].cost += it.cost;
       });
 
       filteredInvoicesRows.push({
         date: inv.date || (inv.createdAt ? inv.createdAt.slice(0, 10) : "-"),
         client: inv.clientName || inv.shopName || "عميل نقدي",
         itemsText: matchedItems.map(i => `${i.category} (${i.duration}) × ${i.qty}`).join(" ، ") || inv.itemsSummary || "-",
-        total: invoiceSalesContribution,
-        paid: invoicePaidContribution,
-        remaining: invoiceDebtContribution,
+        total: invSalesPart,
+        paid: invPaidPart,
+        remaining: invDebtPart,
         notes: inv.notes || "-"
       });
     });
 
-    // إضافة المصروفات العامة الإضافية (إذا كان الفلتر على كل الأصناف)
-    const appliedExtraCost = (selectedItem === "ALL" && selectedDuration === "ALL") ? Number(extraGeneralCost || 0) : 0;
-    const finalTotalCost = filteredCostTotal + appliedExtraCost;
+    const appliedExtra = (selectedItem === "ALL" && selectedDuration === "ALL") ? Number(extraGeneralCost || 0) : 0;
+    const finalTotalCost = filteredCostTotal + appliedExtra;
     const finalNetProfit = filteredSalesTotal - finalTotalCost;
-    const profitMargin = filteredSalesTotal > 0 ? ((finalNetProfit / filteredSalesTotal) * 100).toFixed(1) : 0;
+    const margin = filteredSalesTotal > 0 ? ((finalNetProfit / filteredSalesTotal) * 100).toFixed(1) : 0;
 
-    // 1. تحديث بطاقة إجمالي المبيعات
     document.getElementById("totalSalesValue").textContent = `${filteredSalesTotal.toFixed(2)} ريال`;
     document.getElementById("salesCountBadge").textContent = `${matchingInvoicesCount} فاتورة`;
     document.getElementById("salesSubLabel").textContent = `المحصّل نقداً: ${filteredPaidTotal.toFixed(2)} ريال`;
 
-    // 2. تحديث بطاقة إجمالي التكلفة
     document.getElementById("totalCostValue").textContent = `${finalTotalCost.toFixed(2)} ريال`;
     document.getElementById("soldUnitsBadge").textContent = `${filteredSoldUnits} قطعة`;
     document.getElementById("costSubLabel").textContent =
-      appliedExtraCost > 0
-        ? `تكلفة بضاعة: ${filteredCostTotal.toFixed(2)} + مصاريف: ${appliedExtraCost.toFixed(2)}`
-        : (periodMode === "all" ? "إجمالي التكلفة لكل المدة" : `إجمالي تكلفة شهر ${selectedMonth}`);
+      periodMode === "all" ? "إجمالي التكلفة لكل المدة" : `إجمالي تكلفة شهر ${selectedMonth}`;
 
-    // 3. تحديث بطاقة صافي الأرباح
     document.getElementById("totalProfitValue").textContent = `${finalNetProfit.toFixed(2)} ريال`;
-    document.getElementById("profitMarginBadge").textContent = `${profitMargin}%`;
+    document.getElementById("profitMarginBadge").textContent = `${margin}%`;
     document.getElementById("profitSubLabel").textContent =
-      periodMode === "all" ? "صافي الربح التراكمي لكل المدة" : `صافي ربح شهر ${selectedMonth}`;
+      periodMode === "all" ? "صافي الربح لكل المدة" : `صافي ربح شهر ${selectedMonth}`;
 
-    // 4. تحديث بطاقة إجمالي مديونيات العملاء
     document.getElementById("totalDebtValue").textContent = `${filteredDebtTotal.toFixed(2)} ريال`;
     document.getElementById("debtClientsBadge").textContent = `${debtClientsSet.size} عميل`;
     document.getElementById("debtSubLabel").textContent =
       periodMode === "all"
-        ? "إجمالي المديونيات المتبقية عن كل المدة"
-        : `مديونية هذا الشهر (والتراكمي الكلي: ${allTimeDebtTotal.toFixed(2)} ريال)`;
+        ? "إجمالي مديونيات العملاء عن كل المدة"
+        : `مديونية الشهر (وإجمالي كل المدة: ${allTimeDebtTotal.toFixed(2)} ريال)`;
 
-    // تحديث بطاقة المباع حسب الشركة
     renderSoldCompanyBadges(companyStatsMap);
-
-    // تحديث جدول التقرير التفصيلي للأصناف
     renderCompanySummaryTable(detailedStatsMap);
-
-    // تحديث جدول الفواتير ومديونيات العملاء
     renderFilteredInvoicesTable(filteredInvoicesRows);
-
-    // تحديث جدول دفعات الشراء (FIFO) مع المتبقي من كل دفعة
     renderBatchesTable(updatedBatchesState);
   };
 
-  // =========================================================
-  // 7. دوال عرض الجداول والبطاقات الفرعية
-  // =========================================================
   function renderSoldCompanyBadges(companyStatsMap) {
     const container = document.getElementById("soldCompanyContainer");
     const keys = Object.keys(companyStatsMap);
-    if (keys.length === 0) {
-      container.innerHTML = `<div style="color:var(--muted); font-weight:600;">لا توجد مبيعات مسجلة في هذه الفترة.</div>`;
+    if (!keys.length) {
+      container.innerHTML = `<div style="color:var(--muted);">لا توجد مبيعات في هذه الفترة.</div>`;
       return;
     }
-    container.innerHTML = keys
-      .map(cat => {
-        const st = companyStatsMap[cat];
-        const profit = st.sales - st.cost;
-        return `
-          <div class="company-badge-item">
-            <div class="c-name">${cat}</div>
-            <div class="c-nums">المباع: <strong>${st.qty}</strong> قطعة</div>
-            <div class="c-nums">المبيعات: <strong>${st.sales.toFixed(2)}</strong> ريال</div>
-            <div class="c-nums" style="color:var(--success);">الربح: <strong>${profit.toFixed(2)}</strong> ريال</div>
-          </div>
-        `;
-      })
-      .join("");
+    container.innerHTML = keys.map(cat => {
+      const st = companyStatsMap[cat];
+      const profit = st.sales - st.cost;
+      return `
+        <div class="company-badge-item">
+          <strong>${cat}</strong>
+          <span>المباع: <b>${st.qty}</b> قطعة</span>
+          <span>المبيعات: <b>${st.sales.toFixed(2)}</b> ريال</span>
+          <span style="color:var(--success);">الربح: <b>${profit.toFixed(2)}</b> ريال</span>
+        </div>
+      `;
+    }).join("");
   }
 
   function getAvailableStockCount(category, duration) {
-    // حساب المتاح من الشرائح الممسوحة أو المخزون المسجل
-    const scannedAvailable = simsList.filter(s => {
+    const scannedAvail = simsList.filter(s => {
       const sCat = s.category || s.company || "";
       const sDur = s.duration || "";
       const isSold = s.status === "sold" || s.sold === true;
       return sCat === category && (duration === "غير محدد" || sDur === duration) && !isSold;
     }).length;
-
-    const invKey = `${category}_${duration}`;
-    const manualStock = Number(stockInventory[invKey] || stockInventory[category] || 0);
-    const offset = Number(stockOffsets[invKey] || 0);
-    return Math.max(0, scannedAvailable + manualStock + offset);
+    const key = `${category}_${duration}`;
+    const manual = Number(stockInventory[key] || stockInventory[category] || 0);
+    const offset = Number(stockOffsets[key] || 0);
+    return Math.max(0, scannedAvail + manual + offset);
   }
 
   function renderCompanySummaryTable(detailedStatsMap) {
     const tbody = document.getElementById("companySummaryBody");
     const rows = Object.values(detailedStatsMap);
-    if (rows.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted);">لا توجد بيانات مطابقة للفلتر المحدد</td></tr>`;
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted);">لا توجد بيانات مطابقة</td></tr>`;
       return;
     }
-
-    tbody.innerHTML = rows
-      .map(r => {
-        const profit = r.sales - r.cost;
-        const available = getAvailableStockCount(r.category, r.duration);
-        return `
-          <tr>
-            <td><strong>${r.category}</strong></td>
-            <td>${r.duration}</td>
-            <td><span class="badge badge-blue">${available}</span></td>
-            <td><strong>${r.soldQty}</strong></td>
-            <td>${r.sales.toFixed(2)} ريال</td>
-            <td>${r.cost.toFixed(2)} ريال</td>
-            <td style="color:${profit >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:800;">
-              ${profit.toFixed(2)} ريال
-            </td>
-          </tr>
-        `;
-      })
-      .join("");
+    tbody.innerHTML = rows.map(r => {
+      const profit = r.sales - r.cost;
+      const avail = getAvailableStockCount(r.category, r.duration);
+      return `
+        <tr>
+          <td><strong>${r.category}</strong></td>
+          <td>${r.duration}</td>
+          <td><span class="badge badge-blue">${avail}</span></td>
+          <td><strong>${r.soldQty}</strong></td>
+          <td>${r.sales.toFixed(2)} ريال</td>
+          <td>${r.cost.toFixed(2)} ريال</td>
+          <td style="color:${profit >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:800;">${profit.toFixed(2)} ريال</td>
+        </tr>
+      `;
+    }).join("");
   }
 
   function renderFilteredInvoicesTable(rows) {
     const tbody = document.getElementById("filteredInvoicesBody");
-    if (rows.length === 0) {
+    if (!rows.length) {
       tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted);">لا توجد فواتير في هذه الفترة</td></tr>`;
       return;
     }
-
-    tbody.innerHTML = rows
-      .map(r => `
-        <tr>
-          <td>${r.date}</td>
-          <td><strong>${r.client}</strong></td>
-          <td>${r.itemsText}</td>
-          <td>${r.total.toFixed(2)} ريال</td>
-          <td style="color:var(--success); font-weight:700;">${r.paid.toFixed(2)} ريال</td>
-          <td>
-            <span class="badge ${r.remaining > 0.01 ? 'badge-red' : 'badge-green'}">
-              ${r.remaining.toFixed(2)} ريال
-            </span>
-          </td>
-          <td>${r.notes}</td>
-        </tr>
-      `)
-      .join("");
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td>${r.date}</td>
+        <td><strong>${r.client}</strong></td>
+        <td>${r.itemsText}</td>
+        <td>${r.total.toFixed(2)} ريال</td>
+        <td style="color:var(--success); font-weight:700;">${r.paid.toFixed(2)} ريال</td>
+        <td><span class="badge ${r.remaining > 0.01 ? 'badge-red' : 'badge-green'}">${r.remaining.toFixed(2)} ريال</span></td>
+        <td>${r.notes}</td>
+      </tr>
+    `).join("");
   }
 
-  // =========================================================
-  // 8. دوال التحكم في الفلتر الزمني (كل المدة / بالشهر)
-  // =========================================================
   window.setPeriodMode = function (mode) {
     periodMode = mode;
-    const btnAll = document.getElementById("btnAllTime");
-    const btnMonth = document.getElementById("btnByMonth");
-    const monthPickerBox = document.getElementById("monthPickerContainer");
-
-    if (mode === "all") {
-      btnAll.classList.add("active");
-      btnMonth.classList.remove("active");
-      monthPickerBox.style.display = "none";
-    } else {
-      btnMonth.classList.add("active");
-      btnAll.classList.remove("active");
-      monthPickerBox.style.display = "flex";
-      if (!document.getElementById("dateFilter").value) {
-        document.getElementById("dateFilter").value = currentYearMonth;
-      }
-    }
+    document.getElementById("btnAllTime").classList.toggle("active", mode === "all");
+    document.getElementById("btnByMonth").classList.toggle("active", mode === "month");
+    document.getElementById("monthPickerContainer").style.display = mode === "month" ? "flex" : "none";
     renderDashboard();
   };
 
@@ -1200,28 +785,20 @@
     setPeriodMode("all");
   };
 
-  // =========================================================
-  // 9. دوال إدارة دفعات التكلفة (FIFO) والمصاريف العامة
-  // =========================================================
   window.toggleCostPanel = function () {
-    const panel = document.getElementById("costPanel");
-    panel.classList.toggle("show");
+    document.getElementById("costPanel").classList.toggle("show");
   };
 
   window.calcBatchTotalFromUnit = function () {
-    const qty = Number(document.getElementById("batchQty").value || 0);
-    const unit = Number(document.getElementById("batchUnitCost").value || 0);
-    if (qty > 0 && unit >= 0) {
-      document.getElementById("batchTotalCost").value = (qty * unit).toFixed(2);
-    }
+    const q = Number(document.getElementById("batchQty").value || 0);
+    const u = Number(document.getElementById("batchUnitCost").value || 0);
+    if (q > 0 && u >= 0) document.getElementById("batchTotalCost").value = (q * u).toFixed(2);
   };
 
   window.calcBatchUnitFromTotal = function () {
-    const qty = Number(document.getElementById("batchQty").value || 0);
-    const total = Number(document.getElementById("batchTotalCost").value || 0);
-    if (qty > 0 && total >= 0) {
-      document.getElementById("batchUnitCost").value = (total / qty).toFixed(2);
-    }
+    const q = Number(document.getElementById("batchQty").value || 0);
+    const t = Number(document.getElementById("batchTotalCost").value || 0);
+    if (q > 0 && t >= 0) document.getElementById("batchUnitCost").value = (t / q).toFixed(2);
   };
 
   window.saveCostBatch = async function () {
@@ -1238,46 +815,28 @@
     }
 
     if (editId) {
-      const index = costBatches.findIndex(b => String(b.id) === String(editId));
-      if (index !== -1) {
-        costBatches[index] = {
-          ...costBatches[index],
-          category,
-          qty,
-          unitCost,
-          totalCost,
-          date
-        };
-      }
+      const idx = costBatches.findIndex(b => String(b.id) === String(editId));
+      if (idx !== -1) costBatches[idx] = { ...costBatches[idx], category, qty, unitCost, totalCost, date };
     } else {
-      costBatches.push({
-        id: "batch_" + Date.now(),
-        category,
-        qty,
-        unitCost,
-        totalCost,
-        date
-      });
+      costBatches.push({ id: "batch_" + Date.now(), category, qty, unitCost, totalCost, date });
     }
 
-    // تحديث آخر سعر تكلفة معروف للصنف كمرجع احتياطي
     itemCosts[category] = unitCost;
-
     cancelBatchEdit();
     await syncCostsToCloud();
     renderDashboard();
   };
 
-  window.editCostBatch = function (batchId) {
-    const batch = costBatches.find(b => String(b.id) === String(batchId));
-    if (!batch) return;
-    document.getElementById("editBatchId").value = batch.id;
-    document.getElementById("batchItemSelect").value = batch.category;
-    document.getElementById("batchQty").value = batch.qty;
-    document.getElementById("batchUnitCost").value = batch.unitCost;
-    document.getElementById("batchTotalCost").value = batch.totalCost || (batch.qty * batch.unitCost).toFixed(2);
-    document.getElementById("batchDate").value = batch.date || todayDateStr;
-    document.getElementById("saveBatchBtn").textContent = "💾 تحديث الدفعة";
+  window.editCostBatch = function (id) {
+    const b = costBatches.find(x => String(x.id) === String(id));
+    if (!b) return;
+    document.getElementById("editBatchId").value = b.id;
+    document.getElementById("batchItemSelect").value = b.category;
+    document.getElementById("batchQty").value = b.qty;
+    document.getElementById("batchUnitCost").value = b.unitCost;
+    document.getElementById("batchTotalCost").value = b.totalCost || (b.qty * b.unitCost).toFixed(2);
+    document.getElementById("batchDate").value = b.date || todayDateStr;
+    document.getElementById("saveBatchBtn").textContent = "💾 تحديث";
     document.getElementById("cancelBatchBtn").style.display = "inline-flex";
   };
 
@@ -1291,9 +850,9 @@
     document.getElementById("cancelBatchBtn").style.display = "none";
   };
 
-  window.deleteCostBatch = async function (batchId) {
-    if (!confirm("هل أنت متأكد من حذف دفعة التكلفة هذه؟")) return;
-    costBatches = costBatches.filter(b => String(b.id) !== String(batchId));
+  window.deleteCostBatch = async function (id) {
+    if (!confirm("تأكيد حذف الدفعة؟")) return;
+    costBatches = costBatches.filter(b => String(b.id) !== String(id));
     await syncCostsToCloud();
     renderDashboard();
   };
@@ -1302,60 +861,45 @@
     extraGeneralCost = Number(document.getElementById("extraGeneralCostInput").value || 0);
     await syncCostsToCloud();
     renderDashboard();
-    alert("تم حفظ المصروفات العامة بنجاح.");
+    alert("تم حفظ المصروفات العامة.");
   };
 
   window.renderBatchesTable = function (updatedBatchesState = []) {
     const tbody = document.getElementById("batchesTableBody");
-    if (!Array.isArray(costBatches) || costBatches.length === 0) {
+    if (!costBatches.length) {
       tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted);">لم يتم تسجيل دفعات شراء بعد</td></tr>`;
       return;
     }
-
     const remMap = new Map();
     updatedBatchesState.forEach(b => remMap.set(String(b.id), b.remainingQty));
 
     const sorted = [...costBatches].sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
-    tbody.innerHTML = sorted
-      .map(b => {
-        const rem = remMap.has(String(b.id)) ? remMap.get(String(b.id)) : b.qty;
-        return `
-          <tr>
-            <td>${b.date || "-"}</td>
-            <td><strong>${b.category}</strong></td>
-            <td>${b.qty}</td>
-            <td>
-              <span class="badge ${rem > 0 ? 'badge-green' : 'badge-red'}">
-                ${rem} متبقي
-              </span>
-            </td>
-            <td>${Number(b.unitCost || 0).toFixed(2)} ريال</td>
-            <td>${Number(b.totalCost || (b.qty * b.unitCost)).toFixed(2)} ريال</td>
-            <td>
-              <button type="button" class="btn btn-outline" style="padding:4px 8px; font-size:12px;" onclick="editCostBatch('${b.id}')">✏️ تعديل</button>
-              <button type="button" class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteCostBatch('${b.id}')">🗑️ حذف</button>
-            </td>
-          </tr>
-        `;
-      })
-      .join("");
+    tbody.innerHTML = sorted.map(b => {
+      const rem = remMap.has(String(b.id)) ? remMap.get(String(b.id)) : b.qty;
+      return `
+        <tr>
+          <td>${b.date || "-"}</td>
+          <td><strong>${b.category}</strong></td>
+          <td>${b.qty}</td>
+          <td><span class="badge ${rem > 0 ? 'badge-green' : 'badge-red'}">${rem}</span></td>
+          <td>${Number(b.unitCost || 0).toFixed(2)} ريال</td>
+          <td>${Number(b.totalCost || (b.qty * b.unitCost)).toFixed(2)} ريال</td>
+          <td>
+            <button type="button" class="btn btn-outline" style="padding:4px 8px; font-size:12px;" onclick="editCostBatch('${b.id}')">✏️</button>
+            <button type="button" class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteCostBatch('${b.id}')">🗑️</button>
+          </td>
+        </tr>
+      `;
+    }).join("");
   };
 
-  // =========================================================
-  // 10. تشغيل اللوحة والربط اللحظي مع Firebase
-  // =========================================================
   async function initSalesDashboard() {
     loadFromLocalStorage();
     populateSelectOptions();
     renderDashboard();
 
-    if (!db) {
-      document.getElementById("syncStatusBadge").textContent = "📂 وضع محلي (LocalStorage)";
-      return;
-    }
-
+    if (!db) return;
     try {
-      // 1. الاستماع لإعدادات النظام والدفعات
       onSnapshot(doc(db, "settings", "app_config"), snap => {
         if (snap.exists()) {
           const data = snap.data();
@@ -1368,14 +912,12 @@
           if (data.stockInventory) stockInventory = data.stockInventory;
           if (data.stockOffsets) stockOffsets = data.stockOffsets;
           if (Array.isArray(data.deletedStockItems)) deletedStockItems = data.deletedStockItems;
-
           saveConfigToLocal();
           populateSelectOptions();
           renderDashboard();
         }
       });
 
-      // 2. الاستماع لسجل الفواتير والمبيعات
       onSnapshot(collection(db, "sales_records"), snap => {
         invoicesList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         localStorage.setItem("sales_records_offline", JSON.stringify(invoicesList));
@@ -1384,16 +926,14 @@
         document.getElementById("syncStatusBadge").textContent = "✅ متصل ومزامن سحابياً";
       });
 
-      // 3. الاستماع للشرائح الممسوحة
       onSnapshot(collection(db, "scanned_sims"), snap => {
         simsList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         localStorage.setItem("scanned_sims_offline", JSON.stringify(simsList));
         populateSelectOptions();
         renderDashboard();
       });
-    } catch (err) {
-      console.error("تعذر الاتصال اللحظي بقاعدة البيانات:", err);
-      document.getElementById("syncStatusBadge").textContent = "⚠️ يعمل بالبيانات المحلية";
+    } catch (e) {
+      console.error(e);
     }
   }
 
