@@ -38,13 +38,15 @@
 
         .stat-box {
             border-radius: 12px;
-            padding: 12px 8px;
+            padding: 10px 8px;
             text-align: center;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 5px;
+            align-items: center;
+            gap: 4px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
 
         .stat-box.sales-box {
@@ -79,10 +81,28 @@
             direction: ltr;
         }
 
+        .stat-sub {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 6px;
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         .sales-box .stat-value { color: #15803d; }
+        .sales-box .stat-sub { background: #dcfce7; color: #166534; }
+
         .cost-box .stat-value { color: #b45309; }
+        .cost-box .stat-sub { background: #fef3c7; color: #92400e; }
+
         .profit-box .stat-value { color: #1d4ed8; }
+        .profit-box .stat-sub { background: #dbeafe; color: #1e40af; }
+
         .debt-box .stat-value { color: #dc2626; }
+        .debt-box .stat-sub { background: #fee2e2; color: #991b1b; }
 
         /* أزرار التابات (إضافة تكلفة + مديونيات العملاء) */
         .btn-cost-toggle {
@@ -466,26 +486,44 @@
             white-space: nowrap;
         }
 
-        /* صناديق الفلاتر */
+        /* صندوق الفلتر الموحد الأنيق */
         .filter-box {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
+            background: #f0fdf4;
+            border: 1.5px solid #bbf7d0;
             border-radius: 12px;
-            padding: 10px;
+            padding: 12px 10px;
             margin-bottom: 12px;
             display: flex;
             flex-direction: column;
+            gap: 9px;
+            transition: background 0.25s ease, border-color 0.25s ease;
+        }
+
+        .filter-box.theme-sales {
+            background: #f0fdf4;
+            border-color: #86efac;
+        }
+
+        .filter-box.theme-cost {
+            background: #fffbeb;
+            border-color: #fcd34d;
+        }
+
+        .filter-box.theme-profit {
+            background: #eff6ff;
+            border-color: #93c5fd;
+        }
+
+        .filter-box.theme-all {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .filter-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             gap: 8px;
-        }
-
-        .filter-box.cost-filter-box {
-            border-color: #fde68a;
-            background: #fffdf7;
-        }
-
-        .filter-box.profit-filter-box {
-            border-color: #bfdbfe;
-            background: #f8fbff;
         }
 
         .filter-label {
@@ -494,12 +532,15 @@
             color: #1e3a8a;
         }
 
-        .cost-filter-box .filter-label {
-            color: #b45309;
-        }
-
-        .profit-filter-box .filter-label {
-            color: #1d4ed8;
+        .filter-target-select {
+            background: #1e293b;
+            color: #ffffff;
+            border: 1.5px solid #0f172a;
+            font-weight: 800;
+            padding: 10px 12px;
+            border-radius: 9px;
+            font-size: 0.9rem;
+            cursor: pointer;
         }
 
         select {
@@ -521,7 +562,7 @@
         }
         
         .btn-reset {
-            background: #64748b;
+            background: #475569;
             color: #ffffff;
             border: none;
             padding: 10px 16px;
@@ -534,7 +575,7 @@
             align-items: center;
             gap: 4px;
         }
-        .btn-reset:hover { background: #475569; }
+        .btn-reset:hover { background: #334155; }
 
         /* تصميم مخصص لمربع اختيار الشهر */
         .custom-date-box {
@@ -677,18 +718,22 @@
             <div class="stat-box sales-box">
                 <div class="stat-label">💰 إجمالي المبيعات</div>
                 <div class="stat-value" id="totalSalesValue">0</div>
+                <div class="stat-sub" id="salesSubLabel">الشهر الحالي</div>
             </div>
             <div class="stat-box cost-box">
                 <div class="stat-label">💵 إجمالي التكلفة</div>
                 <div class="stat-value" id="totalCostValue">0</div>
+                <div class="stat-sub" id="costSubLabel">الشهر الحالي</div>
             </div>
             <div class="stat-box profit-box">
                 <div class="stat-label">📈 إجمالي الأرباح</div>
                 <div class="stat-value" id="totalProfitValue">0</div>
+                <div class="stat-sub" id="profitSubLabel">الشهر الحالي</div>
             </div>
             <div class="stat-box debt-box">
                 <div class="stat-label">📋 إجمالي مديونيات العملاء</div>
                 <div class="stat-value" id="totalDebtValue">0</div>
+                <div class="stat-sub" id="debtSubLabel">الإجمالي القائم</div>
             </div>
         </div>
 
@@ -795,62 +840,35 @@
             </div>
         </div>
 
-        <!-- 1. فلتر المبيعات حسب الشركة والمدة -->
-        <div class="filter-box">
-            <div class="filter-label">فلتر المبيعات حسب الشركة والمدة</div>
-            <select id="itemFilter" onchange="renderDashboard()">
-                <option value="">اختر</option>
+        <!-- صندوق الفلتر الموحد بنظام القائمة المنسدلة -->
+        <div class="filter-box theme-sales" id="unifiedFilterBox">
+            <div class="filter-header-row">
+                <div class="filter-label" id="activeFilterTitle">🔍 اختر نوع الفلتر والشركة</div>
+            </div>
+
+            <!-- القائمة المنسدلة لاختيار البند المراد فلترته -->
+            <select id="filterTargetSelect" class="filter-target-select" onchange="onFilterTargetChange()">
+                <option value="sales">💰 فلتر إجمالي المبيعات</option>
+                <option value="cost">💵 فلتر إجمالي التكلفة</option>
+                <option value="profit">📈 فلتر إجمالي الأرباح</option>
+                <option value="all">📊 فلتر الكل معاً (المبيعات والتكلفة والأرباح)</option>
+            </select>
+
+            <!-- القائمة المنسدلة لاختيار الشركة والمدة -->
+            <select id="itemFilter" onchange="onUnifiedFilterChange()">
+                <option value="">اختر الشركة والمدة</option>
                 <option value="ALL">الكل</option>
             </select>
 
+            <!-- صف اختيار الشهر وزر العرض -->
             <div class="date-row">
-                <button class="btn-reset" onclick="resetFilters()">
+                <button class="btn-reset" onclick="resetCurrentFilter()">
                     <span>🔄</span>
                     <span>عرض</span>
                 </button>
-                <div class="custom-date-box" onclick="openDatePicker('dateFilter')">
+                <div class="custom-date-box" onclick="openDatePicker()">
                     <span class="custom-date-label" id="dateDisplayText">📅 حدد التاريخ</span>
-                    <input type="month" id="dateFilter" onchange="onDateFilterChange()">
-                </div>
-            </div>
-        </div>
-
-        <!-- 2. فلتر إجمالي التكلفة حسب الشركة والمدة -->
-        <div class="filter-box cost-filter-box">
-            <div class="filter-label">فلتر إجمالي التكلفة حسب الشركة والمدة</div>
-            <select id="costItemFilter" onchange="renderDashboard()">
-                <option value="">اختر</option>
-                <option value="ALL">الكل</option>
-            </select>
-
-            <div class="date-row">
-                <button class="btn-reset" onclick="resetCostFilters()">
-                    <span>🔄</span>
-                    <span>عرض</span>
-                </button>
-                <div class="custom-date-box" onclick="openDatePicker('costDateFilter')">
-                    <span class="custom-date-label" id="costDateDisplayText">📅 حدد التاريخ</span>
-                    <input type="month" id="costDateFilter" onchange="onCostDateFilterChange()">
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. فلتر إجمالي الأرباح حسب الشركة والمدة -->
-        <div class="filter-box profit-filter-box">
-            <div class="filter-label">فلتر إجمالي الأرباح حسب الشركة والمدة</div>
-            <select id="profitItemFilter" onchange="renderDashboard()">
-                <option value="">اختر</option>
-                <option value="ALL">الكل</option>
-            </select>
-
-            <div class="date-row">
-                <button class="btn-reset" onclick="resetProfitFilters()">
-                    <span>🔄</span>
-                    <span>عرض</span>
-                </button>
-                <div class="custom-date-box" onclick="openDatePicker('profitDateFilter')">
-                    <span class="custom-date-label" id="profitDateDisplayText">📅 حدد التاريخ</span>
-                    <input type="month" id="profitDateFilter" onchange="onProfitDateFilterChange()">
+                    <input type="month" id="dateFilter" onchange="onUnifiedFilterChange()">
                 </div>
             </div>
         </div>
@@ -890,6 +908,13 @@
         let groupedCustomerDebts = [];
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
 
+        // حفظ حالة كل فلتر بشكل مستقل حتى يظل كل مربع محتفظاً بفلترته أو بالشهر الحالي تلقائياً
+        let filterState = {
+            sales: { item: '', month: '' },
+            cost: { item: '', month: '' },
+            profit: { item: '', month: '' }
+        };
+
         const ARABIC_MONTHS = [
             'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
             'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
@@ -901,7 +926,7 @@
         }
 
         // دالة حساب الشهر المحاسبي: تقفيل الشهر يمتد حتى يوم 5 من الشهر الجديد
-        // أي تاريخ من يوم 1 إلى يوم 5 في الشهر الجديد يُضم تلقائياً لإحصائيات الشهر السابق
+        // أي عملية مسجلة من يوم 1 إلى يوم 5 في الشهر الجديد تُضم تلقائياً لإحصائيات الشهر السابق
         function getAccountingMonth(dateStr) {
             if (!dateStr) return '';
             const clean = String(dateStr).trim();
@@ -915,7 +940,6 @@
             if (isNaN(year) || isNaN(month)) return clean.slice(0, 7);
 
             if (!isNaN(day) && day <= 5) {
-                // استثناء أول 5 أيام من أكتوبر 2026 فقط حتى لا تذهب لشهر سبتمبر الفارغ
                 if (!(year === 2026 && month === 10)) {
                     month -= 1;
                     if (month < 1) {
@@ -946,33 +970,85 @@
             return `📅 ${ym}`;
         }
 
-        function openDatePicker(inputId = 'dateFilter') {
-            const dateInput = document.getElementById(inputId);
+        function formatShortMonthName(ym) {
+            if (!ym) return 'الشهر الحالي';
+            const parts = ym.split('-');
+            if (parts.length === 2) {
+                const year = parts[0];
+                const monthIdx = parseInt(parts[1], 10) - 1;
+                const monthName = ARABIC_MONTHS[monthIdx] || parts[1];
+                return `${monthName} ${year}`;
+            }
+            return ym;
+        }
+
+        function formatSubBadgeText(itemKey, monthVal) {
+            const itemName = (!itemKey || itemKey === 'ALL') ? 'الكل' : itemKey.replace('_', ' (') + ')';
+            const monthLabel = monthVal ? formatShortMonthName(monthVal) : 'الشهر الحالي';
+            if (!itemKey && !monthVal) return 'الشهر الحالي';
+            return `${itemName} • ${monthLabel}`;
+        }
+
+        function openDatePicker() {
+            const dateInput = document.getElementById('dateFilter');
             if (dateInput && typeof dateInput.showPicker === 'function') {
                 try { dateInput.showPicker(); } catch (e) {}
             }
         }
 
-        function onDateFilterChange() {
+        // عند تغيير نوع الفلتر من القائمة المنسدلة (مبيعات / تكلفة / أرباح / الكل)
+        window.onFilterTargetChange = function() {
+            const target = document.getElementById('filterTargetSelect').value;
+            const box = document.getElementById('unifiedFilterBox');
+            box.className = `filter-box theme-${target}`;
+
+            const activeState = target === 'all' ? filterState.sales : filterState[target];
+            const itemSelect = document.getElementById('itemFilter');
             const dateInput = document.getElementById('dateFilter');
-            const label = document.getElementById('dateDisplayText');
-            label.textContent = dateInput.value ? formatMonthDisplay(dateInput.value) : '📅 حدد التاريخ';
-            renderDashboard();
-        }
+            const dateLabel = document.getElementById('dateDisplayText');
 
-        function onCostDateFilterChange() {
-            const dateInput = document.getElementById('costDateFilter');
-            const label = document.getElementById('costDateDisplayText');
-            label.textContent = dateInput.value ? formatMonthDisplay(dateInput.value) : '📅 حدد التاريخ';
-            renderDashboard();
-        }
+            itemSelect.value = activeState.item || '';
+            dateInput.value = activeState.month || '';
+            dateLabel.textContent = activeState.month ? formatMonthDisplay(activeState.month) : '📅 حدد التاريخ';
+        };
 
-        function onProfitDateFilterChange() {
-            const dateInput = document.getElementById('profitDateFilter');
-            const label = document.getElementById('profitDateDisplayText');
-            label.textContent = dateInput.value ? formatMonthDisplay(dateInput.value) : '📅 حدد التاريخ';
+        // عند اختيار الشركة أو الشهر داخل الفلتر الموحد
+        window.onUnifiedFilterChange = function() {
+            const target = document.getElementById('filterTargetSelect').value;
+            const itemVal = document.getElementById('itemFilter').value;
+            const monthVal = document.getElementById('dateFilter').value;
+            const dateLabel = document.getElementById('dateDisplayText');
+
+            dateLabel.textContent = monthVal ? formatMonthDisplay(monthVal) : '📅 حدد التاريخ';
+
+            if (target === 'all') {
+                filterState.sales = { item: itemVal, month: monthVal };
+                filterState.cost = { item: itemVal, month: monthVal };
+                filterState.profit = { item: itemVal, month: monthVal };
+            } else {
+                filterState[target] = { item: itemVal, month: monthVal };
+            }
+
             renderDashboard();
-        }
+        };
+
+        // زر عرض (إعادة ضبط الفلتر المختار حالياً لعرض الكل للشهر الحالي)
+        window.resetCurrentFilter = function() {
+            const target = document.getElementById('filterTargetSelect').value;
+            document.getElementById('itemFilter').value = 'ALL';
+            document.getElementById('dateFilter').value = '';
+            document.getElementById('dateDisplayText').textContent = '📅 حدد التاريخ';
+
+            if (target === 'all') {
+                filterState.sales = { item: 'ALL', month: '' };
+                filterState.cost = { item: 'ALL', month: '' };
+                filterState.profit = { item: 'ALL', month: '' };
+            } else {
+                filterState[target] = { item: 'ALL', month: '' };
+            }
+
+            renderDashboard();
+        };
 
         function toggleCostPanel() {
             const panel = document.getElementById('costPanel');
@@ -1483,9 +1559,11 @@
         }
 
         function populateFilterDropdown() {
-            const filterIds = ['itemFilter', 'costItemFilter', 'profitItemFilter'];
+            const select = document.getElementById('itemFilter');
+            if (!select) return;
+            const currentVal = select.value || '';
             let optionsHtml = `
-                <option value="">اختر</option>
+                <option value="">اختر الشركة والمدة</option>
                 <option value="ALL">الكل</option>
             `;
             categoriesList.forEach(c => {
@@ -1498,40 +1576,11 @@
                 });
             });
 
-            filterIds.forEach(id => {
-                const select = document.getElementById(id);
-                if (!select) return;
-                const currentVal = select.value || '';
-                select.innerHTML = optionsHtml;
-                if ([...select.options].some(o => o.value === currentVal)) {
-                    select.value = currentVal;
-                }
-            });
+            select.innerHTML = optionsHtml;
+            if ([...select.options].some(o => o.value === currentVal)) {
+                select.value = currentVal;
+            }
         }
-
-        window.resetFilters = function() {
-            document.getElementById('itemFilter').value = 'ALL';
-            const dateInput = document.getElementById('dateFilter');
-            dateInput.value = '';
-            document.getElementById('dateDisplayText').textContent = '📅 حدد التاريخ';
-            renderDashboard();
-        };
-
-        window.resetCostFilters = function() {
-            document.getElementById('costItemFilter').value = 'ALL';
-            const dateInput = document.getElementById('costDateFilter');
-            dateInput.value = '';
-            document.getElementById('costDateDisplayText').textContent = '📅 حدد التاريخ';
-            renderDashboard();
-        };
-
-        window.resetProfitFilters = function() {
-            document.getElementById('profitItemFilter').value = 'ALL';
-            const dateInput = document.getElementById('profitDateFilter');
-            dateInput.value = '';
-            document.getElementById('profitDateDisplayText').textContent = '📅 حدد التاريخ';
-            renderDashboard();
-        };
 
         function consumeCostFromBatches(queuesMap, fallbackCostMap, key, soldQty) {
             const queue = queuesMap[key] || [];
@@ -1561,7 +1610,7 @@
             return totalCostForSale;
         }
 
-        // دالة موحدة لحساب الإحصائيات لأي فلتر بشكل مستقل تماماً مع تقفيل الشهر يوم 5
+        // دالة موحدة لحساب الإحصائيات لأي فلتر بشكل مستقل مع تقفيل الشهر يوم 5
         function calculateMetricsForFilter(selectedItemKey, selectedMonth, explicitDebtMonth = '') {
             const isAllItems = (selectedItemKey === 'ALL');
             const isSpecificItem = Boolean(selectedItemKey && !isAllItems);
@@ -1703,48 +1752,58 @@
         window.renderDashboard = function() {
             const currentMonth = getCurrentMonthStr();
 
-            // 1. قراءة فلتر المبيعات (يعرض الشهر المحاسبي الحالي تلقائياً إذا لم يتم تحديد شهر)
-            const salesItemKey = document.getElementById('itemFilter').value;
-            const salesMonthInput = document.getElementById('dateFilter').value;
+            // 1. حساب المبيعات (للشهر المحاسبي الحالي افتراضياً أو حسب فلتر المبيعات)
+            const salesItemKey = filterState.sales.item;
+            const salesMonthInput = filterState.sales.month;
             const effectiveSalesMonth = salesMonthInput || currentMonth;
             const salesMetrics = calculateMetricsForFilter(salesItemKey, effectiveSalesMonth, salesMonthInput);
 
-            // 2. قراءة فلتر التكلفة (يعرض الشهر المحاسبي الحالي تلقائياً إذا لم يتم تحديد شهر)
-            const costItemKey = document.getElementById('costItemFilter').value;
-            const costMonthInput = document.getElementById('costDateFilter').value;
+            // 2. حساب التكلفة (للشهر المحاسبي الحالي افتراضياً أو حسب فلتر التكلفة)
+            const costItemKey = filterState.cost.item;
+            const costMonthInput = filterState.cost.month;
             const effectiveCostMonth = costMonthInput || currentMonth;
             const costMetrics = calculateMetricsForFilter(costItemKey, effectiveCostMonth);
 
-            // 3. قراءة فلتر الأرباح (يعرض الشهر المحاسبي الحالي تلقائياً إذا لم يتم تحديد شهر)
-            const profitItemKey = document.getElementById('profitItemFilter').value;
-            const profitMonthInput = document.getElementById('profitDateFilter').value;
+            // 3. حساب الأرباح (للشهر المحاسبي الحالي افتراضياً أو حسب فلتر الأرباح)
+            const profitItemKey = filterState.profit.item;
+            const profitMonthInput = filterState.profit.month;
             const effectiveProfitMonth = profitMonthInput || currentMonth;
             const profitMetrics = calculateMetricsForFilter(profitItemKey, effectiveProfitMonth);
 
-            // تحديث البطاقات الأربع العلوية
+            // تحديث الأرقام في البطاقات الأربع العلوية
             document.getElementById('totalSalesValue').textContent = salesMetrics.totalSalesSum.toLocaleString('en-US');
             document.getElementById('totalCostValue').textContent = costMetrics.displayedTotalCost.toLocaleString('en-US');
             document.getElementById('totalProfitValue').textContent = profitMetrics.totalProfitSum.toLocaleString('en-US');
             document.getElementById('totalDebtValue').textContent = salesMetrics.totalDebtsSum.toLocaleString('en-US');
 
-            // تحديث جدول الإحصائيات بناءً على فلتر المبيعات
+            // تحديث الوسم التوضيحي الصغير تحت كل رقم
+            document.getElementById('salesSubLabel').textContent = formatSubBadgeText(salesItemKey, salesMonthInput);
+            document.getElementById('costSubLabel').textContent = formatSubBadgeText(costItemKey, costMonthInput);
+            document.getElementById('profitSubLabel').textContent = formatSubBadgeText(profitItemKey, profitMonthInput);
+            document.getElementById('debtSubLabel').textContent = (!salesItemKey && !salesMonthInput) ? 'الإجمالي القائم' : formatSubBadgeText(salesItemKey, salesMonthInput);
+
+            // تحديث جدول الإحصائيات بناءً على الاختيار النشط في الفلتر الموحد
+            const currentTarget = document.getElementById('filterTargetSelect').value;
+            const activeTargetState = currentTarget === 'all' ? filterState.sales : filterState[currentTarget];
+            const activeMetricsForTable = currentTarget === 'cost' ? costMetrics : (currentTarget === 'profit' ? profitMetrics : salesMetrics);
+
             const statsTableCard = document.getElementById('statsTableCard');
-            if (!salesItemKey && !salesMonthInput) {
+            if (!activeTargetState.item && !activeTargetState.month) {
                 statsTableCard.style.display = 'none';
                 return;
             }
 
             statsTableCard.style.display = 'block';
             const summaryBody = document.getElementById('companySummaryBody');
-            summaryBody.innerHTML = salesMetrics.activeKeys.map(item => {
-                const baseAuto = (salesMetrics.allScannedMap[item.key] || 0) - (salesMetrics.allSoldMap[item.key] || 0);
+            summaryBody.innerHTML = activeMetricsForTable.activeKeys.map(item => {
+                const baseAuto = (activeMetricsForTable.allScannedMap[item.key] || 0) - (activeMetricsForTable.allSoldMap[item.key] || 0);
                 const offset = (stockOffsets && stockOffsets[item.invKey] !== undefined) ? parseFloat(stockOffsets[item.invKey]) : 0;
                 const availableStock = Math.max(0, baseAuto + offset);
 
-                const scanned = salesMetrics.filteredScannedMap[item.key] || 0;
-                const sold = salesMetrics.filteredSoldMap[item.key] || 0;
-                const rev = salesMetrics.filteredRevenueMap[item.key] || 0;
-                const cost = salesMetrics.filteredSoldCostMap[item.key] || 0;
+                const scanned = activeMetricsForTable.filteredScannedMap[item.key] || 0;
+                const sold = activeMetricsForTable.filteredSoldMap[item.key] || 0;
+                const rev = activeMetricsForTable.filteredRevenueMap[item.key] || 0;
+                const cost = activeMetricsForTable.filteredSoldCostMap[item.key] || 0;
                 const itemProfit = +(rev - cost).toFixed(2);
 
                 return `
