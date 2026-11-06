@@ -54,7 +54,7 @@
         }
         .stat-card.total-card .stat-value { color: #ffffff; }
 
-        /* 2. فلتر الشهر فقط بدون أي مربعات زائدة */
+        /* 2. فلتر الشهر */
         .filter-bar {
             background: var(--card);
             border-radius: 12px;
@@ -157,10 +157,10 @@
         /* 4. جدول المصروفات */
         .table-responsive { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; text-align: right; font-size: 0.9rem; }
-        th, td { padding: 11px 12px; border-bottom: 1px solid var(--border); }
-        th { background: #1e293b; color: white; font-weight: 700; white-space: nowrap; }
+        th, td { padding: 11px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        th { background: #1e293b; color: white; font-weight: 700; }
         tr:hover { background: #f8fafc; }
-        .amount-cell { font-weight: 800; color: var(--danger); white-space: nowrap; }
+        .amount-cell { font-weight: 800; color: var(--danger); }
         .person-badge {
             background: #dbeafe;
             color: var(--primary);
@@ -168,13 +168,6 @@
             border-radius: 12px;
             font-size: 0.82rem;
             font-weight: 700;
-            white-space: nowrap;
-        }
-        .time-sub {
-            display: block;
-            font-size: 0.75rem;
-            color: var(--text-light);
-            margin-top: 2px;
         }
         .btn-del-row {
             background: #fee2e2;
@@ -194,7 +187,7 @@
         }
     </style>
 
-    <!-- ربط Firebase السحابي بنفس إعدادات المشروع -->
+    <!-- ربط Firebase السحابي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -265,7 +258,7 @@
             </div>
 
             <div class="form-group full-width">
-                <button type="button" class="btn-submit" id="submitExpenseBtn" onclick="saveExpense()">💾 إضافة مصروف</button>
+                <button type="button" class="btn-submit" id="submitExpenseBtn" onclick="saveExpense()">💾 إضافة</button>
             </div>
         </div>
     </div>
@@ -281,7 +274,7 @@
                         <th>المبلغ</th>
                         <th>الوصف</th>
                         <th>القائم بالصرف</th>
-                        <th>التاريخ ووقت الإضافة</th>
+                        <th>التاريخ</th>
                         <th>حذف</th>
                     </tr>
                 </thead>
@@ -314,7 +307,6 @@
             return `${y}-${String(m).padStart(2, '0')}`;
         }
 
-        // تحميل البيانات المحفوظة محلياً
         function loadLocalData() {
             const localExp = JSON.parse(localStorage.getItem('expenses_records_offline') || '[]');
             const localSpenders = JSON.parse(localStorage.getItem('expenses_spenders_offline') || '[]');
@@ -330,7 +322,6 @@
             spendersList = Array.from(mergedSpenders);
         }
 
-        // حفظ تلقائي لمسودة الحقول أثناء الكتابة
         function saveDraft() {
             const draft = {
                 amount: document.getElementById('expAmount').value,
@@ -353,7 +344,6 @@
             }
         }
 
-        // مزامنة أسماء القائمين بالصرف محلياً وسحابياً
         async function syncSpendersToStorageAndCloud() {
             localStorage.setItem('expenses_spenders_offline', JSON.stringify(spendersList));
             const appConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
@@ -370,7 +360,6 @@
             }
         }
 
-        // جلب البيانات من السحابة عند فتح الصفحة
         async function loadCloudData() {
             try {
                 if (!window.db) return;
@@ -471,7 +460,6 @@
             if (!monthVal) return expenses;
 
             const [year, month] = monthVal.split('-').map(Number);
-            // بداية الشهر المختار حتى نهاية يوم 5 من الشهر التالي
             const startDate = new Date(year, month - 1, 6, 0, 0, 0, 0);
             const endDate = new Date(year, month, 5, 23, 59, 59, 999);
 
@@ -486,7 +474,6 @@
             });
         }
 
-        // إضافة وحفظ المصروف تلقائياً في الجهاز والسحابة
         async function saveExpense() {
             const amountEl = document.getElementById('expAmount');
             const spenderEl = document.getElementById('expSpender');
@@ -521,10 +508,6 @@
             btn.disabled = true;
             btn.textContent = '⏳ جاري الحفظ...';
 
-            const now = new Date();
-            const timeAdded = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-
-            // تحديد الشهر المحاسبي للمصروف (لغاية يوم 5 من الشهر التالي يحسب تبع الشهر الحالي)
             const [y, m, d] = date.split('-').map(Number);
             const expenseDateObj = new Date(y, m - 1, d);
             const cycleMonth = getActiveCycleMonthStr(expenseDateObj);
@@ -533,7 +516,6 @@
                 amount: amount,
                 spender: spender,
                 date: date,
-                timeAdded: timeAdded,
                 description: description,
                 cycleMonth: cycleMonth,
                 addedBy: currentUser.username || 'admin',
@@ -555,7 +537,7 @@
                 descEl.value = '';
                 saveDraft();
                 btn.disabled = false;
-                btn.textContent = '💾 إضافة مصروف';
+                btn.textContent = '💾 إضافة';
                 renderAll();
             }
         }
@@ -616,10 +598,7 @@
                     <td class="amount-cell">${Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td>${item.description}</td>
                     <td><span class="person-badge">${item.spender}</span></td>
-                    <td>
-                        <strong>${item.date}</strong>
-                        <span class="time-sub">وقت الإضافة: ${item.timeAdded || '-'}</span>
-                    </td>
+                    <td><strong>${item.date}</strong></td>
                     <td>
                         <button type="button" class="btn-del-row" onclick="deleteExpense('${item.id}')">🗑️ حذف</button>
                     </td>
