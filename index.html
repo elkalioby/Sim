@@ -22,8 +22,9 @@
 
         .navbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
         
-        .logo-area { display: flex; align-items: center; }
+        .logo-area { display: flex; align-items: center; gap: 10px; }
         .logo-img { width: 45px; height: 45px; object-fit: contain; border-radius: 8px; }
+        .cloud-status { font-size: 0.75rem; color: var(--success); background: #dcfce7; padding: 4px 8px; border-radius: 12px; font-weight: 600; }
 
         .user-panel { display: flex; align-items: center; gap: 10px; }
         .user-badge { background: #eff6ff; color: var(--primary-light); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
@@ -152,12 +153,58 @@
             }
         }
     </style>
+
+    <!-- ربط Firebase للتخزين السحابي والمزامنة التلقائية -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
+            authDomain: "ahmed-hassan-bb80b.firebaseapp.com",
+            projectId: "ahmed-hassan-bb80b",
+            storageBucket: "ahmed-hassan-bb80b.firebasestorage.app",
+            messagingSenderId: "503682153846",
+            appId: "1:503682153846:web:93b3a174ab31e351a04e57"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.db = db;
+        window.doc = doc;
+        window.getDoc = getDoc;
+        window.setDoc = setDoc;
+
+        // مزامنة الإعدادات العامة تلقائياً مع السحابة
+        async function syncGlobalConfig() {
+            try {
+                const configSnap = await getDoc(doc(db, "settings", "app_config"));
+                if (configSnap.exists()) {
+                    const cloudConfig = configSnap.data();
+                    const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+                    const merged = { ...localConfig, ...cloudConfig };
+                    localStorage.setItem('app_config', JSON.stringify(merged));
+                }
+                const statusEl = document.getElementById('cloudStatusBadge');
+                if (statusEl) statusEl.textContent = '☁️ متصل بالسحابة';
+            } catch (e) {
+                const statusEl = document.getElementById('cloudStatusBadge');
+                if (statusEl) {
+                    statusEl.textContent = '💾 حفظ محلي';
+                    statusEl.style.background = '#fef3c7';
+                    statusEl.style.color = '#d97706';
+                }
+            }
+        }
+        syncGlobalConfig();
+    </script>
 </head>
 <body>
 
     <header class="navbar">
         <div class="logo-area">
             <img src="logo.jpg" class="logo-img" alt="شعار سيم" onerror="this.src='https://via.placeholder.com/45?text=SIM'">
+            <span class="cloud-status" id="cloudStatusBadge">⏳ جاري المزامنة...</span>
         </div>
 
         <div class="user-panel">
@@ -219,7 +266,7 @@
                     </button>
                     <button class="hero-btn btn-expenses" onclick="switchTab('expenses.html', document.getElementById('expensesTabBtn'))">
                         <span class="hero-icon">💸</span>
-                        <span>المصروفات والعهد</span>
+                        <span>المصروفات</span>
                     </button>
                     <button class="hero-btn btn-locations" onclick="switchTab('locations.html', document.getElementById('locationsTabBtn'))">
                         <span class="hero-icon">📍</span>
@@ -263,6 +310,7 @@
                 if (heroUsersBtn) heroUsersBtn.style.display = 'flex';
             }
 
+            // استرجاع آخر تبويب كان مفتوحاً تلقائياً
             const lastSavedTab = localStorage.getItem('sim_active_tab');
             if (lastSavedTab && lastSavedTab !== 'home' && tabButtonsMap[lastSavedTab]) {
                 if (lastSavedTab === 'users.html' && loggedUser.role !== 'admin') {
@@ -277,7 +325,14 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
             
+            // حفظ تلقائي للتبويب المفتوح محلياً وسحابياً
             localStorage.setItem('sim_active_tab', page);
+            if (window.db && loggedUser) {
+                window.setDoc(window.doc(window.db, "settings", "last_state_" + loggedUser.username), {
+                    activeTab: page,
+                    updatedAt: Date.now()
+                }, { merge: true }).catch(() => {});
+            }
 
             const welcomeScreen = document.getElementById('welcomeScreen');
             const contentFrame = document.getElementById('contentFrame');

@@ -8,216 +8,167 @@
         :root {
             --primary: #1e3a8a;
             --primary-light: #2563eb;
-            --bg: #f8fafc;
+            --bg: #f3f4f6;
             --card: #ffffff;
-            --text: #1e293b;
-            --text-light: #64748b;
-            --danger: #ef4444;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --danger: #dc2626;
             --success: #16a34a;
-            --warning: #d97706;
-            --border: #e2e8f0;
+            --border: #e5e7eb;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--bg); color: var(--text); padding: 18px; }
+        body { background-color: var(--bg); color: var(--text); padding: 15px; max-width: 950px; margin: 0 auto; }
 
-        .container { max-width: 1150px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-
-        /* المربعات الإحصائية العلوية */
+        /* 1. المربعات الإحصائية العلوية */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
             gap: 12px;
+            margin-bottom: 14px;
         }
         .stat-card {
             background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            border-top: 4px solid var(--primary-light);
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
             display: flex;
             flex-direction: column;
             gap: 6px;
-            position: relative;
         }
         .stat-card.total-card {
             background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white;
-            border: none;
+            border-top: none;
         }
-        .stat-card .stat-title {
-            font-size: 0.88rem;
-            font-weight: 600;
+        .stat-title {
+            font-size: 0.82rem;
+            font-weight: 700;
             color: var(--text-light);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
         .stat-card.total-card .stat-title { color: #dbeafe; }
-        .stat-card .stat-value {
-            font-size: 1.55rem;
+        .stat-value {
+            font-size: 1.4rem;
             font-weight: 800;
             color: var(--primary);
         }
         .stat-card.total-card .stat-value { color: #ffffff; }
-        .delete-person-btn {
-            background: none;
-            border: none;
-            color: #94a3b8;
-            cursor: pointer;
-            font-size: 0.85rem;
-            padding: 2px 5px;
-            border-radius: 5px;
-        }
-        .delete-person-btn:hover { color: var(--danger); background: #fee2e2; }
 
-        /* شريط فلتر الشهر */
+        /* 2. فلتر الشهر فقط بدون أي مربعات زائدة */
         .filter-bar {
             background: var(--card);
-            border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 14px 18px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
             display: flex;
-            flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
-        .filter-group {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
+        .filter-bar label {
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: var(--primary);
+            white-space: nowrap;
         }
-        .filter-group label { font-weight: 700; font-size: 0.9rem; color: var(--primary); }
-        .filter-input, .filter-select {
-            padding: 8px 12px;
-            border: 1px solid var(--border);
+        .month-input {
+            flex: 1;
+            max-width: 240px;
+            padding: 9px 12px;
+            border: 1px solid #d1d5db;
             border-radius: 8px;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
+            font-weight: 600;
             background: #f8fafc;
             color: var(--text);
             outline: none;
         }
-        .period-badge {
-            background: #eff6ff;
-            color: var(--primary-light);
-            border: 1px solid #bfdbfe;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.82rem;
-            font-weight: 600;
-        }
+        .month-input:focus { border-color: var(--primary-light); background: #fff; }
 
-        /* قسم إضافة مصروف */
-        .form-card {
+        /* 3. كارت إضافة مصروف */
+        .card {
             background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 14px;
             padding: 18px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 18px;
         }
-        .form-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .card h2 {
+            font-size: 1.05rem;
             margin-bottom: 14px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border);
+            color: var(--primary);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 8px;
         }
-        .form-header h3 { font-size: 1.05rem; color: var(--primary); display: flex; align-items: center; gap: 6px; }
-        
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 14px;
-            align-items: end;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 12px;
         }
-        .input-group { display: flex; flex-direction: column; gap: 6px; }
-        .input-group.full-width { grid-column: 1 / -1; }
-        .input-group label { font-size: 0.85rem; font-weight: 600; color: var(--text); }
-        .input-group input, .input-group select, .input-group textarea {
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-group label { font-size: 0.85rem; font-weight: 600; color: #374151; }
+        input, select, textarea {
+            width: 100%;
             padding: 10px 12px;
-            border: 1px solid var(--border);
-            border-radius: 9px;
-            font-size: 0.92rem;
-            background: #f8fafc;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.95rem;
             outline: none;
-            transition: border 0.2s;
-        }
-        .input-group input:focus, .input-group select:focus, .input-group textarea:focus {
-            border-color: var(--primary-light);
             background: #fff;
         }
-        .spender-row {
-            display: flex;
-            gap: 6px;
-        }
-        .spender-row select { flex: 1; }
-        .btn-add-person {
-            background: #eff6ff;
-            color: var(--primary-light);
-            border: 1px solid #bfdbfe;
-            padding: 0 12px;
-            border-radius: 9px;
-            font-weight: 700;
-            cursor: pointer;
-            white-space: nowrap;
-            font-size: 0.85rem;
-            transition: all 0.2s;
-        }
-        .btn-add-person:hover { background: var(--primary-light); color: white; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary-light); }
 
-        .btn-submit-expense {
-            background: var(--success);
-            color: white;
+        .spender-row { display: flex; gap: 6px; align-items: center; }
+        .spender-row select { flex: 1; }
+        .icon-btn {
+            width: 42px;
+            height: 42px;
             border: none;
-            padding: 12px 24px;
-            border-radius: 10px;
-            font-size: 0.95rem;
-            font-weight: 700;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            transition: background 0.2s;
-            width: 100%;
+            flex-shrink: 0;
+            color: #fff;
         }
-        .btn-submit-expense:hover { background: #15803d; }
+        .icon-btn-add { background-color: var(--success); }
+        .icon-btn-del { background-color: var(--danger); }
 
-        /* جدول المصروفات */
-        .table-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        .btn-submit {
+            background-color: var(--primary-light);
+            color: white;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 4px;
+            transition: 0.2s;
         }
-        .table-header {
-            padding: 14px 18px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .table-header h3 { font-size: 1rem; color: var(--primary); }
+        .btn-submit:hover { background-color: var(--primary); }
+
+        /* 4. جدول المصروفات */
         .table-responsive { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; text-align: right; }
-        th, td { padding: 12px 15px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-        th { background: #f1f5f9; color: var(--text); font-weight: 700; white-space: nowrap; }
+        table { width: 100%; border-collapse: collapse; text-align: right; font-size: 0.9rem; }
+        th, td { padding: 11px 12px; border-bottom: 1px solid var(--border); }
+        th { background: #1e293b; color: white; font-weight: 700; white-space: nowrap; }
         tr:hover { background: #f8fafc; }
-        .amount-badge {
-            font-weight: 800;
-            color: var(--danger);
-        }
-        .person-tag {
-            background: #eff6ff;
+        .amount-cell { font-weight: 800; color: var(--danger); white-space: nowrap; }
+        .person-badge {
+            background: #dbeafe;
             color: var(--primary);
-            padding: 4px 10px;
-            border-radius: 20px;
+            padding: 3px 10px;
+            border-radius: 12px;
             font-size: 0.82rem;
-            font-weight: 600;
+            font-weight: 700;
+            white-space: nowrap;
         }
         .time-sub {
             display: block;
@@ -233,365 +184,448 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.8rem;
-            font-weight: 600;
+            font-weight: bold;
         }
         .btn-del-row:hover { background: var(--danger); color: white; }
-        .empty-state {
-            text-align: center;
-            padding: 30px;
-            color: var(--text-light);
-            font-size: 0.95rem;
-        }
+        .empty-row { text-align: center; padding: 24px; color: var(--text-light); font-weight: 600; }
 
         @media (max-width: 768px) {
-            body { padding: 10px; }
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .filter-bar { flex-direction: column; align-items: stretch; }
         }
     </style>
+
+    <!-- ربط Firebase السحابي بنفس إعدادات المشروع -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
+            authDomain: "ahmed-hassan-bb80b.firebaseapp.com",
+            projectId: "ahmed-hassan-bb80b",
+            storageBucket: "ahmed-hassan-bb80b.firebasestorage.app",
+            messagingSenderId: "503682153846",
+            appId: "1:503682153846:web:93b3a174ab31e351a04e57"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.getDocs = getDocs;
+        window.doc = doc;
+        window.deleteDoc = deleteDoc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+
+        if (window.initExpensesApp) { window.initExpensesApp(); }
+    </script>
 </head>
 <body>
 
-<div class="container">
-    <!-- 1. مربعات الإحصائيات (الإجمالي + مربع لكل شخص في القائمة) -->
+    <!-- 1. إحصائيات الإجمالي ومربع لكل شخص في القائمة -->
     <div class="stats-grid" id="statsContainer"></div>
 
-    <!-- 2. فلتر مصروفات الشهر (يحسب حتى يوم 5 من الشهر التالي) -->
+    <!-- 2. فلتر مصروفات الشهر (يحسب تلقائياً لغاية يوم 5 من الشهر التالي) -->
     <div class="filter-bar">
-        <div class="filter-group">
-            <label for="filterMode">📅 تصفية المصروفات:</label>
-            <select id="filterMode" class="filter-select" onchange="handleFilterChange()">
-                <option value="month">حسب الشهر (حتى يوم 5 من الشهر التالي)</option>
-                <option value="all">كل المصروفات (بدون فلتر)</option>
-            </select>
-            <input type="month" id="monthPicker" class="filter-input" onchange="renderAll()">
-            <select id="cycleStartDay" class="filter-select" onchange="renderAll()" title="بداية حساب الشهر">
-                <option value="6">من يوم 6 في الشهر إلى يوم 5 بالشهر التالي</option>
-                <option value="1">من يوم 1 في الشهر إلى يوم 5 بالشهر التالي</option>
-            </select>
-        </div>
-        <div class="period-badge" id="periodTextBadge">جاري حساب الفترة...</div>
+        <label for="monthPicker">📅 مصروفات شهر:</label>
+        <input type="month" id="monthPicker" class="month-input" onchange="renderAll()">
     </div>
 
-    <!-- 3. نموذج وزرار إضافة مصروف جديد -->
-    <div class="form-card">
-        <div class="form-header">
-            <h3>➕ تسجيل مصروف جديد</h3>
-        </div>
+    <!-- 3. نموذج إضافة مصروف -->
+    <div class="card">
+        <h2>➕ إضافة مصروف جديد</h2>
         <div class="form-grid">
-            <div class="input-group">
-                <label for="expAmount">المبلغ</label>
-                <input type="number" id="expAmount" placeholder="0.00" step="0.01" min="0">
+            <div class="form-group">
+                <label>المبلغ</label>
+                <input type="number" id="expAmount" placeholder="0.00" step="0.01" min="0" oninput="saveDraft()">
             </div>
 
-            <div class="input-group">
-                <label for="expSpender">من قام بالصرف</label>
+            <div class="form-group">
+                <label>من قام بالصرف</label>
                 <div class="spender-row">
-                    <select id="expSpender"></select>
-                    <button type="button" class="btn-add-person" onclick="addNewSpender()">+ إضافة اسم</button>
+                    <select id="expSpender" onchange="saveDraft()">
+                        <option value="">-- اختر أو أضف اسماً --</option>
+                    </select>
+                    <button type="button" class="icon-btn icon-btn-add" onclick="addNewSpenderPrompt()" title="إضافة اسم جديد">+</button>
+                    <button type="button" class="icon-btn icon-btn-del" onclick="deleteSelectedSpender()" title="حذف الاسم المحدد">✕</button>
                 </div>
             </div>
 
-            <div class="input-group">
-                <label for="expDate">التاريخ</label>
-                <input type="date" id="expDate">
+            <div class="form-group">
+                <label>التاريخ</label>
+                <input type="date" id="expDate" onchange="saveDraft()">
             </div>
 
-            <div class="input-group full-width">
-                <label for="expDesc">الوصف / البيان</label>
-                <textarea id="expDesc" rows="2" placeholder="اكتب تفاصيل أو سبب المصروف..."></textarea>
+            <div class="form-group full-width">
+                <label>الوصف</label>
+                <textarea id="expDesc" rows="2" placeholder="اكتب تفاصيل المصروف..." oninput="saveDraft()"></textarea>
             </div>
 
-            <div class="input-group full-width">
-                <button type="button" class="btn-submit-expense" onclick="addExpense()">
-                    <span>💾</span> إضافة مصروف
-                </button>
+            <div class="form-group full-width">
+                <button type="button" class="btn-submit" id="submitExpenseBtn" onclick="saveExpense()">💾 إضافة مصروف</button>
             </div>
         </div>
     </div>
 
     <!-- 4. جدول المصروفات -->
-    <div class="table-card">
-        <div class="table-header">
-            <h3>📋 سجل المصروفات</h3>
-            <span id="recordsCount" style="font-size: 0.85rem; color: var(--text-light); font-weight: 600;"></span>
-        </div>
+    <div class="card">
+        <h2>📋 جدول المصروفات</h2>
         <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
                         <th>#</th>
                         <th>المبلغ</th>
-                        <th>الوصف / البيان</th>
+                        <th>الوصف</th>
                         <th>القائم بالصرف</th>
                         <th>التاريخ ووقت الإضافة</th>
-                        <th>إجراء</th>
+                        <th>حذف</th>
                     </tr>
                 </thead>
                 <tbody id="expensesTableBody"></tbody>
             </table>
         </div>
     </div>
-</div>
 
-<script>
-    const EXPENSES_KEY = 'sim_store_expenses';
-    const SPENDERS_KEY = 'sim_store_spenders';
+    <script>
+        let expenses = [];
+        let spendersList = [];
+        let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
 
-    let expenses = JSON.parse(localStorage.getItem(EXPENSES_KEY)) || [];
-    let spenders = JSON.parse(localStorage.getItem(SPENDERS_KEY)) || [];
+        function getTodayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
 
-    // تهيئة التاريخ الافتراضي والشهر الحالي
-    function initPage() {
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
+        // تحديد الشهر النشط تلقائياً (الأيام من 1 إلى 5 تتبع الشهر السابق تلقائياً)
+        function getActiveCycleMonthStr(dateObj = new Date()) {
+            let y = dateObj.getFullYear();
+            let m = dateObj.getMonth() + 1;
+            if (dateObj.getDate() <= 5) {
+                m -= 1;
+                if (m === 0) {
+                    m = 12;
+                    y -= 1;
+                }
+            }
+            return `${y}-${String(m).padStart(2, '0')}`;
+        }
 
-        // وضع تاريخ اليوم في خانة إضافة المصروف
-        document.getElementById('expDate').value = `${yyyy}-${mm}-${dd}`;
+        // تحميل البيانات المحفوظة محلياً
+        function loadLocalData() {
+            const localExp = JSON.parse(localStorage.getItem('expenses_records_offline') || '[]');
+            const localSpenders = JSON.parse(localStorage.getItem('expenses_spenders_offline') || '[]');
+            const appConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
 
-        // إذا كان اليوم بين 1 و 5 من الشهر، فنحن ما زلنا في دورة الشهر السابق تلقائياً
-        let cycleYear = yyyy;
-        let cycleMonth = now.getMonth() + 1;
-        if (now.getDate() <= 5) {
-            cycleMonth -= 1;
-            if (cycleMonth === 0) {
-                cycleMonth = 12;
-                cycleYear -= 1;
+            if (Array.isArray(localExp)) expenses = localExp;
+
+            const mergedSpenders = new Set([
+                ...(Array.isArray(localSpenders) ? localSpenders : []),
+                ...(Array.isArray(appConfig.spendersList) ? appConfig.spendersList : [])
+            ]);
+            expenses.forEach(e => { if (e.spender && e.spender.trim()) mergedSpenders.add(e.spender.trim()); });
+            spendersList = Array.from(mergedSpenders);
+        }
+
+        // حفظ تلقائي لمسودة الحقول أثناء الكتابة
+        function saveDraft() {
+            const draft = {
+                amount: document.getElementById('expAmount').value,
+                spender: document.getElementById('expSpender').value,
+                date: document.getElementById('expDate').value,
+                desc: document.getElementById('expDesc').value
+            };
+            localStorage.setItem('expenses_form_draft', JSON.stringify(draft));
+        }
+
+        function restoreDraft() {
+            const draft = JSON.parse(localStorage.getItem('expenses_form_draft') || 'null');
+            document.getElementById('expDate').value = (draft && draft.date) ? draft.date : getTodayStr();
+            if (draft) {
+                if (draft.amount) document.getElementById('expAmount').value = draft.amount;
+                if (draft.desc) document.getElementById('expDesc').value = draft.desc;
+                if (draft.spender && spendersList.includes(draft.spender)) {
+                    document.getElementById('expSpender').value = draft.spender;
+                }
             }
         }
-        document.getElementById('monthPicker').value = `${cycleYear}-${String(cycleMonth).padStart(2, '0')}`;
 
-        renderSpendersDropdown();
-        renderAll();
-    }
+        // مزامنة أسماء القائمين بالصرف محلياً وسحابياً
+        async function syncSpendersToStorageAndCloud() {
+            localStorage.setItem('expenses_spenders_offline', JSON.stringify(spendersList));
+            const appConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            appConfig.spendersList = spendersList;
+            localStorage.setItem('app_config', JSON.stringify(appConfig));
 
-    function saveToStorage() {
-        localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
-        localStorage.setItem(SPENDERS_KEY, JSON.stringify(spenders));
-    }
-
-    // تحديث القائمة المنسدلة للأشخاص
-    function renderSpendersDropdown(selectedName = '') {
-        const select = document.getElementById('expSpender');
-        if (spenders.length === 0) {
-            select.innerHTML = `<option value="">-- اضغط (+ إضافة اسم) أولاً --</option>`;
-            return;
-        }
-        select.innerHTML = spenders.map(name => 
-            `<option value="${name}" ${name === selectedName ? 'selected' : ''}>${name}</option>`
-        ).join('');
-    }
-
-    // إضافة شخص جديد للقائمة المنسدلة ويظهر له مربع إحصائي فوراً
-    function addNewSpender() {
-        const newName = prompt('أدخل اسم الشخص لإضافته في قائمة الصرف:');
-        if (!newName) return;
-        const cleanName = newName.trim();
-        if (!cleanName) return;
-
-        if (spenders.includes(cleanName)) {
-            alert('هذا الاسم موجود بالفعل في القائمة!');
-            document.getElementById('expSpender').value = cleanName;
-            return;
+            try {
+                if (window.db) {
+                    await window.setDoc(window.doc(window.db, "settings", "app_config"), { spendersList: spendersList }, { merge: true });
+                    await window.setDoc(window.doc(window.db, "settings", "expenses_config"), { spendersList: spendersList }, { merge: true });
+                }
+            } catch (e) {
+                console.error("خطأ في مزامنة الأسماء:", e);
+            }
         }
 
-        spenders.push(cleanName);
-        saveToStorage();
-        renderSpendersDropdown(cleanName);
-        renderAll();
-    }
+        // جلب البيانات من السحابة عند فتح الصفحة
+        async function loadCloudData() {
+            try {
+                if (!window.db) return;
 
-    // حذف اسم شخص من القائمة المنسدلة
-    function removeSpender(name) {
-        if (!confirm(`هل تريد حذف "${name}" من قائمة الصرف؟ (لن يتم مسح مصروفاته السابقة من الجدول)`)) return;
-        spenders = spenders.filter(s => s !== name);
-        saveToStorage();
-        renderSpendersDropdown();
-        renderAll();
-    }
+                const mergedSpenders = new Set(spendersList);
 
-    // حساب بداية ونهاية الدورة الشهرية (لغاية يوم 5 من الشهر التالي)
-    function getFilterDateRange() {
-        const mode = document.getElementById('filterMode').value;
-        const monthVal = document.getElementById('monthPicker').value;
-        const startDay = parseInt(document.getElementById('cycleStartDay').value, 10);
+                const expConfigSnap = await window.getDoc(window.doc(window.db, "settings", "expenses_config"));
+                if (expConfigSnap.exists()) {
+                    const data = expConfigSnap.data();
+                    if (Array.isArray(data.spendersList)) {
+                        data.spendersList.forEach(s => { if (s && s.trim()) mergedSpenders.add(s.trim()); });
+                    }
+                }
 
-        if (mode === 'all' || !monthVal) {
-            return { mode: 'all', start: null, end: null, label: 'عرض جميع المصروفات المسجلة' };
+                const querySnapshot = await window.getDocs(window.collection(window.db, "expenses"));
+                const cloudExpenses = [];
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    cloudExpenses.push({ id: docSnap.id, ...data });
+                    if (data.spender && data.spender.trim()) {
+                        mergedSpenders.add(data.spender.trim());
+                    }
+                });
+
+                spendersList = Array.from(mergedSpenders);
+                localStorage.setItem('expenses_spenders_offline', JSON.stringify(spendersList));
+
+                cloudExpenses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                expenses = cloudExpenses;
+                localStorage.setItem('expenses_records_offline', JSON.stringify(expenses));
+            } catch (e) {
+                console.error("وضع الأوفلاين:", e);
+            } finally {
+                renderSpendersDropdown(document.getElementById('expSpender').value);
+                renderAll();
+            }
         }
 
-        const [year, month] = monthVal.split('-').map(Number);
-        
-        // تاريخ البداية: يوم (6 أو 1) من الشهر المختار الساعة 00:00:00
-        const startDate = new Date(year, month - 1, startDay, 0, 0, 0, 0);
-        
-        // تاريخ النهاية: يوم 5 من الشهر التالي الساعة 23:59:59
-        const endDate = new Date(year, month, 5, 23, 59, 59, 999);
-
-        const formatYMD = (d) => {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${y}/${m}/${day}`;
+        window.initExpensesApp = async function() {
+            loadLocalData();
+            renderSpendersDropdown();
+            restoreDraft();
+            renderAll();
+            await loadCloudData();
         };
 
-        return {
-            mode: 'month',
-            start: startDate,
-            end: endDate,
-            label: `الفترة من ${formatYMD(startDate)} حتى ${formatYMD(endDate)}`
-        };
-    }
-
-    function handleFilterChange() {
-        const mode = document.getElementById('filterMode').value;
-        document.getElementById('monthPicker').style.display = mode === 'all' ? 'none' : 'inline-block';
-        document.getElementById('cycleStartDay').style.display = mode === 'all' ? 'none' : 'inline-block';
-        renderAll();
-    }
-
-    // فلترة المصروفات بناءً على الفترة المختارة
-    function getFilteredExpenses() {
-        const range = getFilterDateRange();
-        document.getElementById('periodTextBadge').innerText = range.label;
-
-        if (range.mode === 'all') return expenses;
-
-        return expenses.filter(item => {
-            const [y, m, d] = item.date.split('-').map(Number);
-            const itemDate = new Date(y, m - 1, d, 12, 0, 0);
-            return itemDate >= range.start && itemDate <= range.end;
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('monthPicker').value = getActiveCycleMonthStr();
+            loadLocalData();
+            renderSpendersDropdown();
+            restoreDraft();
+            renderAll();
         });
-    }
 
-    // إضافة مصروف جديد للجدول
-    function addExpense() {
-        const amountInput = document.getElementById('expAmount');
-        const spenderInput = document.getElementById('expSpender');
-        const dateInput = document.getElementById('expDate');
-        const descInput = document.getElementById('expDesc');
-
-        const amount = parseFloat(amountInput.value);
-        const spender = spenderInput.value;
-        const date = dateInput.value;
-        const description = descInput.value.trim();
-
-        if (isNaN(amount) || amount <= 0) {
-            alert('يرجى إدخال مبلغ صحيح أكبر من صفر.');
-            amountInput.focus();
-            return;
-        }
-        if (!spender) {
-            alert('يرجى اختيار الشخص القائم بالصرف أو إضافة اسم جديد من زر (+ إضافة اسم).');
-            return;
-        }
-        if (!date) {
-            alert('يرجى تحديد تاريخ المصروف.');
-            dateInput.focus();
-            return;
-        }
-        if (!description) {
-            alert('يرجى كتابة وصف المصروف.');
-            descInput.focus();
-            return;
+        function renderSpendersDropdown(selectedVal = '') {
+            const selectEl = document.getElementById('expSpender');
+            if (!selectEl) return;
+            const currentVal = selectedVal || selectEl.value || '';
+            let html = `<option value="">-- اختر الاسم --</option>`;
+            spendersList.forEach(name => {
+                html += `<option value="${name}" ${name === currentVal ? 'selected' : ''}>${name}</option>`;
+            });
+            selectEl.innerHTML = html;
         }
 
-        const now = new Date();
-        const timeAdded = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        async function addNewSpenderPrompt() {
+            const newName = prompt('✨ أدخل اسم الشخص لإضافته في القائمة:');
+            if (!newName || !newName.trim()) return;
+            const trimmed = newName.trim();
+            if (!spendersList.includes(trimmed)) {
+                spendersList.push(trimmed);
+                await syncSpendersToStorageAndCloud();
+            }
+            renderSpendersDropdown(trimmed);
+            saveDraft();
+            renderAll();
+        }
 
-        const newExpense = {
-            id: Date.now(),
-            amount: amount,
-            spender: spender,
-            date: date,
-            timeAdded: timeAdded,
-            description: description
-        };
+        async function deleteSelectedSpender() {
+            const selectEl = document.getElementById('expSpender');
+            const selected = selectEl.value;
+            if (!selected) {
+                alert('⚠️ يرجى اختيار الاسم من القائمة أولاً لحذفه.');
+                return;
+            }
+            if (confirm(`هل أنت متأكد من حذف (${selected}) من القائمة؟`)) {
+                spendersList = spendersList.filter(s => s !== selected);
+                await syncSpendersToStorageAndCloud();
+                renderSpendersDropdown('');
+                saveDraft();
+                renderAll();
+            }
+        }
 
-        expenses.unshift(newExpense);
-        saveToStorage();
+        // حساب مصروفات الشهر المختار حتى يوم 5 من الشهر التالي
+        function getFilteredExpenses() {
+            const monthVal = document.getElementById('monthPicker').value;
+            if (!monthVal) return expenses;
 
-        // تفريغ حقلي المبلغ والوصف لتسهيل الإضافة المتتالية
-        amountInput.value = '';
-        descInput.value = '';
-        amountInput.focus();
+            const [year, month] = monthVal.split('-').map(Number);
+            // بداية الشهر المختار حتى نهاية يوم 5 من الشهر التالي
+            const startDate = new Date(year, month - 1, 6, 0, 0, 0, 0);
+            const endDate = new Date(year, month, 5, 23, 59, 59, 999);
 
-        renderAll();
-    }
+            return expenses.filter(item => {
+                if (item.cycleMonth) {
+                    return item.cycleMonth === monthVal;
+                }
+                const [y, m, d] = (item.date || '').split('-').map(Number);
+                if (!y || !m || !d) return false;
+                const itemDate = new Date(y, m - 1, d, 12, 0, 0);
+                return itemDate >= startDate && itemDate <= endDate;
+            });
+        }
 
-    function deleteExpense(id) {
-        if (!confirm('هل أنت متأكد من حذف هذا المصروف؟')) return;
-        expenses = expenses.filter(item => item.id !== id);
-        saveToStorage();
-        renderAll();
-    }
+        // إضافة وحفظ المصروف تلقائياً في الجهاز والسحابة
+        async function saveExpense() {
+            const amountEl = document.getElementById('expAmount');
+            const spenderEl = document.getElementById('expSpender');
+            const dateEl = document.getElementById('expDate');
+            const descEl = document.getElementById('expDesc');
 
-    // تحديث المربعات العلوية والجدول
-    function renderAll() {
-        const filtered = getFilteredExpenses();
+            const amount = parseFloat(amountEl.value);
+            const spender = spenderEl.value.trim();
+            const date = dateEl.value;
+            const description = descEl.value.trim();
 
-        // 1. حساب الإجمالي العام وإجمالي كل شخص
-        const totalAmount = filtered.reduce((sum, item) => sum + Number(item.amount), 0);
+            if (isNaN(amount) || amount <= 0) {
+                alert('⚠️ يرجى إدخال مبلغ صحيح.');
+                amountEl.focus();
+                return;
+            }
+            if (!spender) {
+                alert('⚠️ يرجى اختيار من قام بالصرف أو إضافته بزر (+).');
+                return;
+            }
+            if (!date) {
+                alert('⚠️ يرجى تحديد التاريخ.');
+                return;
+            }
+            if (!description) {
+                alert('⚠️ يرجى كتابة وصف المصروف.');
+                descEl.focus();
+                return;
+            }
 
-        const statsContainer = document.getElementById('statsContainer');
-        let cardsHTML = `
-            <div class="stat-card total-card">
-                <div class="stat-title">
-                    <span>💰 إجمالي المصروفات</span>
-                </div>
-                <div class="stat-value">${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            </div>
-        `;
+            const btn = document.getElementById('submitExpenseBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ جاري الحفظ...';
 
-        // إنشاء مربع لكل شخص مضاف في القائمة المنسدلة
-        spenders.forEach(person => {
-            const personTotal = filtered
-                .filter(item => item.spender === person)
-                .reduce((sum, item) => sum + Number(item.amount), 0);
+            const now = new Date();
+            const timeAdded = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
 
-            cardsHTML += `
-                <div class="stat-card">
-                    <div class="stat-title">
-                        <span>👤 مصروفات ${person}</span>
-                        <button class="delete-person-btn" title="حذف الاسم من القائمة" onclick="removeSpender('${person}')">✖</button>
-                    </div>
-                    <div class="stat-value">${personTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            // تحديد الشهر المحاسبي للمصروف (لغاية يوم 5 من الشهر التالي يحسب تبع الشهر الحالي)
+            const [y, m, d] = date.split('-').map(Number);
+            const expenseDateObj = new Date(y, m - 1, d);
+            const cycleMonth = getActiveCycleMonthStr(expenseDateObj);
+
+            const expenseData = {
+                amount: amount,
+                spender: spender,
+                date: date,
+                timeAdded: timeAdded,
+                description: description,
+                cycleMonth: cycleMonth,
+                addedBy: currentUser.username || 'admin',
+                createdAt: Date.now()
+            };
+
+            try {
+                if (window.db) {
+                    const docRef = await window.addDoc(window.collection(window.db, "expenses"), expenseData);
+                    expenses.unshift({ id: docRef.id, ...expenseData });
+                } else {
+                    expenses.unshift({ id: 'local_' + Date.now(), ...expenseData });
+                }
+            } catch (e) {
+                expenses.unshift({ id: 'local_' + Date.now(), ...expenseData });
+            } finally {
+                localStorage.setItem('expenses_records_offline', JSON.stringify(expenses));
+                amountEl.value = '';
+                descEl.value = '';
+                saveDraft();
+                btn.disabled = false;
+                btn.textContent = '💾 إضافة مصروف';
+                renderAll();
+            }
+        }
+
+        async function deleteExpense(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا المصروف؟')) return;
+
+            expenses = expenses.filter(item => item.id !== id);
+            localStorage.setItem('expenses_records_offline', JSON.stringify(expenses));
+            renderAll();
+
+            try {
+                if (window.db && !String(id).startsWith('local_')) {
+                    await window.deleteDoc(window.doc(window.db, "expenses", String(id)));
+                }
+            } catch (e) {
+                console.error("خطأ أثناء الحذف من السحابة:", e);
+            }
+        }
+
+        function renderAll() {
+            const filtered = getFilteredExpenses();
+            const totalAmount = filtered.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
+            // 1. تحديث مربعات الإحصائيات العلوية
+            const statsContainer = document.getElementById('statsContainer');
+            let cardsHtml = `
+                <div class="stat-card total-card">
+                    <div class="stat-title">💰 إجمالي المصروفات</div>
+                    <div class="stat-value">${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
             `;
-        });
 
-        statsContainer.innerHTML = cardsHTML;
+            spendersList.forEach(person => {
+                const personTotal = filtered
+                    .filter(item => item.spender === person)
+                    .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
-        // 2. تحديث جدول المصروفات
-        const tbody = document.getElementById('expensesTableBody');
-        document.getElementById('recordsCount').innerText = `عدد الحركات: ${filtered.length}`;
+                cardsHtml += `
+                    <div class="stat-card">
+                        <div class="stat-title">👤 مصروفات ${person}</div>
+                        <div class="stat-value">${personTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                `;
+            });
+            statsContainer.innerHTML = cardsHtml;
 
-        if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="empty-state">لا توجد مصروفات مسجلة في هذه الفترة</td></tr>`;
-            return;
+            // 2. تحديث جدول المصروفات
+            const tbody = document.getElementById('expensesTableBody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-row">لا توجد مصروفات مسجلة في هذا الشهر</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((item, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td class="amount-cell">${Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td>${item.description}</td>
+                    <td><span class="person-badge">${item.spender}</span></td>
+                    <td>
+                        <strong>${item.date}</strong>
+                        <span class="time-sub">وقت الإضافة: ${item.timeAdded || '-'}</span>
+                    </td>
+                    <td>
+                        <button type="button" class="btn-del-row" onclick="deleteExpense('${item.id}')">🗑️ حذف</button>
+                    </td>
+                </tr>
+            `).join('');
         }
-
-        tbody.innerHTML = filtered.map((item, index) => `
-            <tr>
-                <td>${index + 1}</td>
-                <td><span class="amount-badge">${Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></td>
-                <td>${item.description}</td>
-                <td><span class="person-tag">${item.spender}</span></td>
-                <td>
-                    <strong>${item.date}</strong>
-                    <span class="time-sub">وقت الإضافة: ${item.timeAdded || '-'}</span>
-                </td>
-                <td>
-                    <button class="btn-del-row" onclick="deleteExpense(${item.id})">حذف</button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    initPage();
-</script>
-
+    </script>
 </body>
 </html>
