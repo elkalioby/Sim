@@ -559,10 +559,10 @@
 
             <!-- اللوكيشن تحت القسم مباشرة -->
             <div class="form-group">
-                <label>اللوكيشن</label>
+                <label>اللوكيشن (Waze)</label>
                 <div style="display: flex; gap: 6px;">
-                    <input type="text" id="locationInput" placeholder="رابط الخريطة أو اضغط موقعي..." style="flex: 1;">
-                    <button type="button" class="btn" id="gpsBtn" onclick="getCurrentLocation()" style="background:#10b981; color:white; padding:10px 14px; white-space:nowrap;" title="تحديد موقعي بالضبط تلقائياً">
+                    <input type="text" id="locationInput" placeholder="رابط الخريطة أو اضغط موقعي للتحديد عبر Waze..." style="flex: 1;">
+                    <button type="button" class="btn" id="gpsBtn" onclick="getCurrentLocation()" style="background:#10b981; color:white; padding:10px 14px; white-space:nowrap;" title="تحديد موقعي بالضبط على Waze تلقائياً">
                         📍 موقعي
                     </button>
                 </div>
@@ -626,16 +626,70 @@
         let selectedTheme = 'auto';
         let tempImageBase64 = '';
 
+        // دالة لتحويل أي رابط جوجل ماب أو إحداثيات إلى رابط Waze مباشر
+        function convertToWazeUrl(rawLoc, place) {
+            let loc = (rawLoc || '').trim();
+            if (!loc && place && place.lat && place.lng) {
+                return `https://waze.com/ul?ll=${place.lat},${place.lng}&navigate=yes`;
+            }
+            if (!loc) return '';
+
+            // إذا كان الرابط أصلاً رابط Waze
+            if (loc.includes('waze.com/ul')) {
+                return loc;
+            }
+
+            // استخراج الإحداثيات (lat, lng) من روابط جوجل ماب أو النص
+            const coordMatch = loc.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+            if (coordMatch) {
+                const lat = coordMatch[1];
+                const lng = coordMatch[2];
+                return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+            }
+
+            // إذا كان رابطاً خارجياً مختصراً لا يحتوي على إحداثيات نصية ظاهرة
+            if (loc.startsWith('http://') || loc.startsWith('https://')) {
+                return loc;
+            }
+
+            // إذا كان اسم مكان نصي يتم البحث عنه في Waze
+            return `https://waze.com/ul?q=${encodeURIComponent(loc)}&navigate=yes`;
+        }
+
+        // تحديث الروابط القديمة المحفوظة في السحابة والذاكرة تلقائياً إلى Waze
+        async function migrateOldLinksToWaze() {
+            let updatedAny = false;
+            for (let i = 0; i < places.length; i++) {
+                const p = places[i];
+                const converted = convertToWazeUrl(p.location, p);
+                if (converted && converted !== p.location && converted.includes('waze.com/ul')) {
+                    places[i].location = converted;
+                    updatedAny = true;
+                    if (window.db && !String(p.id).startsWith('local_')) {
+                        try {
+                            await window.updateDoc(window.doc(window.db, "locations", p.id), { location: converted });
+                        } catch (e) {
+                            console.error("خطأ في تحديث الرابط تلقائياً:", e);
+                        }
+                    }
+                }
+            }
+            if (updatedAny) {
+                saveLocalData();
+                renderAllSections();
+            }
+        }
+
         // دالة توحيد الحروف العربية لضمان دقة البحث
         function normalizeArabic(text) {
             if (!text) return '';
             return String(text)
                 .toLowerCase()
                 .trim()
-                .replace(/[\u064B-\u065F\u0670]/g, '') // إزالة التشكيل
-                .replace(/[أإآٱ]/g, 'ا')              // توحيد الألف
-                .replace(/ة/g, 'ه')                   // توحيد التاء المربوطة والهاء
-                .replace(/ى/g, 'ي')                   // توحيد الياء
+                .replace(/[\u064B-\u065F\u0670]/g, '')
+                .replace(/[أإآٱ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
                 .replace(/ؤ/g, 'و')
                 .replace(/ئ/g, 'ي');
         }
@@ -651,7 +705,6 @@
                 clearBtn.style.display = hasQuery ? 'inline-flex' : 'none';
             }
 
-            // إخفاء نموذج التسجيل مؤقتاً أثناء البحث لتظهر النتائج فوراً تحت شريط البحث
             if (formCard && !editId) {
                 formCard.style.display = hasQuery ? 'none' : 'block';
             }
@@ -682,7 +735,10 @@
 
             const savedPlaces = JSON.parse(localStorage.getItem('sim_saved_places') || '[]');
             if (Array.isArray(savedPlaces)) {
-                places = savedPlaces;
+                places = savedPlaces.map(p => ({
+                    ...p,
+                    location: convertToWazeUrl(p.location, p)
+                }));
             }
             localStorage.setItem('sim_loc_categories', JSON.stringify(categories));
         }
@@ -738,6 +794,7 @@
                 if (cloudPlaces.length > 0) {
                     cloudPlaces.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
                     places = cloudPlaces;
+                    await migrateOldLinksToWaze();
                 }
 
                 saveLocalData();
@@ -885,6 +942,7 @@
             showImagePreview('');
         }
 
+        // تحديد الموقع الحالي عبر Waze مباشرة
         function getCurrentLocation() {
             return new Promise((resolve, reject) => {
                 const locInput = document.getElementById('locationInput');
@@ -894,14 +952,14 @@
                     return;
                 }
 
-                locInput.value = 'جاري جلب الموقع الدقيق...';
+                locInput.value = 'جاري جلب الموقع الدقيق على Waze...';
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
-                        const exactUrl = `https://maps.google.com/?q=${lat},${lng}`;
-                        locInput.value = exactUrl;
-                        resolve(exactUrl);
+                        const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+                        locInput.value = wazeUrl;
+                        resolve(wazeUrl);
                     },
                     (err) => {
                         locInput.value = '';
@@ -936,7 +994,7 @@
             submitBtn.disabled = true;
             submitBtn.textContent = '⏳...';
 
-            if (!locationUrl || locationUrl === 'جاري جلب الموقع الدقيق...') {
+            if (!locationUrl || locationUrl.includes('جاري جلب الموقع')) {
                 try {
                     locationUrl = await getCurrentLocation();
                 } catch (e) {
@@ -944,6 +1002,9 @@
                     submitBtn.textContent = 'حفظ';
                     return;
                 }
+            } else {
+                // تحويل أي رابط جوجل ماب يحتوي على إحداثيات إلى Waze عند الحفظ
+                locationUrl = convertToWazeUrl(locationUrl);
             }
 
             let chosenTheme = selectedTheme;
@@ -1002,14 +1063,7 @@
         }
 
         function getPlaceMapUrl(place) {
-            let loc = (place.location || '').trim();
-            if (!loc && place.lat && place.lng) {
-                loc = `https://maps.google.com/?q=${place.lat},${place.lng}`;
-            }
-            if (loc && !loc.startsWith('http://') && !loc.startsWith('https://')) {
-                loc = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`;
-            }
-            return loc;
+            return convertToWazeUrl(place.location, place);
         }
 
         function openPlaceInMap(placeId) {
@@ -1025,7 +1079,7 @@
             if (!place) return;
 
             const mapUrl = getPlaceMapUrl(place);
-            const text = `📍 *${place.name}*\n${place.notes ? '📝 ' + place.notes + '\n' : ''}🗺️ ${mapUrl}`;
+            const text = `📍 *${place.name}*\n${place.notes ? '📝 ' + place.notes + '\n' : ''}🚗 Waze: ${mapUrl}`;
             window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
         }
 
@@ -1040,7 +1094,7 @@
             document.getElementById('editPlaceId').value = p.id;
             document.getElementById('placeName').value = p.name || '';
             document.getElementById('placeCategory').value = p.categoryId || (categories[0] && categories[0].id);
-            document.getElementById('locationInput').value = p.location || (p.lat && p.lng ? `https://maps.google.com/?q=${p.lat},${p.lng}` : '');
+            document.getElementById('locationInput').value = convertToWazeUrl(p.location, p);
             document.getElementById('placeNotes').value = p.notes || '';
 
             tempImageBase64 = p.photo || '';
@@ -1102,7 +1156,7 @@
                         </div>
                     </div>
                     <div class="place-footer">
-                        <span class="map-open-hint">🗺️ Google Maps</span>
+                        <span class="map-open-hint">🚗 Waze</span>
                         <div class="place-actions">
                             <button type="button" class="action-icon-btn whatsapp-btn" onclick="sharePlaceWhatsApp(event, '${place.id}')" title="مشاركة عبر واتساب">
                                 <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
@@ -1129,7 +1183,6 @@
                 return normName.includes(normalizedQuery) || normNotes.includes(normalizedQuery);
             };
 
-            // في حالة كتابة نص في البحث: ابحث في كافة الأقسام وأخفِ الأقسام الفارغة
             if (normalizedQuery) {
                 let totalMatches = 0;
                 const knownCatIds = new Set(categories.map(c => c.id));
@@ -1155,7 +1208,6 @@
                     `;
                 }).join('');
 
-                // إظهار أي أماكن مطابقة غير مرتبطة بقسم حالي
                 const uncategorizedPlaces = places.filter(p => !knownCatIds.has(p.categoryId) && matchesQuery(p));
                 if (uncategorizedPlaces.length > 0 && activeCategoryFilter === 'all') {
                     totalMatches += uncategorizedPlaces.length;
@@ -1180,7 +1232,6 @@
                 return;
             }
 
-            // الوضع العادي (بدون بحث)
             const visibleCategories = activeCategoryFilter === 'all'
                 ? categories
                 : categories.filter(c => c.id === activeCategoryFilter);
