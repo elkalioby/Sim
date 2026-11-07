@@ -561,7 +561,7 @@
             <div class="form-group">
                 <label>اللوكيشن (Waze)</label>
                 <div style="display: flex; gap: 6px;">
-                    <input type="text" id="locationInput" placeholder="رابط الخريطة أو اضغط موقعي للتحديد عبر Waze..." style="flex: 1;">
+                    <input type="text" id="locationInput" placeholder="الصق رابط Waze أو اضغط موقعي..." style="flex: 1;" oninput="cleanLocationInputField(this)">
                     <button type="button" class="btn" id="gpsBtn" onclick="getCurrentLocation()" style="background:#10b981; color:white; padding:10px 14px; white-space:nowrap;" title="تحديد موقعي بالضبط على Waze تلقائياً">
                         📍 موقعي
                     </button>
@@ -626,7 +626,7 @@
         let selectedTheme = 'auto';
         let tempImageBase64 = '';
 
-        // دالة لتحويل أي رابط جوجل ماب أو إحداثيات إلى رابط Waze مباشر
+        // دالة ذكية لاستخراج وتنظيف رابط Waze أو الإحداثيات من أي نص ملصق
         function convertToWazeUrl(rawLoc, place) {
             let loc = (rawLoc || '').trim();
             if (!loc && place && place.lat && place.lng) {
@@ -634,12 +634,19 @@
             }
             if (!loc) return '';
 
-            // إذا كان الرابط أصلاً رابط Waze
-            if (loc.includes('waze.com/ul')) {
-                return loc;
+            // 1. إذا كان النص يحتوي على رابط Waze (حتى لو معه كلام عربي أو بحروف كبيرة Https)
+            const wazeMatch = loc.match(/(?:https?:\/\/)?(?:www\.)?waze\.com\/ul[^\s"']*/i);
+            if (wazeMatch) {
+                let cleanWaze = wazeMatch[0];
+                if (!/^https?:\/\//i.test(cleanWaze)) {
+                    cleanWaze = 'https://' + cleanWaze;
+                } else {
+                    cleanWaze = cleanWaze.replace(/^https?:\/\//i, 'https://');
+                }
+                return cleanWaze;
             }
 
-            // استخراج الإحداثيات (lat, lng) من روابط جوجل ماب أو النص
+            // 2. استخراج الإحداثيات (lat, lng) من روابط جوجل ماب أو النص وتحويلها إلى Waze
             const coordMatch = loc.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
             if (coordMatch) {
                 const lat = coordMatch[1];
@@ -647,22 +654,37 @@
                 return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
             }
 
-            // إذا كان رابطاً خارجياً مختصراً لا يحتوي على إحداثيات نصية ظاهرة
-            if (loc.startsWith('http://') || loc.startsWith('https://')) {
-                return loc;
+            // 3. إذا كان يحتوي على أي رابط خارجي آخر (مثل رابط مختصر) مع كلام إضافي، نستخرج الرابط فقط
+            const anyUrlMatch = loc.match(/https?:\/\/[^\s"']+/i);
+            if (anyUrlMatch) {
+                return anyUrlMatch[0].replace(/^https?:\/\//i, m => m.toLowerCase());
             }
 
-            // إذا كان اسم مكان نصي يتم البحث عنه في Waze
+            // 4. إذا كان اسم مكان نصي فقط بدون روابط، يتم البحث عنه في Waze
             return `https://waze.com/ul?q=${encodeURIComponent(loc)}&navigate=yes`;
         }
 
-        // تحديث الروابط القديمة المحفوظة في السحابة والذاكرة تلقائياً إلى Waze
+        // تنظيف حقل الإدخال فوراً عند لصق نص من مشاركة Waze
+        function cleanLocationInputField(inputEl) {
+            const val = inputEl.value;
+            if (!val || val.includes('جاري جلب الموقع')) return;
+            const wazeMatch = val.match(/(?:https?:\/\/)?(?:www\.)?waze\.com\/ul[^\s"']*/i);
+            if (wazeMatch) {
+                let clean = wazeMatch[0];
+                clean = /^https?:\/\//i.test(clean) ? clean.replace(/^https?:\/\//i, 'https://') : 'https://' + clean;
+                if (val !== clean) {
+                    inputEl.value = clean;
+                }
+            }
+        }
+
+        // تحديث وتنظيف كافة الروابط القديمة المحفوظة في السحابة والذاكرة تلقائياً
         async function migrateOldLinksToWaze() {
             let updatedAny = false;
             for (let i = 0; i < places.length; i++) {
                 const p = places[i];
                 const converted = convertToWazeUrl(p.location, p);
-                if (converted && converted !== p.location && converted.includes('waze.com/ul')) {
+                if (converted && converted !== p.location) {
                     places[i].location = converted;
                     updatedAny = true;
                     if (window.db && !String(p.id).startsWith('local_')) {
@@ -1003,7 +1025,7 @@
                     return;
                 }
             } else {
-                // تحويل أي رابط جوجل ماب يحتوي على إحداثيات إلى Waze عند الحفظ
+                // تنظيف وتحويل أي رابط ملصق إلى رابط Waze صافي
                 locationUrl = convertToWazeUrl(locationUrl);
             }
 
