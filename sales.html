@@ -875,7 +875,7 @@
 
         <!-- جدول الإحصائيات -->
         <div class="table-card" id="statsTableCard">
-            <div class="table-title">📊 الإحصائيات</div>
+            <div class="table-title">📊 الإحصائيات (الأصناف المباعة فقط)</div>
             <div class="table-wrap">
                 <table class="summary-table">
                     <thead>
@@ -908,7 +908,6 @@
         let groupedCustomerDebts = [];
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
 
-        // حفظ حالة كل فلتر بشكل مستقل حتى يظل كل مربع محتفظاً بفلترته أو بالشهر الحالي تلقائياً
         let filterState = {
             sales: { item: '', month: '' },
             cost: { item: '', month: '' },
@@ -925,27 +924,43 @@
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        // دالة حساب الشهر المحاسبي: تقفيل الشهر يمتد حتى يوم 5 من الشهر الجديد
-        // أي عملية مسجلة من يوم 1 إلى يوم 5 في الشهر الجديد تُضم تلقائياً لإحصائيات الشهر السابق
-        function getAccountingMonth(dateStr) {
-            if (!dateStr) return '';
-            const clean = String(dateStr).trim();
-            const parts = clean.split('-');
-            if (parts.length < 2) return clean.slice(0, 7);
+        // حساب الشهر المحاسبي: الشهر الجديد يبدأ من يوم 5 ويمتد حتى يوم 4 من الشهر التالي
+        // أي عملية في أيام (1، 2، 3، 4) تُحسب ضمن الشهر السابق، ومن يوم 5 يبدأ الشهر الجديد
+        function getAccountingMonth(dateStr, timestampFallback) {
+            let year = NaN, month = NaN, day = NaN;
 
-            let year = parseInt(parts[0], 10);
-            let month = parseInt(parts[1], 10);
-            const day = parts.length >= 3 ? parseInt(parts[2], 10) : 6;
+            if (dateStr) {
+                const clean = String(dateStr).trim();
+                const isoMatch = clean.match(/^(\d{4})[-/](\d{1,2})(?:[-/](\d{1,2}))?/);
+                const dmyMatch = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
 
-            if (isNaN(year) || isNaN(month)) return clean.slice(0, 7);
+                if (isoMatch) {
+                    year = parseInt(isoMatch[1], 10);
+                    month = parseInt(isoMatch[2], 10);
+                    day = isoMatch[3] ? parseInt(isoMatch[3], 10) : 5;
+                } else if (dmyMatch) {
+                    day = parseInt(dmyMatch[1], 10);
+                    month = parseInt(dmyMatch[2], 10);
+                    year = parseInt(dmyMatch[3], 10);
+                }
+            }
 
-            if (!isNaN(day) && day <= 5) {
-                if (!(year === 2026 && month === 10)) {
-                    month -= 1;
-                    if (month < 1) {
-                        month = 12;
-                        year -= 1;
-                    }
+            if ((isNaN(year) || isNaN(month)) && timestampFallback) {
+                const d = new Date(Number(timestampFallback));
+                if (!isNaN(d.getTime())) {
+                    year = d.getFullYear();
+                    month = d.getMonth() + 1;
+                    day = d.getDate();
+                }
+            }
+
+            if (isNaN(year) || isNaN(month)) return '';
+
+            if (!isNaN(day) && day < 5) {
+                month -= 1;
+                if (month < 1) {
+                    month = 12;
+                    year -= 1;
                 }
             }
 
@@ -953,7 +968,7 @@
         }
 
         function getCurrentMonthStr() {
-            return getAccountingMonth(getTodayStr());
+            return getAccountingMonth(getTodayStr(), Date.now());
         }
 
         document.getElementById('batchDate').value = getTodayStr();
@@ -996,7 +1011,6 @@
             }
         }
 
-        // عند تغيير نوع الفلتر من القائمة المنسدلة (مبيعات / تكلفة / أرباح / الكل)
         window.onFilterTargetChange = function() {
             const target = document.getElementById('filterTargetSelect').value;
             const box = document.getElementById('unifiedFilterBox');
@@ -1012,7 +1026,6 @@
             dateLabel.textContent = activeState.month ? formatMonthDisplay(activeState.month) : '📅 حدد التاريخ';
         };
 
-        // عند اختيار الشركة أو الشهر داخل الفلتر الموحد
         window.onUnifiedFilterChange = function() {
             const target = document.getElementById('filterTargetSelect').value;
             const itemVal = document.getElementById('itemFilter').value;
@@ -1032,7 +1045,6 @@
             renderDashboard();
         };
 
-        // زر عرض (إعادة ضبط الفلتر المختار حالياً لعرض الكل للشهر الحالي)
         window.resetCurrentFilter = function() {
             const target = document.getElementById('filterTargetSelect').value;
             document.getElementById('itemFilter').value = 'ALL';
@@ -1072,7 +1084,6 @@
             }
         }
 
-        // دالة ذكية لتوحيد اسم العميل/المحل وتجاهل الكلمات الزائدة مثل (محل، للاتصال، للاتصالات) لدمج فواتير نفس العميل
         function normalizeCoreIdentity(text) {
             if (!text) return '';
             return String(text)
@@ -1086,7 +1097,6 @@
                 .trim();
         }
 
-        // تجميع كل الفواتير غير المسددة لنفس العميل في عنصر واحد
         function buildGroupedDebts() {
             const groups = [];
 
@@ -1469,21 +1479,39 @@
             if (!dur && parenMatch) {
                 dur = parenMatch[1];
             } else if (!dur) {
-                const numMatch = s.match(/ (30|60|90|180|365) /);
+                const numMatch = s.match(/(?:^|\s|_)(30|60|90|180|365)(?:$|\s)/);
                 if (numMatch) dur = numMatch[1];
             }
 
-            const cleanName = s.replace(/\(\d+\)/g, '').replace(/ (30|60|90) /g, '').trim();
+            const cleanName = s.replace(/\(\d+\)/g, '').replace(/(?:^|\s|_)(30|60|90|180|365)(?:$|\s)/g, '').trim();
             const lower = cleanName.toLowerCase();
 
             let company = cleanName || 'Mobily';
-            if (lower.includes('mobily') || lower.includes('موبايلي')) company = 'Mobily';
-            else if (lower.includes('stc') || lower.includes('اس تي سي') || lower.includes('إس تي سي') || lower.includes('سوا')) company = 'STC';
-            else if (lower.includes('zain') || lower.includes('زين')) company = 'Zain';
-            else if (lower.includes('redbull') || lower.includes('red bull') || lower.includes('ريد بل') || lower.includes('ريدبل')) company = 'Redbull';
-            else {
+
+            let matchedCustom = null;
+            for (const cat of categoriesList) {
+                if (lower === cat.toLowerCase()) {
+                    matchedCustom = cat;
+                    break;
+                }
+            }
+
+            if (matchedCustom) {
+                company = matchedCustom;
+            } else if (lower.includes('روتر') || lower.includes('راوتر') || lower.includes('router')) {
+                const routerCat = categoriesList.find(c => c.includes('روتر') || c.includes('راوتر'));
+                company = routerCat || cleanName;
+            } else if (lower.includes('mobily') || lower.includes('موبايلي')) {
+                company = 'Mobily';
+            } else if (lower.includes('stc') || lower.includes('اس تي سي') || lower.includes('إس تي سي') || lower.includes('سوا')) {
+                company = 'STC';
+            } else if (lower.includes('zain') || lower.includes('زين')) {
+                company = 'Zain';
+            } else if (lower.includes('redbull') || lower.includes('red bull') || lower.includes('ريد بل') || lower.includes('ريدبل')) {
+                company = 'Redbull';
+            } else {
                 for (const cat of categoriesList) {
-                    if (lower === cat.toLowerCase() || lower.includes(cat.toLowerCase())) {
+                    if (lower.includes(cat.toLowerCase())) {
                         company = cat;
                         break;
                     }
@@ -1500,30 +1528,23 @@
         function extractInvoiceItems(inv) {
             const extracted = [];
 
-            if (Array.isArray(inv.cartItems) && inv.cartItems.length > 0) {
-                inv.cartItems.forEach(it => {
-                    const rawCat = it.item || it.category || it.company || it.name || '';
-                    const { company, duration } = parseCompanyAndDuration(rawCat, it.duration || it.dur);
-                    const qty = parseFloat(it.qty ?? it.quantity ?? it.count ?? 0) || 0;
-                    const price = parseFloat(it.price ?? 0) || 0;
-                    const total = parseFloat(it.total ?? (qty * price) ?? 0) || 0;
-                    if (company || qty > 0) {
-                        extracted.push({ company, duration, qty, total });
-                    }
-                });
-                return extracted;
-            }
+            const itemsArray = (Array.isArray(inv.cartItems) && inv.cartItems.length > 0)
+                ? inv.cartItems
+                : ((Array.isArray(inv.items) && inv.items.length > 0)
+                    ? inv.items
+                    : ((Array.isArray(inv.products) && inv.products.length > 0) ? inv.products : null));
 
-            const altArray = inv.items || inv.products;
-            if (Array.isArray(altArray) && altArray.length > 0) {
-                altArray.forEach(it => {
+            if (itemsArray) {
+                itemsArray.forEach(it => {
                     const rawCat = it.item || it.category || it.company || it.name || '';
                     const { company, duration } = parseCompanyAndDuration(rawCat, it.duration || it.dur);
                     const qty = parseFloat(it.qty ?? it.quantity ?? it.count ?? 0) || 0;
                     const price = parseFloat(it.price ?? 0) || 0;
-                    const total = parseFloat(it.total ?? (qty * price) ?? 0) || 0;
-                    if (company || qty > 0) {
-                        extracted.push({ company, duration, qty, total });
+                    const itemTotal = (it.total !== undefined && it.total !== null && it.total !== '')
+                        ? (parseFloat(it.total) || 0)
+                        : +(qty * price).toFixed(2);
+                    if (qty > 0) {
+                        extracted.push({ company, duration, qty, total: itemTotal });
                     }
                 });
                 return extracted;
@@ -1533,7 +1554,7 @@
             const { company, duration } = parseCompanyAndDuration(rawCat, inv.duration);
             const qty = parseFloat(inv.qty ?? inv.quantity ?? inv.count ?? inv.totalQty ?? 0) || 0;
             const total = parseFloat(inv.total ?? inv.totalAmount ?? 0) || 0;
-            if (company || qty > 0) {
+            if (qty > 0) {
                 extracted.push({ company, duration, qty, total });
             }
 
@@ -1610,7 +1631,6 @@
             return totalCostForSale;
         }
 
-        // دالة موحدة لحساب الإحصائيات لأي فلتر بشكل مستقل مع تقفيل الشهر يوم 5
         function calculateMetricsForFilter(selectedItemKey, selectedMonth, explicitDebtMonth = '') {
             const isAllItems = (selectedItemKey === 'ALL');
             const isSpecificItem = Boolean(selectedItemKey && !isAllItems);
@@ -1656,7 +1676,7 @@
                     batchQueuesMap[b.key].push({ remainingQty: q, unitCost: u });
                     fallbackCostMap[b.key] = u;
                 }
-                const bMonth = getAccountingMonth(b.date);
+                const bMonth = getAccountingMonth(b.date, b.timestamp);
                 if (!selectedMonth || bMonth === selectedMonth) {
                     filteredBatchesCostMap[b.key] = (filteredBatchesCostMap[b.key] || 0) + bTotal;
                 }
@@ -1667,7 +1687,7 @@
                 const key = `${company}_${duration}`;
                 allScannedMap[key] = (allScannedMap[key] || 0) + 1;
 
-                const simMonth = getAccountingMonth(sim.date);
+                const simMonth = getAccountingMonth(sim.date, sim.timestamp);
                 if (!selectedMonth || simMonth === selectedMonth) {
                     filteredScannedMap[key] = (filteredScannedMap[key] || 0) + 1;
                 }
@@ -1682,7 +1702,7 @@
 
             chronologicalInvoices.forEach(inv => {
                 const items = extractInvoiceItems(inv);
-                const invMonth = getAccountingMonth(inv.date);
+                const invMonth = getAccountingMonth(inv.date, inv.timestamp);
                 const matchesMonth = !selectedMonth || invMonth === selectedMonth;
                 const matchesDebtMonth = !explicitDebtMonth || invMonth === explicitDebtMonth;
                 const matchesItem = !isSpecificItem || items.some(it => `${it.company}_${it.duration}` === selectedItemKey);
@@ -1752,19 +1772,19 @@
         window.renderDashboard = function() {
             const currentMonth = getCurrentMonthStr();
 
-            // 1. حساب المبيعات (للشهر المحاسبي الحالي افتراضياً أو حسب فلتر المبيعات)
+            // 1. حساب المبيعات (للشهر المحاسبي الحالي الذي يبدأ يوم 5)
             const salesItemKey = filterState.sales.item;
             const salesMonthInput = filterState.sales.month;
             const effectiveSalesMonth = salesMonthInput || currentMonth;
             const salesMetrics = calculateMetricsForFilter(salesItemKey, effectiveSalesMonth, salesMonthInput);
 
-            // 2. حساب التكلفة (للشهر المحاسبي الحالي افتراضياً أو حسب فلتر التكلفة)
+            // 2. حساب التكلفة
             const costItemKey = filterState.cost.item;
             const costMonthInput = filterState.cost.month;
             const effectiveCostMonth = costMonthInput || currentMonth;
             const costMetrics = calculateMetricsForFilter(costItemKey, effectiveCostMonth);
 
-            // 3. حساب الأرباح (للشهر المحاسبي الحالي افتراضياً أو حسب فلتر الأرباح)
+            // 3. حساب الأرباح
             const profitItemKey = filterState.profit.item;
             const profitMonthInput = filterState.profit.month;
             const effectiveProfitMonth = profitMonthInput || currentMonth;
@@ -1795,7 +1815,19 @@
 
             statsTableCard.style.display = 'block';
             const summaryBody = document.getElementById('companySummaryBody');
-            summaryBody.innerHTML = activeMetricsForTable.activeKeys.map(item => {
+
+            // إظهار الأصناف التي تم بيعها فقط في الجدول (المباع > 0)
+            const soldItemsOnly = activeMetricsForTable.activeKeys.filter(item => {
+                const sold = activeMetricsForTable.filteredSoldMap[item.key] || 0;
+                return sold > 0;
+            });
+
+            if (soldItemsOnly.length === 0) {
+                summaryBody.innerHTML = `<tr><td colspan="7" style="padding:16px; color:#64748b; font-weight:bold; text-align:center;">لا توجد مبيعات مسجلة في هذه الفترة.</td></tr>`;
+                return;
+            }
+
+            summaryBody.innerHTML = soldItemsOnly.map(item => {
                 const baseAuto = (activeMetricsForTable.allScannedMap[item.key] || 0) - (activeMetricsForTable.allSoldMap[item.key] || 0);
                 const offset = (stockOffsets && stockOffsets[item.invKey] !== undefined) ? parseFloat(stockOffsets[item.invKey]) : 0;
                 const availableStock = Math.max(0, baseAuto + offset);
@@ -1883,10 +1915,11 @@
                     localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
                     const recordsSnap = await window.getDocs(window.collection(window.db, "sales_records"));
-                    invoicesList = [];
+                    const uniqueRecordsMap = new Map();
                     recordsSnap.forEach(docSnap => {
-                        invoicesList.push({ id: docSnap.id, firebaseId: docSnap.id, ...docSnap.data() });
+                        uniqueRecordsMap.set(docSnap.id, { id: docSnap.id, firebaseId: docSnap.id, ...docSnap.data() });
                     });
+                    invoicesList = Array.from(uniqueRecordsMap.values());
                     localStorage.setItem('sales_records_offline', JSON.stringify(invoicesList));
                 }
             } catch (e) {

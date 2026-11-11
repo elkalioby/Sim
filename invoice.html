@@ -275,7 +275,7 @@
                 <option value="all">كل الفترات</option>
                 <option value="today">اليوم</option>
                 <option value="week">هذا الأسبوع (آخر 7 أيام)</option>
-                <option value="month">هذا الشهر</option>
+                <option value="month">هذا الشهر (من يوم 5)</option>
             </select>
             <button class="filter-btn" id="debtFilterBtn" onclick="currentPage=1; toggleDebtFilter()">المديونيات فقط</button>
         </div>
@@ -302,6 +302,48 @@
         const itemsPerPage = 5;
 
         document.getElementById('reminderDate').valueAsDate = new Date();
+
+        // دالة حساب الشهر المحاسبي الموحدة: الشهر يبدأ من يوم 5 ويمتد حتى يوم 4 من الشهر التالي
+        function getAccountingMonth(dateStr, timestampFallback) {
+            let year = NaN, month = NaN, day = NaN;
+
+            if (dateStr) {
+                const clean = String(dateStr).trim();
+                const isoMatch = clean.match(/^(\d{4})[-/](\d{1,2})(?:[-/](\d{1,2}))?/);
+                const dmyMatch = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+
+                if (isoMatch) {
+                    year = parseInt(isoMatch[1], 10);
+                    month = parseInt(isoMatch[2], 10);
+                    day = isoMatch[3] ? parseInt(isoMatch[3], 10) : 5;
+                } else if (dmyMatch) {
+                    day = parseInt(dmyMatch[1], 10);
+                    month = parseInt(dmyMatch[2], 10);
+                    year = parseInt(dmyMatch[3], 10);
+                }
+            }
+
+            if ((isNaN(year) || isNaN(month)) && timestampFallback) {
+                const d = new Date(Number(timestampFallback));
+                if (!isNaN(d.getTime())) {
+                    year = d.getFullYear();
+                    month = d.getMonth() + 1;
+                    day = d.getDate();
+                }
+            }
+
+            if (isNaN(year) || isNaN(month)) return '';
+
+            if (!isNaN(day) && day < 5) {
+                month -= 1;
+                if (month < 1) {
+                    month = 12;
+                    year -= 1;
+                }
+            }
+
+            return `${year}-${String(month).padStart(2, '0')}`;
+        }
 
         // حفظ واسترجاع مسودة الفاتورة تلقائياً
         function saveInvoiceDraft() {
@@ -395,7 +437,6 @@
             }
         });
 
-        // تنظيف أي أصناف وهمية بدون مدة مثل "Redbull" المنفردة
         function cleanPhantomKeysFromObj(obj) {
             if (!obj || typeof obj !== 'object') return;
             Object.keys(obj).forEach(k => {
@@ -543,7 +584,7 @@
             ]);
 
             allKeys.forEach(key => {
-                if (!key.includes('(')) return; // تجاهل أي اسم صنف وهمي بدون مدة مثل Redbull المنفردة
+                if (!key.includes('(')) return;
                 const base = autoStockInventory[key] || 0;
                 const offset = (stockOffsets && stockOffsets[key] !== undefined) ? parseFloat(stockOffsets[key]) : 0;
                 const finalQty = base + offset;
@@ -1097,7 +1138,7 @@
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
             const todayStr = `${year}-${month}-${day}`;
-            const currentMonthStr = `${year}-${month}`;
+            const currentAccountingMonth = getAccountingMonth(todayStr, now.getTime());
             
             const d = new Date(now);
             d.setDate(d.getDate() - 7);
@@ -1112,7 +1153,10 @@
                 if (!matchesSearch) return false;
                 if (timeFilter === 'today' && r.date !== todayStr) return false;
                 if (timeFilter === 'week' && (!r.date || r.date < weekAgoStr || r.date > todayStr)) return false;
-                if (timeFilter === 'month' && (!r.date || !r.date.startsWith(currentMonthStr))) return false;
+                if (timeFilter === 'month') {
+                    const recordAccMonth = getAccountingMonth(r.date, r.timestamp);
+                    if (recordAccMonth !== currentAccountingMonth) return false;
+                }
                 return true;
             });
 
