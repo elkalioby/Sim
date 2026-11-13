@@ -35,17 +35,19 @@
         .card { background: var(--card); padding: 16px; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid var(--border); }
         .card-title { font-size: 1.08rem; font-weight: 800; color: var(--primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
 
-        label { display: block; margin-top: 10px; margin-bottom: 4px; font-weight: 700; font-size: 0.85rem; color: #334155; }
-        input, select, button { padding: 10px 12px; width: 100%; font-size: 0.92rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; outline: none; }
+        label { display: block; margin-top: 10px; margin-bottom: 4px; font-weight: 700; font-size: 0.84rem; color: #334155; }
+        input, select, button { padding: 9px 10px; width: 100%; font-size: 0.9rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; outline: none; }
         input:focus, select:focus { border-color: var(--primary-light); }
 
-        /* فرض التوزيع جنباً إلى جنب إجبارياً (نوع الحركة أوسع والتاريخ أصغر) بدون تأثر بحجم الشاشة */
-        .form-grid { display: grid; grid-template-columns: 1.35fr 0.65fr; gap: 8px; }
+        /* تنسيق نوع الحركة (أكبر) والتاريخ (أصغر) جنباً إلى جنب بارتفاع موحد */
+        .form-grid { display: grid; grid-template-columns: 1.35fr 0.65fr; gap: 8px; align-items: end; }
+        .form-grid > div { min-width: 0; }
         .full-width { grid-column: 1 / -1; }
 
-        .mode-select { font-weight: 800; font-size: 0.95rem; cursor: pointer; }
+        .mode-select { font-weight: 800; font-size: 0.92rem; cursor: pointer; height: 42px; padding: 6px 10px; }
         .mode-select.mode-dispatch { background: #f0fdf4; border: 2px solid var(--success); color: #166534; }
         .mode-select.mode-return { background: #fef2f2; border: 2px solid var(--danger); color: #991b1b; }
+        .date-compact-input { height: 42px; padding: 6px 6px; font-size: 0.82rem; font-weight: 700; text-align: center; direction: ltr; }
 
         .autocomplete-wrapper { position: relative; }
         .customers-dropdown {
@@ -79,22 +81,41 @@
         }
         .sim-suggestion-item:hover { background: #f0fdf4; }
 
-        .upload-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+        /* أزرار الرفع والتصوير والباركود + زر الكشاف وتقريب العدسة مثل إضافة شريحة */
+        .upload-actions { display: flex; gap: 8px; margin-top: 14px; }
         .btn-upload-icon {
-            border: none; font-size: 1.5rem; height: 50px;
+            flex: 1; border: none; font-size: 1.4rem; height: 50px;
             cursor: pointer; border-radius: 12px; color: white; display: flex;
             align-items: center; justify-content: center; transition: 0.2s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08); font-weight: 800;
         }
         .btn-upload-icon:active { transform: scale(0.96); }
         .btn-gallery { background: #0284c7; }
         .btn-camera-shot { background: #7c3aed; }
-        .btn-live-cam { background: #2563eb; }
+        .btn-live-cam { background: #2563eb; font-size: 1.05rem; }
+        .btn-torch {
+            flex: 0 0 52px; height: 50px; background: #f59e0b; color: white;
+            border: none; font-weight: bold; font-size: 1.35rem; padding: 0;
+            cursor: pointer; display: none; align-items: center; justify-content: center; border-radius: 12px;
+        }
+
+        .zoom-bar {
+            display: none; align-items: center; gap: 8px; margin-top: 8px;
+            background: #f1f5f9; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+        }
+        .zoom-bar span { font-size: 0.82rem; font-weight: bold; color: var(--primary); white-space: nowrap; }
+        .zoom-bar input[type="range"] { margin: 0; padding: 0; flex: 1; accent-color: var(--primary-light); cursor: pointer; }
 
         #reader { width: 100%; margin-top: 10px; border-radius: 10px; overflow: hidden; }
+        #scanMonitor {
+            display: none; font-size: 0.8rem; background: #f8fafc; color: #475569;
+            padding: 6px 10px; border-radius: 6px; border: 1px dashed #cbd5e1;
+            margin-top: 8px; text-align: center; font-family: monospace; font-weight: 700;
+        }
+
         #ocrProgressBox {
             display: none; margin-top: 10px; background: #eff6ff; border: 1px dashed #60a5fa;
-            padding: 12px; border-radius: 10px; text-align: center; font-weight: 800; color: var(--primary); font-size: 0.88rem;
+            padding: 12px; border-radius: 10px; text-align: center; font-weight: 800; color: var(--primary); font-size: 0.92rem;
         }
 
         .temp-images-strip {
@@ -114,18 +135,46 @@
         }
         .btn-confirm-batch {
             background: var(--success); color: white; border: none; font-weight: 900;
-            font-size: 1rem; padding: 13px; border-radius: 10px; cursor: pointer; margin-top: 10px;
+            font-size: 1rem; padding: 13px; border-radius: 10px; cursor: pointer; margin-top: 10px; transition: 0.2s;
         }
         .btn-confirm-batch.return-btn { background: var(--danger); }
+        .btn-confirm-batch:disabled {
+            background: #94a3b8 !important; color: #f1f5f9 !important;
+            cursor: not-allowed !important; opacity: 0.65;
+        }
+
+        /* حقول جدول المعاينة قابلة للكتابة بوضوح تام */
+        .serial-input-staging {
+            font-family: monospace; font-weight: 800; text-align: center;
+            width: 185px; min-width: 185px; padding: 7px 6px; font-size: 0.88rem;
+            direction: ltr; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px;
+        }
+        .tag-input-staging {
+            font-family: monospace, sans-serif; font-weight: 900; text-align: center;
+            width: 92px; min-width: 92px; padding: 7px 6px; font-size: 0.95rem;
+            direction: ltr; background: #fff; border: 1.5px solid #64748b; border-radius: 6px;
+            color: #1e293b; text-transform: uppercase;
+        }
+        .tag-input-staging:focus { border-color: var(--primary-light); background: #eff6ff; }
 
         #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: 800; display: none; margin-bottom: 10px; font-size: 0.9rem; }
 
-        /* فرض ظهور فلاتر السجل جنباً إلى جنب إجبارياً */
-        .filters-bar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; background: #f1f5f9; padding: 10px; border-radius: 10px; align-items: end; }
-        .filter-item { display: flex; flex-direction: column; }
-        .filter-row-flex { display: flex; gap: 6px; align-items: center; }
-        .filter-row-flex input { flex: 1; margin: 0; }
-        .filter-row-flex button { width: auto; padding: 10px 12px; white-space: nowrap; margin: 0; }
+        /* تنسيق فلاتر السجل: نوع الحركة أوسع والفترة أصغر بارتفاع متطابق */
+        .filters-bar {
+            display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 8px;
+            margin-bottom: 12px; background: #f1f5f9; padding: 10px; border-radius: 10px; align-items: end;
+        }
+        .filter-item { display: flex; flex-direction: column; min-width: 0; }
+        .filter-item select { height: 40px; padding: 6px 8px; font-weight: 700; font-size: 0.86rem; width: 100%; }
+        .filter-row-flex { display: flex; gap: 4px; align-items: center; min-width: 0; }
+        .filter-row-flex input[type="month"] {
+            flex: 1; min-width: 0; height: 40px; margin: 0;
+            padding: 4px 4px; font-size: 0.78rem; font-weight: 700; text-align: center;
+        }
+        .filter-row-flex button {
+            width: auto; height: 40px; padding: 0 9px; font-size: 0.78rem;
+            white-space: nowrap; margin: 0; flex-shrink: 0;
+        }
 
         .search-input { font-size: 0.95rem; font-weight: 700; border: 2px solid #cbd5e1; padding: 11px 14px; margin-bottom: 12px; }
 
@@ -143,7 +192,7 @@
 
         .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
-        th, td { border: 1px solid var(--border); padding: 9px 7px; text-align: center; white-space: nowrap; }
+        th, td { border: 1px solid var(--border); padding: 8px 6px; text-align: center; white-space: nowrap; }
         th { background: #1e293b; color: white; font-weight: 700; }
         .serial-cell { font-family: monospace; font-weight: 800; font-size: 0.86rem; letter-spacing: 0.4px; }
         .tag-badge { background: #ede9fe; color: #5b21b6; padding: 3px 9px; border-radius: 6px; font-weight: 900; font-family: monospace; font-size: 0.85rem; }
@@ -236,7 +285,7 @@
 
             <div>
                 <label>التاريخ *</label>
-                <input type="date" id="actionDate" onchange="saveDispatchDraft()">
+                <input type="date" id="actionDate" class="date-compact-input" onchange="saveDispatchDraft()">
             </div>
 
             <div id="customerSelectWrap" class="full-width autocomplete-wrapper">
@@ -250,9 +299,9 @@
             </div>
 
             <div class="full-width quick-add-box">
-                <label>⚡ إضافة سريعة بالسريال الكامل أو بآخر 4 أو 5 أرقام منه (مثال: 92277):</label>
+                <label>بحث بالسيريال أو آخر 4 أرقام</label>
                 <div class="quick-row">
-                    <input type="text" id="quickSerialInput" inputmode="numeric" placeholder="✍️ اكتب السريال أو آخر أرقام منه..." oninput="onQuickSerialInput(); saveDispatchDraft();" onkeydown="if(event.key==='Enter') addQuickSerial()">
+                    <input type="text" id="quickSerialInput" inputmode="numeric" placeholder="✍️ اكتب السريال أو آخر 4 أرقام..." oninput="onQuickSerialInput(); saveDispatchDraft();" onkeydown="if(event.key==='Enter') addQuickSerial()">
                     <button type="button" class="btn-quick-add" onclick="addQuickSerial()">➕</button>
                 </div>
                 <div id="simSuggestions" class="sim-suggestions"></div>
@@ -272,10 +321,20 @@
             <button type="button" id="liveScanBtn" class="btn-upload-icon btn-live-cam" onclick="toggleLiveScanner()" title="مسح مباشر للباركود">
                 بارْكُود
             </button>
+            <button type="button" id="torchBtn" class="btn-torch" onclick="toggleTorch()" title="تشغيل/إيقاف الكشاف">
+                🔦
+            </button>
+        </div>
+
+        <div id="zoomWrap" class="zoom-bar">
+            <span>🔍 تقريب العدسة:</span>
+            <input type="range" id="zoomSlider" min="1" max="3.5" step="0.1" value="1.5" oninput="applyZoom(this.value)">
+            <span id="zoomVal" style="min-width: 35px; text-align: left;">1.5x</span>
         </div>
 
         <div id="reader"></div>
-        <div id="ocrProgressBox">⏳ جاري قراءة الباركود والكتابة اليدوية بدقة لكل الشريحة...</div>
+        <div id="scanMonitor">في انتظار توجيه الكاميرا نحو الباركود...</div>
+        <div id="ocrProgressBox">⏳ جاري التحليل...</div>
 
         <div id="tempImagesStrip" class="temp-images-strip" title="اضغط على أي صورة لتكبيرها ومراجعتها"></div>
 
@@ -290,8 +349,8 @@
                     <thead>
                         <tr>
                             <th>حذف</th>
-                            <th>السريال (ICCID)</th>
-                            <th>الرمز</th>
+                            <th style="min-width:195px;">السريال (ICCID)</th>
+                            <th style="min-width:105px;">الرمز</th>
                             <th>التصنيف</th>
                             <th>المدة</th>
                             <th>حالة الفحص والمطابقة</th>
@@ -330,7 +389,7 @@
             </div>
         </div>
 
-        <input type="text" id="mainSearchInput" class="search-input" placeholder="🔍 ابحث بالسريال (أو آخر أرقامه مثل 92277)، أو بالرمز (مثل N115)، أو باسم العميل..." oninput="saveDispatchDraft(); renderHistoryTable();">
+        <input type="text" id="mainSearchInput" class="search-input" placeholder="🔍 البحث بالسيريال أو الرمز" oninput="saveDispatchDraft(); renderHistoryTable();">
 
         <div id="tagSummaryBox">
             <div class="tag-summary-title" id="tagSummaryTitle"></div>
@@ -393,6 +452,9 @@
         </div>
     </div>
 
+    <!-- عنصر خفي لفحص ملفات الباركود عند الحاجة -->
+    <div id="hiddenFileScanner" style="display:none;"></div>
+
     <script>
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
         let simsList = [];
@@ -402,8 +464,63 @@
         let selectedCustomer = null;
         let stagingList = [];
         let tempImageUrls = [];
-        let html5QrScanner = null;
+
+        // إعداد الماسح المباشر بنفس خصائص صفحة إضافة شريحة (barcode.html)
+        const scannerConfig = {
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+            verbose: false
+        };
+        if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
+            scannerConfig.formatsToSupport = [
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.EAN_13
+            ];
+        }
+        const html5QrScanner = new Html5Qrcode("reader", scannerConfig);
         let isLiveCamRunning = false;
+        let isTorchOn = false;
+        let lastScanned = "";
+        let lastScanTime = 0;
+        let audioCtx = null;
+
+        function unlockAudio() {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+            } catch (e) {}
+        }
+
+        function playBeep(success = true) {
+            try {
+                unlockAudio();
+                if (!audioCtx) return;
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (success) {
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(1400, now);
+                    osc.frequency.setValueAtTime(1800, now + 0.06);
+                    gain.gain.setValueAtTime(0.6, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+                    osc.start(now);
+                    osc.stop(now + 0.16);
+                    if (navigator.vibrate) navigator.vibrate(70);
+                } else {
+                    osc.type = "sawtooth";
+                    osc.frequency.setValueAtTime(220, now);
+                    gain.gain.setValueAtTime(0.5, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                    if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+                }
+            } catch (e) {}
+        }
 
         function getTodayStr() {
             const d = new Date();
@@ -816,6 +933,7 @@
             return matrix[b.length][a.length];
         }
 
+        // مطابقة ذكية للسريال مع المخزون (حتى لو التقط آخر 8-9 أرقام من شباك الشريحة الصغير أو أخطأ في رقمين)
         function matchWithInventorySim(rawCandidate) {
             const clean = normalizeDigits(rawCandidate).replace(/[^0-9]/g, '');
             if (clean.length < 6) return null;
@@ -823,17 +941,23 @@
             const exact = simsList.find(s => s.code === clean);
             if (exact) return exact.code;
 
-            if (clean.length >= 7) {
-                const subMatches = simsList.filter(s => s.code && (s.code.includes(clean) || clean.includes(s.code)));
+            const iccidIdx = clean.indexOf('89966');
+            const coreClean = iccidIdx >= 0 ? clean.substring(iccidIdx, iccidIdx + 20) : clean;
+
+            if (coreClean.length >= 7) {
+                const subMatches = simsList.filter(s => s.code && (s.code.includes(coreClean) || coreClean.includes(s.code)));
                 if (subMatches.length === 1) return subMatches[0].code;
+                // لو أكثر من تطابق نفضل الشريحة غير المصروفة بعد
+                const availMatch = subMatches.find(s => s.status !== 'dispatched' && s.status !== 'returned');
+                if (availMatch && coreClean.length >= 8) return availMatch.code;
             }
 
-            if (clean.length >= 15) {
+            if (coreClean.length >= 14) {
                 let bestCode = null;
-                let bestDist = 3;
-                simsList.find(s => {
-                    if (!s.code || Math.abs(s.code.length - clean.length) > 2) return false;
-                    const dist = levenshteinDistance(clean, s.code);
+                let bestDist = 4;
+                simsList.forEach(s => {
+                    if (!s.code || Math.abs(s.code.length - coreClean.length) > 2) return;
+                    const dist = levenshteinDistance(coreClean, s.code);
                     if (dist < bestDist) {
                         bestDist = dist;
                         bestCode = s.code;
@@ -842,36 +966,212 @@
                 if (bestCode) return bestCode;
             }
 
-            const iccidIdx = clean.indexOf('89966');
-            if (iccidIdx >= 0 && clean.substring(iccidIdx).length >= 12) {
-                return clean.substring(iccidIdx, iccidIdx + 20);
+            // مطابقة بآخر 8 أو 9 أرقام من السريال مع المخزون
+            if (coreClean.length >= 8) {
+                const tail8 = coreClean.slice(-8);
+                const tailMatches = simsList.filter(s => s.code && s.code.endsWith(tail8));
+                if (tailMatches.length === 1) return tailMatches[0].code;
             }
-            if (clean.length >= 12) return clean;
+
+            if (iccidIdx >= 0 && coreClean.length >= 12) {
+                return coreClean;
+            }
+            if (coreClean.length >= 15) return coreClean;
             return null;
         }
 
-        function extractTagCodesFromText(text) {
+        // استخراج الرموز المكتوبة بخط اليد (مثل N78, n 74, N64, n.52)
+        function extractHandwrittenTagFromBoxText(text, fallbackPrefix = 'N') {
             const norm = normalizeDigits(text);
-            const ignoredWords = new Set(['SIM', 'PIN', 'PUK', 'STC', 'ZAIN', 'MOBILY', 'DIAL', 'CALL', 'GSM', 'LTE', 'HTTP', 'HTTPS', 'WWW', 'COM', 'NET']);
-            const regex = /\b([A-Za-z]{1,2})\s*([0-9IlOoSs]{1,5})\b/g;
-            const foundTags = [];
+            const ignoredWords = new Set(['SIM', 'PIN', 'PUK', 'STC', 'ZAIN', 'MOBILY', 'DIAL', 'CALL', 'GSM', 'LTE', 'HTTP', 'HTTPS', 'WWW', 'COM', 'NET', 'SERVICE', 'CENTER']);
+            
+            // 1. بحث عن حرف متبوع بمسافة أو نقطة أو شرطة ثم أرقام (مثل N78 أو n.52 أو u 74)
+            const regex = /([A-Za-z]{1,2})[\s.\-_~,:;'/\\|]*([0-9IlOoSsZzBb]{1,4})/g;
             let match;
             while ((match = regex.exec(norm)) !== null) {
-                const letters = match[1].toUpperCase();
+                let letters = match[1].toUpperCase();
                 if (ignoredWords.has(letters)) continue;
+
+                // تصحيح القراءات الشائعة لحرف N المكتوب بخط اليد (مثل u أو v أو m أو h أو r)
+                if (['U', 'V', 'W', 'H', 'M', 'R', 'I', 'L'].includes(letters)) {
+                    letters = fallbackPrefix;
+                }
+
                 let digits = match[2]
                     .replace(/[Il]/g, '1')
                     .replace(/[Oo]/g, '0')
                     .replace(/[Ss]/g, '5')
+                    .replace(/[Zz]/g, '2')
+                    .replace(/[Bb]/g, '8')
                     .replace(/[^0-9]/g, '');
-                if (digits.length >= 1 && digits.length <= 5) {
+
+                if (digits.length >= 1 && digits.length <= 4) {
                     const candidate = `${letters}${digits}`;
-                    if (!['R901', 'L1100', 'D1100', 'D901'].includes(candidate)) {
-                        foundTags.push(candidate);
+                    if (!['R901', 'L1100', 'D1100', 'D901'].includes(candidate) && digits !== '1100' && digits !== '901') {
+                        return candidate;
                     }
                 }
             }
-            return foundTags;
+
+            // 2. إذا قرأ المحرك الأرقام فقط في مربع خط اليد المعزول (أو قرأ حرف N كرقم 4 أو 11 مثل 474 أو 1178)
+            const numMatches = norm.match(/\d{2,4}/g) || [];
+            for (const numStr of numMatches) {
+                if (['1100', '901', '899', '8996', '6034', '3430'].includes(numStr)) continue;
+                if (numStr.length === 2) {
+                    return `${fallbackPrefix}${numStr}`;
+                }
+                if (numStr.length === 3 && (numStr.startsWith('4') || numStr.startsWith('1'))) {
+                    return `${fallbackPrefix}${numStr.slice(1)}`;
+                }
+                if (numStr.length === 4 && numStr.startsWith('11')) {
+                    return `${fallbackPrefix}${numStr.slice(2)}`;
+                }
+            }
+
+            return '';
+        }
+
+        // تجهيز كانفاس مع إطار أبيض (Quiet Zone) لتحسين قراءة الباركود الذي يلامس حواف الصورة
+        function createPaddedBarcodeCanvas(sourceCanvas, cropYStartRatio = 0, cropYEndRatio = 1, highContrast = false) {
+            const sw = sourceCanvas.width;
+            const sy = Math.floor(sourceCanvas.height * cropYStartRatio);
+            const sh = Math.floor(sourceCanvas.height * (cropYEndRatio - cropYStartRatio));
+            const pad = 24;
+            const scale = sw < 600 ? 1.8 : 1.2;
+            const dw = Math.round(sw * scale);
+            const dh = Math.round(sh * scale);
+
+            const out = document.createElement('canvas');
+            out.width = dw + pad * 2;
+            out.height = dh + pad * 2;
+            const ctx = out.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, out.width, out.height);
+            ctx.drawImage(sourceCanvas, 0, sy, sw, sh, pad, pad, dw, dh);
+
+            if (highContrast) {
+                const imgData = ctx.getImageData(0, 0, out.width, out.height);
+                const d = imgData.data;
+                for (let i = 0; i < d.length; i += 4) {
+                    const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+                    const v = lum < 145 ? 0 : 255;
+                    d[i] = d[i + 1] = d[i + 2] = v;
+                }
+                ctx.putImageData(imgData, 0, 0);
+            }
+            return out;
+        }
+
+        // تجهيز كانفاس مخصص لمنطقة الكتابة اليدوية أعلى الشريحة (يستخرج الحبر الأسود/الأزرق + الفلوماستر البرتقالي/الأحمر على الكارت الأزرق)
+        function createHandwritingZoneCanvas(cellCanvas) {
+            const cw = cellCanvas.width;
+            const ch = cellCanvas.height;
+            // الكتابة اليدوية تقع دائماً في الجزء العلوي الأيمن/الأوسط من الشريحة (تجنب الـ QR على اليسار)
+            const sx = Math.floor(cw * 0.28);
+            const sy = Math.floor(ch * 0.02);
+            const sw = Math.floor(cw * 0.68);
+            const sh = Math.floor(ch * 0.38);
+
+            const scale = 2.0;
+            const tw = Math.round(sw * scale);
+            const th = Math.round(sh * scale);
+
+            const temp = document.createElement('canvas');
+            temp.width = tw;
+            temp.height = th;
+            const tCtx = temp.getContext('2d');
+            tCtx.drawImage(cellCanvas, sx, sy, sw, sh, 0, 0, tw, th);
+
+            const imgData = tCtx.getImageData(0, 0, tw, th);
+            const d = imgData.data;
+
+            // حساب متوسط إضاءة الخلفية الزرقاء
+            let sumLum = 0;
+            const pixelCount = tw * th;
+            for (let i = 0; i < d.length; i += 4) {
+                sumLum += (d[i] + d[i + 1] + d[i + 2]) / 3;
+            }
+            const avgLum = sumLum / (pixelCount || 1);
+
+            for (let i = 0; i < d.length; i += 4) {
+                const r = d[i], g = d[i + 1], b = d[i + 2];
+                const lum = (r + g + b) / 3;
+
+                // 1. حبر داكن (أسود أو أزرق غامق مثل N78, n 74, N73, n.52)
+                const isDarkInk = (lum < avgLum * 0.68) || (r < 85 && g < 90 && b < 115);
+
+                // 2. فلوماستر برتقالي أو أحمر على الكارت الأزرق (مثل N64, N76 حيث اللون الأحمر أعلى من الأزرق)
+                const isWarmMarker = (r > b + 4) && (r > 115) && !(r > 180 && g > 180 && b > 180);
+
+                const val = (isDarkInk || isWarmMarker) ? 0 : 255;
+                d[i] = d[i + 1] = d[i + 2] = val;
+            }
+            tCtx.putImageData(imgData, 0, 0);
+
+            // نجمع النسخة المعالجة + النسخة العادية المحسنة في صورة واحدة صغيرة لتعزيز قراءة Tesseract
+            const combined = document.createElement('canvas');
+            const pad = 16;
+            combined.width = tw + pad * 2;
+            combined.height = th * 2 + pad * 3;
+            const cCtx = combined.getContext('2d');
+            cCtx.fillStyle = '#ffffff';
+            cCtx.fillRect(0, 0, combined.width, combined.height);
+            cCtx.drawImage(temp, pad, pad);
+            cCtx.drawImage(cellCanvas, sx, sy, sw, sh, pad, th + pad * 2, tw, th);
+            return combined;
+        }
+
+        // استخراج السريال من خلية الشريحة بكل الطرق الممكنة (BarcodeDetector -> Html5Qrcode -> OCR)
+        async function extractSerialFromCell(cellCanvas) {
+            const formats1D = ['code_128', 'code_39', 'ean_13', 'itf', 'codabar'];
+
+            // 1. فحص عبر BarcodeDetector (بدون qr_code نهائياً حتى لا يقرأ مربع QR بدلاً من الباركود)
+            if ('BarcodeDetector' in window) {
+                const candidates = [
+                    createPaddedBarcodeCanvas(cellCanvas, 0, 1, false),
+                    createPaddedBarcodeCanvas(cellCanvas, 0.45, 1, false),
+                    createPaddedBarcodeCanvas(cellCanvas, 0.45, 1, true)
+                ];
+                for (const cnv of candidates) {
+                    try {
+                        const bitmap = await createImageBitmap(cnv);
+                        const detector = new BarcodeDetector({ formats: formats1D });
+                        const barcodes = await detector.detect(bitmap);
+                        for (const b of barcodes) {
+                            const matched = matchWithInventorySim(b.rawValue);
+                            if (matched) return matched;
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            // 2. فحص احتياطي عبر Html5Qrcode على منطقة الباركود السفلية
+            try {
+                const bottomCnv = createPaddedBarcodeCanvas(cellCanvas, 0.45, 1, false);
+                const blob = await new Promise(res => bottomCnv.toBlob(res, 'image/jpeg', 0.95));
+                if (blob) {
+                    const file = new File([blob], "cell_barcode.jpg", { type: "image/jpeg" });
+                    const tempScanner = new Html5Qrcode("hiddenFileScanner", scannerConfig);
+                    const decoded = await tempScanner.scanFile(file, false);
+                    const matched = matchWithInventorySim(decoded);
+                    if (matched) return matched;
+                }
+            } catch (e) {}
+
+            // 3. فحص OCR مركز على شريط أرقام الباركود السفلي وشباك الشريحة الوسطي
+            try {
+                const bottomStrip = createPaddedBarcodeCanvas(cellCanvas, 0.35, 1, false);
+                const { data } = await Tesseract.recognize(bottomStrip, 'eng');
+                const rawText = normalizeDigits(data.text || '');
+                const cleaned = rawText.replace(/8996\s*6/g, '89966').replace(/(\d)\s+(\d)/g, '$1$2');
+                const numMatches = cleaned.match(/\d{7,22}/g) || [];
+                for (const rawNum of numMatches) {
+                    const resolved = matchWithInventorySim(rawNum);
+                    if (resolved) return resolved;
+                }
+            } catch (e) {}
+
+            return null;
         }
 
         async function handleImagesSelected(event) {
@@ -879,6 +1179,7 @@
             if (files.length === 0) return;
 
             const progressBox = document.getElementById('ocrProgressBox');
+            progressBox.innerText = `⏳ جاري التحليل...`;
             progressBox.style.display = 'block';
 
             const strip = document.getElementById('tempImagesStrip');
@@ -888,7 +1189,7 @@
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                progressBox.innerText = `⏳ جاري تحليل الشرائح واستخراج الباركود والرموز (${i + 1} من ${files.length})...`;
+                progressBox.innerText = `⏳ جاري التحليل...`;
 
                 const objUrl = URL.createObjectURL(file);
                 tempImageUrls.push(objUrl);
@@ -899,33 +1200,65 @@
                     const origW = imgEl.naturalWidth || imgEl.width;
                     const origH = imgEl.naturalHeight || imgEl.height;
 
-                    const cols = 2;
-                    const rows = 3;
-                    const cellW = origW / cols;
-                    const cellH = origH / rows;
+                    // أولاً: مسح شامل للصورة كاملة عبر BarcodeDetector لالتقاط جميع الباركودات بإحداثياتها الدقيقة دون أي قص
+                    const fullImageBarcodes = [];
+                    if ('BarcodeDetector' in window) {
+                        try {
+                            const fullBitmap = await createImageBitmap(imgEl);
+                            const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'itf'] });
+                            const detected = await detector.detect(fullBitmap);
+                            detected.forEach(b => {
+                                const matched = matchWithInventorySim(b.rawValue);
+                                if (matched && b.boundingBox) {
+                                    fullImageBarcodes.push({
+                                        code: matched,
+                                        cx: b.boundingBox.x + b.boundingBox.width / 2,
+                                        cy: b.boundingBox.y + b.boundingBox.height / 2
+                                    });
+                                }
+                            });
+                        } catch (e) {}
+                    }
+
+                    // تقسيم الشبكة (2 عمود × 3 صفوف) مع هامش تداخل (Overlap Padding) لمنع قطع الشريحة في الصف الأول يسار (N78)
+                    const rowRanges = [
+                        [0.00, 0.43], // الصف الأول (يغطي الهامش العلوي والشرائح المزاحة لأسفل مثل N78)
+                        [0.33, 0.72], // الصف الثاني
+                        [0.63, 1.00]  // الصف الثالث
+                    ];
+                    const colRanges = [
+                        [0.47, 1.00], // العمود الأيمن أولاً (cOrder = 0)
+                        [0.00, 0.53]  // العمود الأيسر ثانياً (cOrder = 1)
+                    ];
 
                     const gridCells = [];
+                    for (let r = 0; r < 3; r++) {
+                        for (let cIdx = 0; cIdx < 2; cIdx++) {
+                            const [y0Ratio, y1Ratio] = rowRanges[r];
+                            const [x0Ratio, x1Ratio] = colRanges[cIdx];
 
-                    for (let r = 0; r < rows; r++) {
-                        for (let c = 0; c < cols; c++) {
+                            const sx = Math.floor(origW * x0Ratio);
+                            const sy = Math.floor(origH * y0Ratio);
+                            const sw = Math.floor(origW * (x1Ratio - x0Ratio));
+                            const sh = Math.floor(origH * (y1Ratio - y0Ratio));
+
                             const subCanvas = document.createElement('canvas');
-                            subCanvas.width = cellW;
-                            subCanvas.height = cellH;
+                            subCanvas.width = sw;
+                            subCanvas.height = sh;
                             const sCtx = subCanvas.getContext('2d');
-                            sCtx.drawImage(imgEl, c * cellW, r * cellH, cellW, cellH, 0, 0, cellW, cellH);
+                            sCtx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, sw, sh);
 
                             gridCells.push({
                                 r: r,
-                                c: c,
+                                cOrder: cIdx,
+                                x0: sx,
+                                x1: sx + sw,
+                                y0: sy,
+                                y1: sy + sh,
                                 canvas: subCanvas
                             });
                         }
                     }
-
-                    gridCells.sort((a, b) => {
-                        if (a.r !== b.r) return a.r - b.r;
-                        return b.c - a.c;
-                    });
 
                     const fileExtractedItems = [];
                     const seenFileCodes = new Set();
@@ -934,39 +1267,27 @@
                         let cellCode = null;
                         let cellTag = '';
 
-                        if ('BarcodeDetector' in window) {
-                            try {
-                                const bitmap = await createImageBitmap(cell.canvas);
-                                const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'qr_code'] });
-                                const barcodes = await detector.detect(bitmap);
-                                for (const b of barcodes) {
-                                    const matched = matchWithInventorySim(b.rawValue);
-                                    if (matched) {
-                                        cellCode = matched;
-                                        break;
-                                    }
-                                }
-                            } catch (e) {}
+                        // أ. التحقق مما إذا كان المسح الشامل قد التقط الباركود داخل حدود هذه الخلية
+                        const inCellBarcode = fullImageBarcodes.find(fb =>
+                            !seenFileCodes.has(fb.code) &&
+                            fb.cx >= cell.x0 && fb.cx <= cell.x1 &&
+                            fb.cy >= cell.y0 && fb.cy <= cell.y1
+                        );
+                        if (inCellBarcode) {
+                            cellCode = inCellBarcode.code;
                         }
 
-                        try {
-                            const { data } = await Tesseract.recognize(cell.canvas, 'eng');
-                            const text = normalizeDigits(data.text || '');
-                            
-                            const tags = extractTagCodesFromText(text);
-                            if (tags.length > 0) cellTag = tags[0];
+                        // ب. إذا لم يلتقطه المسح الشامل، نفحص الخلية المعزولة بـ 3 طبقات (BarcodeDetector -> Html5Qrcode -> OCR)
+                        if (!cellCode) {
+                            cellCode = await extractSerialFromCell(cell.canvas);
+                        }
 
-                            if (!cellCode) {
-                                const numMatches = text.match(/\d{7,22}/g) || [];
-                                for (const rawNum of numMatches) {
-                                    const resolved = matchWithInventorySim(rawNum);
-                                    if (resolved) {
-                                        cellCode = resolved;
-                                        break;
-                                    }
-                                }
-                            }
-                        } catch (err) {}
+                        // ج. استخراج الكتابة اليدوية (الحرف والرقم مثل N78, N74, N64) من المنطقة العلوية للشريحة
+                        try {
+                            const hwCanvas = createHandwritingZoneCanvas(cell.canvas);
+                            const { data } = await Tesseract.recognize(hwCanvas, 'eng');
+                            cellTag = extractHandwrittenTagFromBoxText(data.text || '', 'N');
+                        } catch (hwErr) {}
 
                         if (cellCode && !seenFileCodes.has(cellCode)) {
                             seenFileCodes.add(cellCode);
@@ -993,9 +1314,11 @@
             saveDispatchDraft();
 
             if (totalAddedFromImages > 0) {
+                playBeep(true);
                 showMessage(`📸 تم استخراج (${totalAddedFromImages}) شريحة وترتيبها من اليمين لليسار بنجاح!`);
             } else {
-                showMessage(`⚠️ لم يتم التعرف على الشرائح بدقة. يمكنك استخدام الإضافة السريعة بالأسفل.`, true);
+                playBeep(false);
+                showMessage(`⚠️ لم يتم التعرف على الشرائح بدقة. يمكنك استخدام البحث السريع بالأسفل.`, true);
             }
             renderStagingTable();
         }
@@ -1033,40 +1356,144 @@
             }
         }
 
+        // =====================================================================
+        // نظام المسح المباشر للباركود مطابق تماماً لملف إضافة شريحة (barcode.html)
+        // =====================================================================
+        async function applyZoom(val) {
+            document.getElementById('zoomVal').innerText = val + 'x';
+            if (!isLiveCamRunning) return;
+            try {
+                await html5QrScanner.applyVideoConstraints({
+                    advanced: [{ zoom: parseFloat(val) }]
+                });
+            } catch (e) {}
+        }
+
+        async function toggleTorch() {
+            if (!isLiveCamRunning) return;
+            try {
+                isTorchOn = !isTorchOn;
+                await html5QrScanner.applyVideoConstraints({ advanced: [{ torch: isTorchOn }] });
+                document.getElementById('torchBtn').style.background = isTorchOn ? "#16a34a" : "#f59e0b";
+            } catch (err) {
+                showMessage("⚠️ الفلاش غير مدعوم من المتصفح في هذا الجهاز", true);
+            }
+        }
+
         async function toggleLiveScanner() {
+            unlockAudio();
             const btn = document.getElementById('liveScanBtn');
-            if (isLiveCamRunning && html5QrScanner) {
+            const torchBtn = document.getElementById('torchBtn');
+            const zoomWrap = document.getElementById('zoomWrap');
+            const monitor = document.getElementById('scanMonitor');
+
+            if (isLiveCamRunning) {
                 await html5QrScanner.stop();
                 isLiveCamRunning = false;
+                isTorchOn = false;
                 btn.innerText = 'بارْكُود';
                 btn.style.background = '#2563eb';
+                torchBtn.style.display = 'none';
+                torchBtn.style.background = '#f59e0b';
+                zoomWrap.style.display = 'none';
+                monitor.style.display = 'none';
                 return;
             }
 
-            if (!html5QrScanner) {
-                html5QrScanner = new Html5Qrcode("reader");
-            }
+            const qrBoxConfig = function(viewfinderWidth, viewfinderHeight) {
+                return {
+                    width: Math.floor(viewfinderWidth * 0.94),
+                    height: Math.floor(viewfinderHeight * 0.35)
+                };
+            };
 
             try {
-                await html5QrScanner.start(
-                    { facingMode: "environment" },
-                    { fps: 15, qrbox: { width: 280, height: 120 } },
-                    (decodedText) => {
-                        const matched = matchWithInventorySim(decodedText);
-                        if (matched) {
-                            if (addCodeToStaging(matched, '')) {
-                                saveDispatchDraft();
-                                renderStagingTable();
-                                showMessage(`✅ تم التقاط السريال: ${matched}`);
+                try {
+                    await html5QrScanner.start(
+                        { facingMode: "environment" },
+                        {
+                            fps: 20,
+                            disableFlip: false,
+                            qrbox: qrBoxConfig,
+                            videoConstraints: {
+                                facingMode: "environment",
+                                width: { ideal: 1920 },
+                                height: { ideal: 1080 },
+                                focusMode: "continuous"
                             }
-                        }
-                    }
-                );
+                        },
+                        (decodedText) => handleLiveBarcodeScan(decodedText)
+                    );
+                } catch (hdErr) {
+                    await html5QrScanner.start(
+                        { facingMode: "environment" },
+                        {
+                            fps: 15,
+                            disableFlip: false,
+                            qrbox: qrBoxConfig
+                        },
+                        (decodedText) => handleLiveBarcodeScan(decodedText)
+                    );
+                }
+
                 isLiveCamRunning = true;
-                btn.innerText = '⏹️';
+                btn.innerText = '⏹️ إيقاف';
                 btn.style.background = '#dc2626';
+                torchBtn.style.display = 'flex';
+                zoomWrap.style.display = 'flex';
+                monitor.style.display = 'block';
+                monitor.innerText = 'الكاميرا جاهزة.. وجه المستطيل على الباركود';
+
+                document.getElementById('zoomSlider').value = "1.5";
+                setTimeout(() => applyZoom(1.5), 400);
             } catch (e) {
-                showMessage('⚠️ تعذر تشغيل الكاميرا المباشرة.', true);
+                showMessage('⚠️ تعذر تشغيل الكاميرا، تأكد من إعطاء الصلاحية للمتصفح.', true);
+            }
+        }
+
+        function handleLiveBarcodeScan(scannedCode) {
+            const rawStr = String(scannedCode || '').trim();
+            if (!rawStr) return;
+
+            const monitor = document.getElementById('scanMonitor');
+            const lowerRaw = rawStr.toLowerCase();
+            if (lowerRaw.includes('http://') || lowerRaw.includes('https://') || lowerRaw.includes('www.') || lowerRaw.includes('.com') || lowerRaw.includes('.sa') || lowerRaw.includes('/')) {
+                if (monitor) monitor.innerText = "تم تجاهل رابط ويب غير صالح";
+                return;
+            }
+
+            let code = normalizeDigits(rawStr).replace(/[^0-9]/g, '');
+            const iccidIdx = code.indexOf('89966');
+            if (iccidIdx > 0) {
+                code = code.substring(iccidIdx);
+            }
+
+            if (code.length < 8) {
+                if (monitor && code.length > 0) {
+                    monitor.innerText = `قراءة غير مكتملة (${code}).. اثبت قليلاً على الباركود كامل`;
+                }
+                return;
+            }
+
+            const matched = matchWithInventorySim(code) || code;
+            if (monitor) monitor.innerText = `تم التقاط الكود: ${matched}`;
+
+            const now = Date.now();
+            if (matched === lastScanned && (now - lastScanTime) < 2500) return;
+            lastScanned = matched;
+            lastScanTime = now;
+
+            if (stagingList.some(item => item.code === matched)) {
+                playBeep(false);
+                showMessage(`⚠️ الشريحة (${matched}) موجودة بالفعل في القائمة المؤقتة!`, true);
+                return;
+            }
+
+            if (addCodeToStaging(matched, '')) {
+                playBeep(true);
+                saveDispatchDraft();
+                renderStagingTable();
+                showMessage(`✅ تم التقاط السريال: ${matched}`);
             }
         }
 
@@ -1149,9 +1576,15 @@
             }
         }
 
-        function updateStagingRowTag(idx, newTag) {
+        function updateStagingRowTag(idx, inputEl) {
             if (stagingList[idx]) {
-                stagingList[idx].tagCode = String(newTag || '').trim().toUpperCase();
+                const upper = String(inputEl.value || '').toUpperCase();
+                if (inputEl.value !== upper) {
+                    const pos = inputEl.selectionStart;
+                    inputEl.value = upper;
+                    try { inputEl.setSelectionRange(pos, pos); } catch (e) {}
+                }
+                stagingList[idx].tagCode = upper.trim();
                 saveDispatchDraft();
             }
         }
@@ -1178,6 +1611,7 @@
             if (!sim) {
                 return {
                     valid: false,
+                    alreadyDispatched: false,
                     category: category,
                     duration: duration,
                     html: `<span class="warn-pill">⚠️ غير مضافة مسبقاً في تاب (إضافة شريحة)!</span>`
@@ -1188,6 +1622,7 @@
                 if (sim.status === 'dispatched') {
                     return {
                         valid: false,
+                        alreadyDispatched: true,
                         category: category,
                         duration: duration,
                         html: `<span class="warn-pill">🚫 مصروفة مسبقاً للعميل: ${sim.clientName || 'مسجل سابقاً'} (${sim.tagCode || '-'})</span>`
@@ -1196,6 +1631,7 @@
                 if (sim.status === 'returned') {
                     return {
                         valid: false,
+                        alreadyDispatched: false,
                         category: category,
                         duration: duration,
                         html: `<span class="warn-pill">❌ مسجلة كمرتجع سابقاً (${sim.clientName || 'غير محدد'})</span>`
@@ -1203,6 +1639,7 @@
                 }
                 return {
                     valid: true,
+                    alreadyDispatched: false,
                     category: category,
                     duration: duration,
                     html: `<span class="ready-pill">✅ مضافة بالمخزون وجاهزة للصرف</span>`
@@ -1211,6 +1648,7 @@
                 if (sim.status === 'returned') {
                     return {
                         valid: false,
+                        alreadyDispatched: false,
                         category: category,
                         duration: duration,
                         html: `<span class="warn-pill">⚠️ مسجلة كمرتجع (❌) بالفعل مسبقاً!</span>`
@@ -1219,6 +1657,7 @@
                 const prevClient = sim.clientName ? `👤 العميل: ${sim.clientName} (${sim.tagCode || 'بدون رمز'})` : `جاهزة للمرتجع`;
                 return {
                     valid: true,
+                    alreadyDispatched: false,
                     category: category,
                     duration: duration,
                     html: `<span class="ready-pill">📥 ${prevClient}</span>`
@@ -1230,6 +1669,7 @@
             const section = document.getElementById('stagingSection');
             const tbody = document.getElementById('stagingTableBody');
             const counterEl = document.getElementById('stagingCounterText');
+            const confirmBtn = document.getElementById('confirmBatchBtn');
             const mode = document.getElementById('operationMode').value;
 
             if (stagingList.length === 0) {
@@ -1248,11 +1688,11 @@
                 return `
                     <tr>
                         <td><button type="button" class="btn-sm btn-sm-danger" onclick="removeStagingRow(${idx})">✕</button></td>
-                        <td>
-                            <input type="text" value="${item.code}" style="font-family:monospace; font-weight:800; text-align:center; min-width:170px;" onchange="updateStagingRowCode(${idx}, this.value)">
+                        <td style="min-width:195px;">
+                            <input type="text" class="serial-input-staging" value="${item.code}" onchange="updateStagingRowCode(${idx}, this.value)">
                         </td>
-                        <td>
-                            <input type="text" value="${item.tagCode || ''}" placeholder="N115" style="font-family:sans-serif; font-weight:800; text-align:center; max-width:95px; background:#fff;" oninput="updateStagingRowTag(${idx}, this.value)">
+                        <td style="min-width:105px;">
+                            <input type="text" class="tag-input-staging" value="${item.tagCode || ''}" placeholder="N78" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="updateStagingRowTag(${idx}, this)">
                         </td>
                         <td><span class="cat-badge">${check.category}</span></td>
                         <td><span class="dur-badge">${check.duration}</span></td>
@@ -1262,6 +1702,13 @@
             }).join('');
 
             counterEl.innerText = `📋 إجمالي الشرائح: (${stagingList.length}) — صالحة: (${validCount}) | تحذيرات: (${warnCount})`;
+
+            // تعطيل زر الاعتماد إذا كانت هناك أي شريحة مصروفة مسبقاً أو بها تحذير
+            if (warnCount > 0) {
+                confirmBtn.disabled = true;
+            } else {
+                confirmBtn.disabled = false;
+            }
         }
 
         async function commitStagingBatch() {
@@ -1270,22 +1717,22 @@
 
             if (stagingList.length === 0) return;
 
+            const invalidItems = stagingList.filter(it => !inspectSimForStaging(it.code, mode).valid);
+            if (invalidItems.length > 0) {
+                showMessage(`⚠️ لا يمكن الاعتماد لوجود (${invalidItems.length}) شريحة مصروفة مسبقاً أو غير مسجلة بالمخزون. يرجى حذفها من القائمة أولاً.`, true);
+                return;
+            }
+
             if (mode === 'dispatch' && !selectedCustomer) {
                 showMessage('⚠️ يجب اختيار العميل أولاً من قائمة العملاء المسجلين قبل اعتماد الصرف!', true);
                 document.getElementById('customerSearchInput').focus();
                 return;
             }
 
-            const invalidItems = stagingList.filter(it => !inspectSimForStaging(it.code, mode).valid);
-            if (invalidItems.length > 0) {
-                showMessage(`⚠️ يوجد عدد (${invalidItems.length}) شريحة بها تحذير (غير مضافة بالمخزون أو مصروفة مسبقاً). يرجى مراجعتها أو حذفها أولاً.`, true);
-                return;
-            }
-
             if (mode === 'dispatch') {
                 const missingTag = stagingList.some(it => !it.tagCode || !it.tagCode.trim());
                 if (missingTag) {
-                    if (!confirm('توجد شرائح بدون رمز (مثل N115). هل تريد المتابعة وحفظها بدون رمز؟')) return;
+                    if (!confirm('توجد شرائح بدون رمز (مثل N78). هل تريد المتابعة وحفظها بدون رمز؟')) return;
                 }
             }
 
@@ -1366,7 +1813,7 @@
             const tbody = document.getElementById('historyTableBody');
             const monthVal = document.getElementById('monthFilter').value;
             const statusVal = document.getElementById('statusFilter').value;
-            const rawSearch = (document.getElementById('mainSearchInput').value || '').trim();
+            const rawSearch = normalizeDigits((document.getElementById('mainSearchInput').value || '').trim());
             const searchLower = rawSearch.toLowerCase();
 
             const activeSims = simsList.filter(s => s.status === 'dispatched' || s.status === 'returned');
@@ -1374,7 +1821,8 @@
             const filtered = activeSims.filter(s => {
                 if (statusVal !== 'ALL' && s.status !== statusVal) return false;
 
-                if (monthVal) {
+                // إذا لم يكن هناك نص في خانة البحث نلتزم بفلتر الفترة، أما عند البحث بالسيريال أو الرمز نظهر النتائج فوراً
+                if (!searchLower && monthVal) {
                     const effectiveDate = s.actionDate || (s.status === 'returned' ? s.returnDate : s.dispatchDate) || s.date;
                     const effectiveTs = s.returnTimestamp || s.dispatchTimestamp || s.timestamp;
                     const recMonth = getAccountingMonth(effectiveDate, effectiveTs);
@@ -1384,13 +1832,17 @@
                 if (!searchLower) return true;
 
                 const cat = resolveSimCategory(s);
-                const codeMatch = s.code && s.code.toLowerCase().includes(searchLower);
-                const tagMatch = s.tagCode && s.tagCode.toLowerCase().includes(searchLower);
-                const clientMatch = s.clientName && s.clientName.toLowerCase().includes(searchLower);
-                const shopMatch = s.shopName && s.shopName.toLowerCase().includes(searchLower);
-                const catMatch = cat && cat.toLowerCase().includes(searchLower);
+                const codeStr = String(s.code || '').toLowerCase();
+                const tagStr = String(s.tagCode || '').toLowerCase();
+                const clientStr = String(s.clientName || '').toLowerCase();
+                const shopStr = String(s.shopName || '').toLowerCase();
+                const catStr = String(cat || '').toLowerCase();
 
-                return codeMatch || tagMatch || clientMatch || shopMatch || catMatch;
+                return codeStr.includes(searchLower) ||
+                       tagStr.includes(searchLower) ||
+                       clientStr.includes(searchLower) ||
+                       shopStr.includes(searchLower) ||
+                       catStr.includes(searchLower);
             });
 
             const dispCount = filtered.filter(s => s.status === 'dispatched').length;
@@ -1411,7 +1863,7 @@
                     if (s.tagCode) clientsMap[cKey].tags.add(s.tagCode);
                 });
 
-                document.getElementById('tagSummaryTitle').innerText = `📊 العملاء المطابقون للبحث "${rawSearch}" (إجمالي: ${filtered.length} شريحة):`;
+                document.getElementById('tagSummaryTitle').innerText = `📊 نتائج البحث عن "${rawSearch}" (إجمالي: ${filtered.length} شريحة):`;
                 document.getElementById('tagSummaryChips').innerHTML = Object.entries(clientsMap).map(([cName, info]) => {
                     const tagsStr = Array.from(info.tags).join(', ');
                     return `
@@ -1554,6 +2006,7 @@
             } catch (e) {}
 
             closeEditSimModal();
+            renderStagingTable();
             renderHistoryTable();
             showMessage(`✅ تم تحديث بيانات الشريحة (${code}) بنجاح!`);
         }
@@ -1577,6 +2030,7 @@
             simsList[idx] = sim;
             localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
             await recalculateAndSyncGlobalStock();
+            renderStagingTable();
             renderHistoryTable();
             showMessage(`🗑️ تم حذف حركة الشريحة (${code}) من السجل وتحديث الرصيد.`);
 
