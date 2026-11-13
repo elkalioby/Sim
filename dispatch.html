@@ -39,6 +39,7 @@
         input, select, button { padding: 10px 12px; width: 100%; font-size: 0.92rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; outline: none; }
         input:focus, select:focus { border-color: var(--primary-light); }
 
+        /* فرض ظهور نوع الحركة والتاريخ بجانب بعضهما بشكل دائم */
         .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .full-width { grid-column: 1 / -1; }
 
@@ -119,12 +120,12 @@
 
         #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: 800; display: none; margin-bottom: 10px; font-size: 0.9rem; }
 
-        /* تنسيق الفلاتر لجعل العناصر بجانب بعضها ومنظمة */
+        /* تنسيق فلاتر السجل لتكون جنباً إلى جنب بشكل ثابت ومضبوط */
         .filters-bar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; background: #f1f5f9; padding: 10px; border-radius: 10px; align-items: end; }
         .filter-item { display: flex; flex-direction: column; }
         .filter-row-flex { display: flex; gap: 6px; align-items: center; }
         .filter-row-flex input { flex: 1; margin: 0; }
-        .filter-row-flex button { width: auto; padding: 10px 14px; white-space: nowrap; margin: 0; }
+        .filter-row-flex button { width: auto; padding: 10px 12px; white-space: nowrap; margin: 0; }
 
         .search-input { font-size: 0.95rem; font-weight: 700; border: 2px solid #cbd5e1; padding: 11px 14px; margin-bottom: 12px; }
 
@@ -178,11 +179,6 @@
         }
 
         .modal-box { background: #fff; padding: 18px; border-radius: 14px; width: 100%; max-width: 420px; }
-
-        @media (max-width: 600px) {
-            .form-grid { grid-template-columns: 1fr; }
-            .filters-bar { grid-template-columns: 1fr; }
-        }
     </style>
 
     <script type="module">
@@ -316,7 +312,7 @@
             <span>📋 السجل</span>
         </div>
 
-        <!-- فلاتر السجل بترتيب: نوع الحركة أولاً ثم الفترة -->
+        <!-- فلاتر السجل بترتيب: نوع الحركة أولاً ثم الفترة جنباً إلى جنب -->
         <div class="filters-bar">
             <div class="filter-item">
                 <label style="margin-top:0;">🔄 نوع الحركة (صرف&مرتجع):</label>
