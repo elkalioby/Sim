@@ -38,7 +38,6 @@
         input, select, button { padding: 9px 10px; width: 100%; font-size: 0.9rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; outline: none; }
         input:focus, select:focus { border-color: var(--primary-light); }
 
-        /* تنسيق نوع الحركة والتاريخ جنباً إلى جنب مع إظهار التاريخ بالكامل دون قص */
         .form-grid { display: grid; grid-template-columns: 1.12fr 0.88fr; gap: 8px; align-items: end; }
         .form-grid > div { min-width: 0; }
         .full-width { grid-column: 1 / -1; }
@@ -488,7 +487,6 @@
         let tempImageUrls = [];
         let pendingFilesAfterKey = null;
 
-        // تنظيف مفتاح API في حال تم نسخ رابط كامل أو مسافات بالخطأ
         function extractCleanApiKey(rawInput) {
             const str = String(rawInput || '').trim();
             const match = str.match(/AIza[0-9A-Za-z\-_]{30,45}/);
@@ -942,9 +940,10 @@
 
             dropdown.innerHTML = matched.map((c, idx) => {
                 const name = (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName : (c.shopName || 'عميل');
+                const showShop = c.shopName && c.shopName !== name ? `— 🏪 ${c.shopName}` : '';
                 return `
                     <div class="customer-option" onclick="selectRegisteredCustomer('${c.id || idx}')">
-                        <div class="customer-option-main">👤 ${name} ${c.shopName ? `— 🏪 ${c.shopName}` : ''}</div>
+                        <div class="customer-option-main">👤 ${name} ${showShop}</div>
                         <div class="customer-option-sub">
                             ${c.marketName ? `<span>📍 ${c.marketName}</span>` : ''}
                             ${c.phone ? `<span>📞 ${c.phone}</span>` : ''}
@@ -970,7 +969,8 @@
             document.getElementById('customersDropdown').style.display = 'none';
 
             const pill = document.getElementById('selectedCustomerPill');
-            document.getElementById('selectedCustomerText').innerText = `👤 ${selectedCustomer.clientName} ${selectedCustomer.shopName ? `(${selectedCustomer.shopName})` : ''}`;
+            const shopText = (selectedCustomer.shopName && selectedCustomer.shopName !== selectedCustomer.clientName) ? `(${selectedCustomer.shopName})` : '';
+            document.getElementById('selectedCustomerText').innerText = `👤 ${selectedCustomer.clientName} ${shopText}`;
             pill.style.display = 'flex';
             saveDispatchDraft();
         }
@@ -1193,7 +1193,6 @@
             return fallbackItems;
         }
 
-        // جلب قائمة الموديلات المتاحة تلقائياً من حساب المستخدم في حال تغيير أسمائها من جوجل
         async function discoverAvailableFlashModels(apiKeyToUse) {
             try {
                 const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKeyToUse)}`);
@@ -1204,7 +1203,6 @@
                     .map(m => String(m.name || '').replace(/^models\//, ''))
                     .filter(name => name.includes('gemini') && (name.includes('flash') || name.includes('pro')));
 
-                // ترتيب الموديلات بحيث نفضل الإصدارات الأحدث (3.5 ثم 3.0 ثم flash)
                 models.sort((a, b) => {
                     const score = (n) => (n.includes('3.5') ? 40 : n.includes('3.0') ? 30 : n.includes('flash') ? 20 : 10);
                     return score(b) - score(a);
@@ -1215,10 +1213,6 @@
             }
         }
 
-        // =====================================================================
-        // استدعاء Gemini Vision AI بالموديلات الجديدة (gemini-3.5-flash-lite / gemini-3.5-flash)
-        // مع كشف تلقائي عن الموديلات المتاحة في حسابك
-        // =====================================================================
         async function analyzeImageWithGemini(base64Jpeg, apiKeyToUse) {
             const cleanKey = extractCleanApiKey(apiKeyToUse);
             const defaultModels = [
@@ -1269,7 +1263,6 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                         const errMsg = (errJson.error && errJson.error.message) || `HTTP ${resp.status}`;
                         const errObj = new Error(errMsg);
 
-                        // إذا كان الموديل غير متاح، ننتقل فوراً للموديل التالي في القائمة
                         if (resp.status === 404 || errMsg.includes('no longer available') || errMsg.includes('not found') || errMsg.includes('not supported')) {
                             lastErr = errObj;
                             continue;
@@ -1928,7 +1921,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             if (rawSearch && filtered.length > 0) {
                 const clientsMap = {};
                 filtered.forEach(s => {
-                    const cKey = s.clientName || 'غير محدد';
+                    const cKey = s.clientName || 'بدون عميل';
                     if (!clientsMap[cKey]) {
                         clientsMap[cKey] = { shop: s.shopName || '', dispatched: 0, returned: 0, tags: new Set() };
                     }
@@ -1940,9 +1933,10 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 document.getElementById('tagSummaryTitle').innerText = `📊 نتائج البحث عن "${rawSearch}" (إجمالي: ${filtered.length} شريحة):`;
                 document.getElementById('tagSummaryChips').innerHTML = Object.entries(clientsMap).map(([cName, info]) => {
                     const tagsStr = Array.from(info.tags).join(', ');
+                    const shopLabel = (info.shop && info.shop !== cName) ? `(${info.shop})` : '';
                     return `
                         <div class="client-chip">
-                            <span>👤 ${cName} ${info.shop ? `(${info.shop})` : ''}</span>
+                            <span>👤 ${cName} ${shopLabel}</span>
                             ${tagsStr ? `<span class="tag-badge">${tagsStr}</span>` : ''}
                             <span style="color:#16a34a;">✅ ${info.dispatched}</span>
                             ${info.returned > 0 ? `<span style="color:#dc2626;">❌ ${info.returned}</span>` : ''}
@@ -1972,8 +1966,9 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
                 const cat = resolveSimCategory(s);
                 const dur = resolveSimDuration(s, cat);
+                const showShop = s.shopName && s.shopName !== s.clientName ? ` <span style="color:#64748b; font-size:0.78rem;">(${s.shopName})</span>` : '';
                 const clientDisplay = s.clientName
-                    ? `<strong>👤 ${s.clientName}</strong>${s.shopName ? ` <span style="color:#64748b; font-size:0.78rem;">(${s.shopName})</span>` : ''}`
+                    ? `<strong>👤 ${s.clientName}</strong>${showShop}`
                     : '-';
 
                 return `
@@ -2012,11 +2007,14 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             if (editDurSelect) editDurSelect.value = curDur;
 
             const custSelect = document.getElementById('editSimCustomerSelect');
-            let html = `<option value="">-- اختر العميل --</option>`;
+            const hasNoClient = !sim.clientName || sim.clientName.trim() === '';
+            let html = `<option value="" ${hasNoClient ? 'selected' : ''}>-- اختر العميل --</option>`;
+
             customersList.forEach((c, idx) => {
                 const cName = (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName : (c.shopName || 'بدون اسم');
-                const selected = (sim.clientName === cName) ? 'selected' : '';
-                html += `<option value="${idx}" ${selected}>${cName} ${c.shopName ? `— ${c.shopName}` : ''}</option>`;
+                const selected = (!hasNoClient && sim.clientName === cName) ? 'selected' : '';
+                const shopSuffix = (c.shopName && c.shopName !== cName) ? ` — ${c.shopName}` : '';
+                html += `<option value="${idx}" ${selected}>${cName}${shopSuffix}</option>`;
             });
             custSelect.innerHTML = html;
 
@@ -2045,11 +2043,18 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             sim.company = sim.category;
             sim.updatedAt = Date.now();
 
+            // إذا اختار عميل من القائمة يتم تحديثه، وإذا اختار (-- اختر العميل --) يتم تفريغ بيانات العميل فوراً
             if (custIdx !== '' && customersList[custIdx]) {
                 const c = customersList[custIdx];
                 sim.clientName = (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName : (c.shopName || 'بدون اسم');
                 sim.shopName = c.shopName || '';
                 sim.clientPhone = c.phone || '';
+                sim.clientId = c.id || '';
+            } else {
+                sim.clientName = '';
+                sim.shopName = '';
+                sim.clientPhone = '';
+                sim.clientId = '';
             }
 
             if (newStatus === 'returned' && !sim.returnDate) {
@@ -2064,6 +2069,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 sim.tagCode = '';
                 sim.clientName = '';
                 sim.shopName = '';
+                sim.clientPhone = '';
+                sim.clientId = '';
                 sim.dispatchDate = '';
                 sim.returnDate = '';
                 sim.actionDate = '';
