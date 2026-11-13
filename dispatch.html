@@ -256,7 +256,7 @@
             </div>
         </div>
 
-        <!-- أزرار رفع الصور أو التصوير (أيقونات فقط بدون نصوص) -->
+        <!-- أزرار رفع الصور أو التصوير (أيقونات فقط: ملفات، كاميرا، باركود) -->
         <input type="file" id="galleryFilesInput" accept="image/*" multiple style="display:none;" onchange="handleImagesSelected(event)">
         <input type="file" id="cameraShotInput" accept="image/*" capture="environment" style="display:none;" onchange="handleImagesSelected(event)">
 
@@ -268,7 +268,7 @@
                 📷
             </button>
             <button type="button" id="liveScanBtn" class="btn-upload-icon btn-live-cam" onclick="toggleLiveScanner()" title="مسح مباشر للباركود">
-                🎥
+                بارْكُود
             </button>
         </div>
 
@@ -953,12 +953,10 @@
                 const fileExtractedItems = [];
                 const seenFileCodes = new Set();
 
-                // 1. فحص الباركود بـ Tesseract مع استخراج تفاصيل الإحداثيات المكانية (bbox) لترتيب اليمين لليسار
                 try {
                     const imgEl = await loadImageElement(objUrl);
                     const canvasNormal = createEnhancedCanvas(imgEl, false);
                     
-                    // استخدام وضع أسطر blocks لاستخراج إحداثيات X و Y بدقة لترتيب اليمين لليسار
                     const { data } = await Tesseract.recognize(canvasNormal, 'eng', {
                         logger: m => {}
                     });
@@ -986,7 +984,6 @@
                         });
                     }
 
-                    // في حال لم تلتقط الـ lines بوضوح، نلجأ للطريقة العامة
                     if (fileExtractedItems.length === 0 && data && data.text) {
                         const parsed = parseOcrResult(data.text);
                         parsed.items.forEach(it => {
@@ -1004,9 +1001,9 @@
                 fileExtractedItems.sort((a, b) => {
                     const yDiff = Math.abs(a.y - b.y);
                     if (yDiff > 40) {
-                        return a.y - b.y; // من الأعلى للأسفل
+                        return a.y - b.y;
                     }
-                    return b.x - a.x; // في نفس السطر: من اليمين لليسار
+                    return b.x - a.x; // اليمين أولاً ثم الشمال
                 });
 
                 fileExtractedItems.forEach(it => {
@@ -1060,7 +1057,7 @@
             if (isLiveCamRunning && html5QrScanner) {
                 await html5QrScanner.stop();
                 isLiveCamRunning = false;
-                btn.innerText = '🎥';
+                btn.innerText = 'بارْكُود';
                 btn.style.background = '#2563eb';
                 return;
             }
