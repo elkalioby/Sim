@@ -39,7 +39,8 @@
         input, select, button { padding: 10px 12px; width: 100%; font-size: 0.92rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; outline: none; }
         input:focus, select:focus { border-color: var(--primary-light); }
 
-        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        /* تعديل عرض الأعمدة: جعل نوع الحركة أكبر والتاريخ أصغر */
+        .form-grid { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 10px; }
         .full-width { grid-column: 1 / -1; }
 
         .mode-select { font-weight: 800; font-size: 0.95rem; cursor: pointer; }
@@ -310,7 +311,6 @@
             <span>📋 السجل</span>
         </div>
 
-        <!-- الفلاتر: نوع الحركة أولاً ثم الفترة -->
         <div class="filters-bar">
             <div class="filter-item">
                 <label style="margin-top:0;">نوع الحركة:</label>
