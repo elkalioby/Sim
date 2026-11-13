@@ -205,6 +205,16 @@
         let tempImageBase64 = '';
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
 
+        function normalizePhone(p) {
+            if (!p) return '';
+            const arabicNums = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+            let str = String(p);
+            for (let i = 0; i < 10; i++) {
+                str = str.replace(new RegExp(arabicNums[i], 'g'), i);
+            }
+            return str.replace(/\D/g, '');
+        }
+
         function loadLocalMarketsAndCustomers() {
             const appConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             const localMarkets = JSON.parse(localStorage.getItem('markets_list_offline') || '[]');
@@ -369,6 +379,304 @@
             );
         }
 
+        // استخراج أسماء مجموعات المبيعات والفواتير من الصفحة الرئيسية تلقائياً
+        async function getTargetSalesCollections() {
+            const cols = new Set(["sales", "sales_records", "invoices", "invoices_records"]);
+            try {
+                let scriptsText = "";
+                if (window.parent && window.parent !== window && window.parent.document) {
+                    scriptsText = Array.from(window.parent.document.scripts).map(s => s.textContent || "").join("\n");
+                }
+                if (!scriptsText) {
+                    const res = await fetch("index.html");
+                    if (res.ok) scriptsText = await res.text();
+                }
+                const regex = /collection\s*\(\s*[^,]+,\s*['"]([^'"]+)['"]\s*\)/g;
+                let match;
+                while ((match = regex.exec(scriptsText)) !== null) {
+                    const colName = match[1].trim();
+                    const ignore = ["customers", "settings", "employees", "users", "expenses", "inventory", "stock", "sim_cards", "items", "products"];
+                    if (colName && !ignore.includes(colName)) {
+                        cols.add(colName);
+                    }
+                }
+            } catch (e) {
+                console.warn("تعذر فحص مجموعات الصفحة الرئيسية:", e);
+            }
+            return Array.from(cols);
+        }
+
+        // مطابقة سجل فاتورة/مبيعات مع بيانات العميل وتحديد التحديثات المطلوبة
+        function computeSaleUpdatesForCustomer(sale, cust, oldCust = null) {
+            if (!sale || typeof sale !== 'object') return null;
+            // استبعاد سجلات العملاء نفسها
+            if (sale.shopImage !== undefined && sale.total === undefined && sale.items === undefined && sale.amount === undefined && sale.price === undefined && sale.remaining === undefined) {
+                return null;
+            }
+
+            const sClient = (sale.clientName || sale.customerName || '').trim();
+            const sShop = (sale.shopName || sale.storeName || '').trim();
+            const sPhone = normalizePhone(sale.phone || sale.clientPhone || sale.customerPhone || '');
+
+            const cClient = (cust.clientName || '').trim();
+            const cShop = (cust.shopName || '').trim();
+            const cPhone = normalizePhone(cust.phone || '');
+
+            const oldClient = oldCust ? (oldCust.clientName || '').trim() : '';
+            const oldShop = oldCust ? (oldCust.shopName || '').trim() : '';
+            const oldPhone = oldCust ? normalizePhone(oldCust.phone || '') : '';
+
+            let matched = false;
+
+            // 1. مطابقة بمعرف العميل
+            if (cust.id && (sale.customerId === cust.id || sale.clientId === cust.id)) {
+                matched = true;
+            }
+
+            // 2. مطابقة برقم الهاتف (أولوية عالية جداً للفواتير المسجلة سابقاً مثل 0568457868)
+            if (!matched && sPhone.length >= 8) {
+                if ((cPhone && sPhone === cPhone) || (oldPhone && sPhone === oldPhone)) {
+                    matched = true;
+                }
+            }
+
+            // 3. مطابقة بالاسم القديم عند التعديل المباشر
+            if (!matched && oldCust) {
+                const oldNames = [oldClient, oldShop].filter(Boolean);
+                const saleNames = [sClient, sShop].filter(Boolean);
+                if (oldNames.length > 0 && saleNames.some(sn => oldNames.includes(sn))) {
+                    matched = true;
+                }
+            }
+
+            // 4. مطابقة إذا كان أحد الاسمين (العميل أو المحل) متطابقاً والآخر تم تعديله
+            if (!matched) {
+                if (sClient && sShop && sClient === sShop) {
+                    if ((cClient === sClient && cShop && cShop !== sShop) || (cShop === sShop && cClient && cClient !== sClient)) {
+                        matched = true;
+                    }
+                }
+            }
+
+            if (!matched) return null;
+
+            // تحديد الاسم الجديد المعتمد
+            let targetClientName = cClient || cShop || 'بدون اسم';
+            let targetShopName = cShop || cClient || '';
+
+            // إذا كانت الفاتورة تحمل نفس الاسم في الخانتين (مثل: محل كنوز الحاج للاتصال)
+            // وكان العميل قد تم تعديل إحدى خانتيه فقط وبقيت الأخرى بالاسم القديم، نعتمد الاسم المعدل للخانتين
+            if (sClient && sShop && sClient === sShop) {
+                if (cClient && cClient !== sClient && (!cShop || cShop === sShop)) {
+                    targetClientName = cClient;
+                    targetShopName = cClient;
+                } else if (cShop && cShop !== sShop && (!cClient || cClient === sClient)) {
+                    targetClientName = cShop;
+                    targetShopName = cShop;
+                }
+            } else if (oldClient && oldShop && oldClient === oldShop) {
+                if (cClient !== oldClient && cShop === oldShop) {
+                    targetClientName = cClient;
+                    targetShopName = cClient;
+                } else if (cShop !== oldShop && cClient === oldClient) {
+                    targetClientName = cShop;
+                    targetShopName = cShop;
+                }
+            }
+
+            const updates = {};
+
+            if (sale.clientName !== undefined && sale.clientName !== targetClientName) {
+                updates.clientName = targetClientName;
+            }
+            if (sale.customerName !== undefined && sale.customerName !== targetClientName) {
+                updates.customerName = targetClientName;
+            }
+            if (sale.shopName !== undefined && targetShopName && sale.shopName !== targetShopName) {
+                updates.shopName = targetShopName;
+            }
+            if (sale.storeName !== undefined && targetShopName && sale.storeName !== targetShopName) {
+                updates.storeName = targetShopName;
+            }
+            if (cust.marketName && sale.marketName !== undefined && sale.marketName !== cust.marketName) {
+                updates.marketName = cust.marketName;
+            }
+            if (cust.phone && sale.phone !== undefined && sale.phone !== cust.phone) {
+                updates.phone = cust.phone;
+            }
+
+            return Object.keys(updates).length > 0 ? updates : null;
+        }
+
+        // تحديث جميع الفواتير والمبيعات في التخزين المحلي + الصفحة الرئيسية + السحابة
+        async function syncCustomerChangesEverywhere(targetCustomers, oldCust = null) {
+            const custArray = Array.isArray(targetCustomers) ? targetCustomers : [targetCustomers];
+            if (custArray.length === 0) return;
+
+            // 1. توحيد بيانات العميل نفسه إذا كان يحمل اسماً قديماً في إحدى الخانتين
+            let customersUpdatedLocally = false;
+
+            // 2. تحديث جميع الجداول المحفوظة في localStorage
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (!key || key === 'customers_records_offline' || key === 'markets_list_offline' || key === 'logged_user' || key === 'app_config') continue;
+
+                    const raw = localStorage.getItem(key);
+                    if (!raw || !raw.trim().startsWith('[')) continue;
+
+                    try {
+                        const arr = JSON.parse(raw);
+                        if (!Array.isArray(arr)) continue;
+
+                        let changed = false;
+                        arr.forEach(record => {
+                            custArray.forEach(c => {
+                                const upd = computeSaleUpdatesForCustomer(record, c, oldCust);
+                                if (upd) {
+                                    Object.assign(record, upd);
+                                    changed = true;
+                                }
+                            });
+                        });
+
+                        if (changed) {
+                            localStorage.setItem(key, JSON.stringify(arr));
+                        }
+                    } catch (e) {}
+                }
+            } catch (e) {
+                console.warn("خطأ أثناء تحديث التخزين المحلي:", e);
+            }
+
+            // 3. تحديث الذاكرة الحية والواجهة في الصفحة الرئيسية (index.html) فوراً
+            syncParentWindowMemoryAndUI(custArray, oldCust);
+
+            // 4. تحديث مجموعات المبيعات والفواتير في Firebase السحابي
+            if (window.db) {
+                const collectionsToSync = await getTargetSalesCollections();
+                for (const colName of collectionsToSync) {
+                    try {
+                        const snap = await window.getDocs(window.collection(window.db, colName));
+                        const updatePromises = [];
+
+                        snap.forEach(docSnap => {
+                            const sData = docSnap.data();
+                            let combinedUpdates = null;
+
+                            custArray.forEach(c => {
+                                const upd = computeSaleUpdatesForCustomer(sData, c, oldCust);
+                                if (upd) {
+                                    combinedUpdates = { ...(combinedUpdates || {}), ...upd };
+                                    // إذا كان العميل نفسه في قاعدة العملاء لا يزال يحتفظ بالاسم القديم في إحدى الخانتين، نحدثه أيضاً
+                                    if (upd.clientName && upd.shopName && upd.clientName === upd.shopName) {
+                                        if (c.clientName !== upd.clientName || c.shopName !== upd.shopName) {
+                                            c.clientName = upd.clientName;
+                                            c.shopName = upd.shopName;
+                                            customersUpdatedLocally = true;
+                                            if (c.id && !String(c.id).startsWith('local_')) {
+                                                window.updateDoc(window.doc(window.db, "customers", String(c.id)), {
+                                                    clientName: c.clientName,
+                                                    shopName: c.shopName
+                                                }).catch(() => {});
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+
+                            if (combinedUpdates && Object.keys(combinedUpdates).length > 0) {
+                                updatePromises.push(
+                                    window.updateDoc(window.doc(window.db, colName, docSnap.id), combinedUpdates)
+                                );
+                            }
+                        });
+
+                        if (updatePromises.length > 0) {
+                            await Promise.all(updatePromises);
+                        }
+                    } catch (e) {
+                        console.warn(`تعذر مزامنة المجموعة ${colName}:`, e);
+                    }
+                }
+            }
+
+            if (customersUpdatedLocally) {
+                localStorage.setItem('customers_records_offline', JSON.stringify(customers));
+                renderCustomers();
+            }
+
+            // إعادة تحديث الصفحة الأم بعد اكتمال مزامنة السحابة
+            syncParentWindowMemoryAndUI(custArray, oldCust);
+        }
+
+        // تحديث المصفوفات والدوال داخل الصفحة الأم (index.html) بدون الحاجة لعمل ريفريش يدوي
+        function syncParentWindowMemoryAndUI(custArray, oldCust = null) {
+            try {
+                if (!window.parent || window.parent === window) return;
+
+                const pWin = window.parent;
+                const scriptsText = Array.from(pWin.document.scripts).map(s => s.textContent || "").join("\n");
+
+                // استخراج أسماء المتغيرات المعرفة في index.html
+                const varNames = new Set(["sales", "salesRecords", "salesList", "allSales", "invoices", "invoicesRecords", "invoicesList", "records", "transactions"]);
+                const varRegex = /\b(?:let|var|const)\s+([a-zA-Z_$][0-9a-zA-Z_$]*)\s*=/g;
+                let m;
+                while ((m = varRegex.exec(scriptsText)) !== null) {
+                    varNames.add(m[1]);
+                }
+
+                let parentDataChanged = false;
+
+                varNames.forEach(vName => {
+                    if (vName === "customers" || vName === "marketsList") return;
+                    try {
+                        const val = pWin.eval(vName);
+                        if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'object') {
+                            val.forEach(item => {
+                                custArray.forEach(c => {
+                                    const upd = computeSaleUpdatesForCustomer(item, c, oldCust);
+                                    if (upd) {
+                                        Object.assign(item, upd);
+                                        parentDataChanged = true;
+                                    }
+                                });
+                            });
+                        }
+                    } catch (e) {}
+                });
+
+                // تحديث قائمة العملاء في الصفحة الأم إن وجدت
+                try {
+                    const pCust = pWin.eval("typeof customers !== 'undefined' ? customers : null");
+                    if (Array.isArray(pCust)) {
+                        pCust.length = 0;
+                        customers.forEach(c => pCust.push({ ...c }));
+                    }
+                } catch (e) {}
+
+                // استدعاء دوال إعادة الرسم في الصفحة الأم لتحديث الفواتير والمبيعات فوراً
+                if (parentDataChanged) {
+                    const fnNames = new Set([
+                        "renderInvoices", "renderSales", "renderRecords", "renderAll",
+                        "renderDebts", "updateDashboard", "updateStats", "filterInvoices", "filterSales"
+                    ]);
+                    const fnRegex = /function\s+((?:render|update|filter)[a-zA-Z0-9_$]*)\s*\(\s*\)/g;
+                    let fm;
+                    while ((fm = fnRegex.exec(scriptsText)) !== null) {
+                        fnNames.add(fm[1]);
+                    }
+                    fnNames.forEach(fn => {
+                        try {
+                            pWin.eval(`if (typeof ${fn} === 'function') ${fn}();`);
+                        } catch (e) {}
+                    });
+                }
+            } catch (e) {
+                console.warn("تعذر تحديث ذاكرة الصفحة الأم مباشرة:", e);
+            }
+        }
+
         async function loadCloudData() {
             try {
                 if (!window.db) {
@@ -413,6 +721,9 @@
                 cloudList.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 customers = cloudList;
                 localStorage.setItem('customers_records_offline', JSON.stringify(customers));
+
+                // مزامنة تلقائية لجميع العملاء مع الفواتير والمبيعات (لتعديل أي فواتير قديمة مثل محل كنوز)
+                await syncCustomerChangesEverywhere(customers);
             } catch (error) {
                 console.error("خطأ أثناء جلب البيانات من السحابة:", error);
             } finally {
@@ -421,74 +732,12 @@
             }
         }
 
-        // دالة لتحديث اسم العميل في المبيعات والفواتير المرتبطة به تلقائياً
-        async function cascadeCustomerUpdateToSales(oldName, newData) {
-            if (!oldName) return;
-            const cleanOldName = oldName.trim();
-            const cleanNewName = newData.clientName.trim();
-
-            const localSales = JSON.parse(localStorage.getItem('sales_records_offline') || '[]');
-            let localChanged = false;
-
-            if (Array.isArray(localSales)) {
-                localSales.forEach(sale => {
-                    if (sale.clientName && sale.clientName.trim() === cleanOldName) {
-                        sale.clientName = cleanNewName;
-                        if (newData.shopName) sale.shopName = newData.shopName;
-                        if (newData.marketName) sale.marketName = newData.marketName;
-                        if (newData.phone) sale.phone = newData.phone;
-                        localChanged = true;
-                    }
-                    if (sale.customerName && sale.customerName.trim() === cleanOldName) {
-                        sale.customerName = cleanNewName;
-                        localChanged = true;
-                    }
-                });
-                if (localChanged) {
-                    localStorage.setItem('sales_records_offline', JSON.stringify(localSales));
-                }
-            }
-
-            if (window.db) {
-                const salesCollections = ["sales", "sales_records"];
-                for (const colName of salesCollections) {
-                    try {
-                        const snap = await window.getDocs(window.collection(window.db, colName));
-                        const updatePromises = [];
-                        snap.forEach(docSnap => {
-                            const sData = docSnap.data();
-                            const updates = {};
-                            if (sData.clientName && sData.clientName.trim() === cleanOldName) {
-                                updates.clientName = cleanNewName;
-                                if (newData.shopName) updates.shopName = newData.shopName;
-                                if (newData.marketName) updates.marketName = newData.marketName;
-                                if (newData.phone) updates.phone = newData.phone;
-                            }
-                            if (sData.customerName && sData.customerName.trim() === cleanOldName) {
-                                updates.customerName = cleanNewName;
-                            }
-                            if (Object.keys(updates).length > 0) {
-                                updatePromises.push(
-                                    window.updateDoc(window.doc(window.db, colName, docSnap.id), updates)
-                                );
-                            }
-                        });
-                        if (updatePromises.length > 0) {
-                            await Promise.all(updatePromises);
-                        }
-                    } catch (e) {
-                        console.warn(`تعذر تحديث المجموعة ${colName}:`, e);
-                    }
-                }
-            }
-        }
-
         async function saveCustomer(event) {
             event.preventDefault();
 
             const editId = document.getElementById('editCustomerId').value;
-            const clientName = document.getElementById('clientName').value.trim();
-            const shopName = document.getElementById('shopName').value.trim();
+            let clientName = document.getElementById('clientName').value.trim();
+            let shopName = document.getElementById('shopName').value.trim();
             const marketName = document.getElementById('marketSelect').value.trim();
             const phone = document.getElementById('phone').value.trim();
             const location = document.getElementById('locationInput').value.trim();
@@ -500,11 +749,34 @@
 
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ جاري الحفظ...';
+            submitBtn.textContent = '⏳ جاري الحفظ وتحديث الفواتير...';
+
+            let oldCustomerSnapshot = null;
+
+            if (editId) {
+                const existing = customers.find(c => String(c.id) === String(editId));
+                if (existing) {
+                    oldCustomerSnapshot = { ...existing };
+                    const oldC = (existing.clientName || '').trim();
+                    const oldS = (existing.shopName || '').trim();
+
+                    // إذا كان اسم العميل واسم المحل متطابقين سابقاً وعدّل المستخدم أحدهما فقط، نوحد الجديد في الخانتين
+                    if (oldC && oldS && oldC === oldS) {
+                        if (clientName !== oldC && shopName === oldS) {
+                            shopName = clientName;
+                        } else if (shopName !== oldS && clientName === oldC) {
+                            clientName = shopName;
+                        }
+                    }
+                }
+            }
+
+            const finalClientName = clientName || shopName || 'بدون اسم';
+            const finalShopName = shopName || clientName || '';
 
             const customerData = {
-                clientName: clientName || shopName || 'بدون اسم',
-                shopName: shopName || '',
+                clientName: finalClientName,
+                shopName: finalShopName,
                 marketName: marketName || '',
                 phone: phone || '',
                 location: location || '',
@@ -514,17 +786,18 @@
             };
 
             try {
+                let savedRecord = null;
+
                 if (editId) {
                     const index = customers.findIndex(c => String(c.id) === String(editId));
-                    let oldClientName = '';
-
                     if (index !== -1) {
-                        oldClientName = customers[index].clientName || '';
                         customerData.createdAt = customers[index].createdAt || Date.now();
-                        customers[index] = { ...customerData, id: editId };
+                        savedRecord = { ...customerData, id: editId };
+                        customers[index] = savedRecord;
+                    } else {
+                        savedRecord = { ...customerData, id: editId };
                     }
 
-                    // حفظ محلي فوري أولاً
                     localStorage.setItem('customers_records_offline', JSON.stringify(customers));
 
                     if (window.db && !String(editId).startsWith('local_')) {
@@ -532,18 +805,19 @@
                         await window.updateDoc(docRef, customerData);
                     }
 
-                    if (oldClientName && oldClientName !== customerData.clientName) {
-                        await cascadeCustomerUpdateToSales(oldClientName, customerData);
-                    }
+                    // تحديث الفواتير والمبيعات فوراً
+                    await syncCustomerChangesEverywhere(savedRecord, oldCustomerSnapshot);
                 } else {
                     customerData.createdAt = Date.now();
                     if (window.db) {
                         const docRef = await window.addDoc(window.collection(window.db, "customers"), customerData);
-                        customers.unshift({ ...customerData, id: docRef.id });
+                        savedRecord = { ...customerData, id: docRef.id };
                     } else {
-                        customers.unshift({ ...customerData, id: 'local_' + Date.now() });
+                        savedRecord = { ...customerData, id: 'local_' + Date.now() };
                     }
+                    customers.unshift(savedRecord);
                     localStorage.setItem('customers_records_offline', JSON.stringify(customers));
+                    await syncCustomerChangesEverywhere(savedRecord, null);
                 }
 
                 resetForm();
