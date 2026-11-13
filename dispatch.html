@@ -163,6 +163,8 @@
         .btn-sm-danger { background: #fee2e2; color: #dc2626; }
         .btn-sm-blue { background: #e0f2fe; color: #0369a1; }
 
+        .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; background: #dcfce7; color: #166534; font-weight: 800; }
+
         /* نافذة تكبير الصورة وتعديل السجل */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; justify-content: center; align-items: center; padding: 15px; }
         .modal-img { max-width: 95%; max-height: 85vh; border-radius: 12px; }
@@ -225,6 +227,7 @@
     <div class="card">
         <div class="card-title">
             <span>📸 تسجيل حركة شرائح بالصور أو الكاميرا</span>
+            <span class="sync-badge" id="syncStatusBadge">☁️ مزامنة وحفظ تلقائي</span>
         </div>
 
         <div id="msg"></div>
@@ -240,13 +243,13 @@
 
             <div>
                 <label>التاريخ *</label>
-                <input type="date" id="actionDate">
+                <input type="date" id="actionDate" onchange="saveDispatchDraft()">
             </div>
 
             <!-- اختيار العميل من قائمة العملاء المسجلين فقط -->
             <div id="customerSelectWrap" class="full-width autocomplete-wrapper">
                 <label>اختر العميل (من العملاء المسجلين فقط) *</label>
-                <input type="text" id="customerSearchInput" autocomplete="off" placeholder="🔍 ابحث باسم العميل أو المحل أو الجوال لاختياره..." oninput="filterCustomersList()" onfocus="filterCustomersList()">
+                <input type="text" id="customerSearchInput" autocomplete="off" placeholder="🔍 ابحث باسم العميل أو المحل أو الجوال لاختياره..." oninput="filterCustomersList(); saveDispatchDraft();" onfocus="filterCustomersList()">
                 <div id="customersDropdown" class="customers-dropdown"></div>
                 <div id="selectedCustomerPill" class="selected-customer-pill">
                     <span id="selectedCustomerText"></span>
@@ -258,7 +261,7 @@
             <div class="full-width">
                 <label>تثبيت الرمز المكتوب على الشرائح (اختياري - مثال: N115)</label>
                 <div class="quick-row">
-                    <input type="text" id="fixedTagInput" placeholder="🔤 اكتب الحرف والرقم مثل N115 ليُطبق تلقائياً أو يُستخرج من الصورة..." oninput="this.value = this.value.toUpperCase()">
+                    <input type="text" id="fixedTagInput" placeholder="🔤 اكتب الحرف والرقم مثل N115 ليُطبق تلقائياً أو يُستخرج من الصورة..." oninput="this.value = this.value.toUpperCase(); saveDispatchDraft();">
                     <button type="button" class="btn-quick-add" style="background:#0284c7;" onclick="applyFixedTagToStaging()">تطبيق على القائمة</button>
                 </div>
             </div>
@@ -290,7 +293,7 @@
         <div class="quick-add-box">
             <label>⚡ إضافة سريعة بالسريال الكامل أو بآخر 4 أو 5 أرقام منه (مثال: 92277):</label>
             <div class="quick-row">
-                <input type="text" id="quickSerialInput" inputmode="numeric" placeholder="✍️ اكتب السريال أو آخر أرقام منه للبحث الفوري في المخزون..." oninput="onQuickSerialInput()" onkeydown="if(event.key==='Enter') addQuickSerial()">
+                <input type="text" id="quickSerialInput" inputmode="numeric" placeholder="✍️ اكتب السريال أو آخر أرقام منه للبحث الفوري في المخزون..." oninput="onQuickSerialInput(); saveDispatchDraft();" onkeydown="if(event.key==='Enter') addQuickSerial()">
                 <button type="button" class="btn-quick-add" onclick="addQuickSerial()">➕ إضافة للقائمة</button>
             </div>
             <div id="simSuggestions" class="sim-suggestions"></div>
@@ -334,13 +337,13 @@
             <div>
                 <label style="margin-top:0;">📅 فلتر الشهر المحاسبي (من يوم 5):</label>
                 <div style="display:flex; gap:6px;">
-                    <input type="month" id="monthFilter" onchange="renderHistoryTable()">
-                    <button type="button" class="btn-sm btn-sm-blue" onclick="document.getElementById('monthFilter').value=''; renderHistoryTable();">الكل</button>
+                    <input type="month" id="monthFilter" onchange="saveDispatchDraft(); renderHistoryTable();">
+                    <button type="button" class="btn-sm btn-sm-blue" onclick="document.getElementById('monthFilter').value=''; saveDispatchDraft(); renderHistoryTable();">الكل</button>
                 </div>
             </div>
             <div>
                 <label style="margin-top:0;">🔄 فلتر نوع الحركة:</label>
-                <select id="statusFilter" onchange="renderHistoryTable()">
+                <select id="statusFilter" onchange="saveDispatchDraft(); renderHistoryTable();">
                     <option value="ALL">الكل (صرف ✅ + مرتجع ❌)</option>
                     <option value="dispatched">المنصرف فقط (✅)</option>
                     <option value="returned">المرتجع فقط (❌)</option>
@@ -348,7 +351,7 @@
             </div>
         </div>
 
-        <input type="text" id="mainSearchInput" class="search-input" placeholder="🔍 ابحث بالسريال (أو آخر أرقامه مثل 92277)، أو بالرمز (مثل N115)، أو باسم العميل..." oninput="renderHistoryTable()">
+        <input type="text" id="mainSearchInput" class="search-input" placeholder="🔍 ابحث بالسريال (أو آخر أرقامه مثل 92277)، أو بالرمز (مثل N115)، أو باسم العميل..." oninput="saveDispatchDraft(); renderHistoryTable();">
 
         <!-- صندوق ملخص العملاء عند البحث برمز مثل N115 -->
         <div id="tagSummaryBox">
@@ -453,6 +456,71 @@
         document.getElementById('actionDate').value = getTodayStr();
         document.getElementById('monthFilter').value = getAccountingMonth(getTodayStr(), Date.now());
 
+        // حفظ واسترجاع المسودة التلقائي في حال إغلاق المتصفح بالخطأ
+        function saveDispatchDraft() {
+            const draft = {
+                operationMode: document.getElementById('operationMode').value,
+                actionDate: document.getElementById('actionDate').value,
+                selectedCustomer: selectedCustomer,
+                customerSearchText: document.getElementById('customerSearchInput').value,
+                fixedTagInput: document.getElementById('fixedTagInput').value,
+                quickSerialInput: document.getElementById('quickSerialInput').value,
+                stagingList: stagingList,
+                monthFilter: document.getElementById('monthFilter').value,
+                statusFilter: document.getElementById('statusFilter').value,
+                mainSearchInput: document.getElementById('mainSearchInput').value
+            };
+            localStorage.setItem('sim_dispatch_draft', JSON.stringify(draft));
+        }
+
+        function restoreDispatchDraft() {
+            const raw = localStorage.getItem('sim_dispatch_draft');
+            if (!raw) return;
+            try {
+                const draft = JSON.parse(raw);
+                if (!draft) return;
+
+                if (draft.operationMode) {
+                    document.getElementById('operationMode').value = draft.operationMode;
+                }
+                if (draft.actionDate) {
+                    document.getElementById('actionDate').value = draft.actionDate;
+                }
+                if (draft.fixedTagInput !== undefined) {
+                    document.getElementById('fixedTagInput').value = draft.fixedTagInput;
+                }
+                if (draft.quickSerialInput !== undefined) {
+                    document.getElementById('quickSerialInput').value = draft.quickSerialInput;
+                }
+                if (draft.customerSearchText !== undefined) {
+                    document.getElementById('customerSearchInput').value = draft.customerSearchText;
+                }
+                if (draft.selectedCustomer && draft.selectedCustomer.clientName) {
+                    selectedCustomer = draft.selectedCustomer;
+                    document.getElementById('customerSearchInput').style.display = 'none';
+                    const pill = document.getElementById('selectedCustomerPill');
+                    document.getElementById('selectedCustomerText').innerText = `👤 ${selectedCustomer.clientName} ${selectedCustomer.shopName ? `(${selectedCustomer.shopName})` : ''}`;
+                    pill.style.display = 'flex';
+                }
+                if (Array.isArray(draft.stagingList)) {
+                    stagingList = draft.stagingList;
+                }
+                if (draft.monthFilter !== undefined) {
+                    document.getElementById('monthFilter').value = draft.monthFilter;
+                }
+                if (draft.statusFilter) {
+                    document.getElementById('statusFilter').value = draft.statusFilter;
+                }
+                if (draft.mainSearchInput !== undefined) {
+                    document.getElementById('mainSearchInput').value = draft.mainSearchInput;
+                }
+
+                onModeChange(false);
+            } catch (e) {
+                console.error("خطأ في استرجاع مسودة الصرف والمرتجع:", e);
+            }
+        }
+
         function showMessage(text, isError = false) {
             const msg = document.getElementById('msg');
             msg.style.display = 'block';
@@ -536,22 +604,50 @@
             } catch (e) {}
         }
 
+        // دمج ذكي بين البيانات المحلية والسحابية لضمان عدم ضياع أي حركة تمت أوفلاين
         window.initDispatchApp = async function() {
             loadLocalData();
+            restoreDispatchDraft();
+            renderStagingTable();
             renderHistoryTable();
 
             try {
                 if (window.db) {
+                    const localMap = new Map();
+                    simsList.forEach(s => { if (s.code) localMap.set(s.code, s); });
+
                     const simsSnap = await window.getDocs(window.collection(window.db, "scanned_sims"));
-                    const cloudSims = [];
+                    const mergedSims = [];
+                    const pendingCloudUpdates = [];
+
                     simsSnap.forEach(d => {
-                        const data = d.data();
-                        if (!data.category && data.company) data.category = data.company;
-                        cloudSims.push(data);
+                        const cloudSim = d.data();
+                        if (!cloudSim.category && cloudSim.company) cloudSim.category = cloudSim.company;
+                        const locSim = localMap.get(cloudSim.code);
+
+                        if (locSim && (locSim.updatedAt || 0) > (cloudSim.updatedAt || 0)) {
+                            mergedSims.push(locSim);
+                            pendingCloudUpdates.push(locSim);
+                        } else {
+                            mergedSims.push(cloudSim);
+                        }
+                        localMap.delete(cloudSim.code);
                     });
-                    if (cloudSims.length > 0) {
-                        simsList = cloudSims;
+
+                    // إضافة أي شرائح محلية لم تُرفع بعد
+                    localMap.forEach(remSim => {
+                        mergedSims.push(remSim);
+                        pendingCloudUpdates.push(remSim);
+                    });
+
+                    if (mergedSims.length > 0) {
+                        simsList = mergedSims;
                         localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
+                    }
+
+                    // رفع أي تعديلات معلقة للسحابة تلقائياً
+                    for (const upSim of pendingCloudUpdates) {
+                        await window.setDoc(window.doc(window.db, "scanned_sims", upSim.code), upSim, { merge: true });
                     }
 
                     const custSnap = await window.getDocs(window.collection(window.db, "customers"));
@@ -561,15 +657,34 @@
                         customersList = cloudCust;
                         localStorage.setItem('customers_records_offline', JSON.stringify(customersList));
                     }
+
+                    const badge = document.getElementById('syncStatusBadge');
+                    if (badge) {
+                        badge.textContent = '☁️ متصل ومُزامن تلقائياً';
+                        badge.style.background = '#dcfce7';
+                        badge.style.color = '#166534';
+                    }
                 }
             } catch (e) {
-                console.log("وضع الأوفلاين مفعل.");
+                const badge = document.getElementById('syncStatusBadge');
+                if (badge) {
+                    badge.textContent = '💾 وضع أوفلاين (حفظ تلقائي)';
+                    badge.style.background = '#fef3c7';
+                    badge.style.color = '#b45309';
+                }
             }
 
             await recalculateAndSyncGlobalStock();
             renderStagingTable();
             renderHistoryTable();
         };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadLocalData();
+            restoreDispatchDraft();
+            renderStagingTable();
+            renderHistoryTable();
+        });
 
         window.addEventListener('storage', (e) => {
             if (e.key === 'scanned_sims_offline' || e.key === 'customers_records_offline') {
@@ -579,7 +694,7 @@
             }
         });
 
-        function onModeChange() {
+        function onModeChange(shouldSave = true) {
             const mode = document.getElementById('operationMode').value;
             const selectEl = document.getElementById('operationMode');
             const custWrap = document.getElementById('customerSelectWrap');
@@ -596,6 +711,7 @@
                 confirmBtn.className = 'btn-confirm-batch return-btn';
                 confirmBtn.innerText = '❌ اعتماد المرتجع وخصمه من الرصيد';
             }
+            if (shouldSave) saveDispatchDraft();
             renderStagingTable();
         }
 
@@ -658,6 +774,7 @@
             const pill = document.getElementById('selectedCustomerPill');
             document.getElementById('selectedCustomerText').innerText = `👤 ${selectedCustomer.clientName} ${selectedCustomer.shopName ? `(${selectedCustomer.shopName})` : ''}`;
             pill.style.display = 'flex';
+            saveDispatchDraft();
         }
 
         function clearSelectedCustomer() {
@@ -666,6 +783,7 @@
             input.value = '';
             input.style.display = 'block';
             document.getElementById('selectedCustomerPill').style.display = 'none';
+            saveDispatchDraft();
             input.focus();
         }
 
@@ -692,25 +810,21 @@
             return matrix[b.length][a.length];
         }
 
-        // مطابقة ذكية للسريال المقروء من الصورة مع قاعدة بيانات الشرائح الممسوحة مسبقاً
         function matchWithInventorySim(rawCandidate) {
             const clean = normalizeDigits(rawCandidate).replace(/[^0-9]/g, '');
             if (clean.length < 6) return null;
 
-            // 1. مطابقة تامة
             const exact = simsList.find(s => s.code === clean);
             if (exact) return exact.code;
 
-            // 2. مطابقة بجزء من السريال (آخر 7 أرقام أو أكثر)
             if (clean.length >= 7) {
                 const subMatches = simsList.filter(s => s.code && (s.code.includes(clean) || clean.includes(s.code)));
                 if (subMatches.length === 1) return subMatches[0].code;
             }
 
-            // 3. مطابقة تقريبية لو الكاميرا أخطأت في رقم أو رقمين بسبب خط القلم على الشريحة
             if (clean.length >= 15) {
                 let bestCode = null;
-                let bestDist = 3; // يسمح باختلاف رقم أو رقمين كحد أقصى
+                let bestDist = 3;
                 simsList.forEach(s => {
                     if (!s.code || Math.abs(s.code.length - clean.length) > 2) return;
                     const dist = levenshteinDistance(clean, s.code);
@@ -722,7 +836,6 @@
                 if (bestCode) return bestCode;
             }
 
-            // لو لم يكن في المخزون ولكن طوله سريال كامل (12 رقم فأكثر) نرجعه ليظهر تحذير أنه غير مضاف بالمخزون
             const iccidIdx = clean.indexOf('89966');
             if (iccidIdx >= 0 && clean.substring(iccidIdx).length >= 12) {
                 return clean.substring(iccidIdx, iccidIdx + 20);
@@ -731,7 +844,6 @@
             return null;
         }
 
-        // استخراج الرموز المكتوبة بخط اليد مثل N115 من النص المستخرج
         function extractTagCodesFromText(text) {
             const norm = normalizeDigits(text);
             const ignoredWords = new Set(['SIM', 'PIN', 'PUK', 'STC', 'ZAIN', 'MOBILY', 'DIAL', 'CALL', 'GSM', 'LTE', 'HTTP', 'HTTPS', 'WWW', 'COM', 'NET']);
@@ -748,7 +860,6 @@
                     .replace(/[^0-9]/g, '');
                 if (digits.length >= 1 && digits.length <= 5) {
                     const candidate = `${letters}${digits}`;
-                    // استبعاد أرقام خدمة العملاء المطبوعة مثل 1100 أو 901
                     if (!['R901', 'L1100', 'D1100', 'D901'].includes(candidate)) {
                         foundTags.push(candidate);
                     }
@@ -757,7 +868,6 @@
             return foundTags;
         }
 
-        // استخراج السريالات والرموز من نص الصورة بالكامل
         function parseOcrResult(ocrText) {
             const normText = normalizeDigits(ocrText);
             const foundTags = extractTagCodesFromText(normText);
@@ -766,14 +876,11 @@
             const results = [];
             const seenCodes = new Set();
 
-            // البحث عن السريالات التي تبدأ بـ 89966 أو الأرقام الطويلة (حتى لو بينها مسافات بسيطة)
             const lines = normText.split(/[\r\n]+/);
             lines.forEach((line, lineIdx) => {
-                // البحث عن رمز في نفس السطر أو السطور القريبة
                 const lineTags = extractTagCodesFromText(line);
                 const nearbyTag = lineTags[0] || foundTags[Math.min(lineIdx, foundTags.length - 1)] || defaultTag;
 
-                // تجميع الأرقام المتجاورة في السطر
                 const cleanedLineForDigits = line
                     .replace(/8996\s*6/g, '89966')
                     .replace(/(\d)\s+(\d)/g, '$1$2');
@@ -788,7 +895,6 @@
                 });
             });
 
-            // فحص إضافي للنص الكامل متصل في حال انقسم السريال على سطرين
             const compactDigits = normText.replace(/\s+/g, '');
             const iccidRegex = /89966\d{10,15}/g;
             let m;
@@ -803,7 +909,6 @@
             return { items: results, detectedTags: foundTags };
         }
 
-        // تحسين تباين الصورة على Canvas لزيادة دقة قراءة الأرقام وخط اليد
         function createEnhancedCanvas(imgElement, highContrast = false) {
             const canvas = document.createElement('canvas');
             const maxDim = 1800;
@@ -835,7 +940,6 @@
             return canvas;
         }
 
-        // معالجة الصور المرفوعة أو الملتقطة بالكاميرا
         async function handleImagesSelected(event) {
             const files = Array.from(event.target.files || []);
             if (files.length === 0) return;
@@ -860,7 +964,6 @@
                 const codesFromThisFile = new Set();
                 let tagsFromThisFile = [];
 
-                // 1. محاولة قراءة الباركود المباشر عبر BarcodeDetector أو Html5Qrcode
                 if ('BarcodeDetector' in window) {
                     try {
                         const bitmap = await createImageBitmap(file);
@@ -873,7 +976,6 @@
                     } catch (e) {}
                 }
 
-                // 2. قراءة الأرقام المطبوعة والرمز المكتوب بخط اليد (مثل N115) عبر Tesseract OCR
                 try {
                     const imgEl = await loadImageElement(objUrl);
                     const canvasNormal = createEnhancedCanvas(imgEl, false);
@@ -882,7 +984,6 @@
                     parsed1.items.forEach(it => codesFromThisFile.add(it.code));
                     if (parsed1.detectedTags.length > 0) tagsFromThisFile.push(...parsed1.detectedTags);
 
-                    // إذا لم يلتقط كل الأرقام، نعمل مسح إضافي عالي التباين
                     const canvasContrast = createEnhancedCanvas(imgEl, true);
                     const { data: data2 } = await Tesseract.recognize(canvasContrast, 'eng');
                     const parsed2 = parseOcrResult(data2.text || '');
@@ -906,9 +1007,10 @@
 
             progressBox.style.display = 'none';
             event.target.value = '';
+            saveDispatchDraft();
 
             if (totalAddedFromImages > 0) {
-                showMessage(`📸 تم استخراج (${totalAddedFromImages}) شريحة من الصور بنجاح! راجع الجدول بالأسفل قبل الاعتماد.`);
+                showMessage(`📸 تم استخراج (${totalAddedFromImages}) شريحة من الصور بنجاح وحفظها في المسودة! راجع الجدول بالأسفل قبل الاعتماد.`);
             } else {
                 showMessage(`⚠️ لم يتم التقاط أرقام واضحة من الصورة. يمكنك استخدام البحث السريع بآخر 4-5 أرقام من السريال بالأسفل.`, true);
             }
@@ -942,7 +1044,6 @@
             document.getElementById('imgModal').style.display = 'flex';
         }
 
-        // الكاميرا الحية السريعة لمسح الباركود
         async function toggleLiveScanner() {
             const btn = document.getElementById('liveScanBtn');
             if (isLiveCamRunning && html5QrScanner) {
@@ -966,6 +1067,7 @@
                         if (matched) {
                             const tag = document.getElementById('fixedTagInput').value.trim().toUpperCase();
                             if (addCodeToStaging(matched, tag)) {
+                                saveDispatchDraft();
                                 renderStagingTable();
                                 showMessage(`✅ تم التقاط السريال: ${matched}`);
                             }
@@ -980,7 +1082,6 @@
             }
         }
 
-        // البحث والإضافة السريعة بآخر أرقام السريال
         function onQuickSerialInput() {
             const input = document.getElementById('quickSerialInput');
             const box = document.getElementById('simSuggestions');
@@ -1016,6 +1117,7 @@
             addCodeToStaging(code, tag);
             document.getElementById('quickSerialInput').value = '';
             document.getElementById('simSuggestions').style.display = 'none';
+            saveDispatchDraft();
             renderStagingTable();
         }
 
@@ -1029,6 +1131,7 @@
             addCodeToStaging(matched, tag);
             input.value = '';
             document.getElementById('simSuggestions').style.display = 'none';
+            saveDispatchDraft();
             renderStagingTable();
         }
 
@@ -1051,6 +1154,7 @@
             const fixedTag = document.getElementById('fixedTagInput').value.trim().toUpperCase();
             if (!fixedTag) return;
             stagingList.forEach(item => { item.tagCode = fixedTag; });
+            saveDispatchDraft();
             renderStagingTable();
         }
 
@@ -1058,6 +1162,7 @@
             const clean = normalizeDigits(newVal).replace(/[^0-9]/g, '');
             if (stagingList[idx]) {
                 stagingList[idx].code = matchWithInventorySim(clean) || clean;
+                saveDispatchDraft();
                 renderStagingTable();
             }
         }
@@ -1065,22 +1170,24 @@
         function updateStagingRowTag(idx, newTag) {
             if (stagingList[idx]) {
                 stagingList[idx].tagCode = newTag.trim().toUpperCase();
+                saveDispatchDraft();
             }
         }
 
         function removeStagingRow(idx) {
             stagingList.splice(idx, 1);
+            saveDispatchDraft();
             renderStagingTable();
         }
 
         function clearStagingList() {
             stagingList = [];
             tempImageUrls = [];
+            saveDispatchDraft();
             renderTempImagesStrip();
             renderStagingTable();
         }
 
-        // فحص حالة كل سريال في جدول المعاينة (تحذير غير مضاف بالمخزون + منع تكرار الصرف)
         function inspectSimForStaging(code, mode) {
             const sim = simsList.find(s => s.code === code);
             if (!sim) {
@@ -1114,7 +1221,6 @@
                     html: `<span class="ready-pill">✅ مضافة بالمخزون وجاهزة للصرف</span>`
                 };
             } else {
-                // وضع المرتجع
                 if (sim.status === 'returned') {
                     return {
                         valid: false,
@@ -1168,7 +1274,6 @@
             counterEl.innerText = `📋 إجمالي الشرائح المستخرجة: (${stagingList.length}) — صالحة للتنفيذ: (${validCount}) | تحذيرات: (${warnCount})`;
         }
 
-        // اعتماد وحفظ حركة الصرف أو المرتجع
         async function commitStagingBatch() {
             const mode = document.getElementById('operationMode').value;
             const actionDate = document.getElementById('actionDate').value || getTodayStr();
@@ -1181,7 +1286,6 @@
                 return;
             }
 
-            // التأكد من عدم وجود شرائح غير مضافة بالمخزون أو مكررة الصرف
             const invalidItems = stagingList.filter(it => !inspectSimForStaging(it.code, mode).valid);
             if (invalidItems.length > 0) {
                 showMessage(`⚠️ يوجد عدد (${invalidItems.length}) شريحة بها تحذير (غير مضافة بالمخزون أو مصروفة مسبقاً). يرجى مراجعتها أو حذفها من القائمة المؤقتة أولاً.`, true);
@@ -1217,6 +1321,7 @@
                     sim.dispatchDate = actionDate;
                     sim.actionDate = actionDate;
                     sim.dispatchTimestamp = now;
+                    sim.updatedAt = now;
                     sim.dispatchedBy = currentUser.username || 'admin';
                 } else {
                     sim.status = 'returned';
@@ -1224,6 +1329,7 @@
                     sim.returnDate = actionDate;
                     sim.actionDate = actionDate;
                     sim.returnTimestamp = now;
+                    sim.updatedAt = now;
                     sim.returnedBy = currentUser.username || 'admin';
                 }
 
@@ -1241,16 +1347,17 @@
                     }
                 }
             } catch (e) {
-                console.warn("تم الحفظ محلياً وسيتم المزامنة لاحقاً.");
+                console.warn("تم الحفظ محلياً وسيتم المزامنة تلقائياً عند توفر الإنترنت.");
             }
 
             const countDone = updatedSimsForCloud.length;
+            const lastClientName = selectedCustomer ? selectedCustomer.clientName : '';
             clearStagingList();
-            onModeChange();
+            onModeChange(true);
             btn.disabled = false;
 
             if (mode === 'dispatch') {
-                showMessage(`✅ تم صرف (${countDone}) شريحة للعميل (${selectedCustomer.clientName}) والتعليم عليها بـ (✅) بنجاح!`);
+                showMessage(`✅ تم صرف (${countDone}) شريحة للعميل (${lastClientName}) والتعليم عليها بـ (✅) ومزامنتها بنجاح!`);
             } else {
                 showMessage(`❌ تم تسجيل (${countDone}) شريحة كمرتجع والتعليم عليها بـ (❌) وخصمها من الرصيد الممسوح والمتاح بنجاح!`);
             }
@@ -1258,7 +1365,6 @@
             renderHistoryTable();
         }
 
-        // عرض جدول الصرف والمرتجع والبحث بالسريال أو بالرمز (مثل N115) أو بالعميل
         function renderHistoryTable() {
             const tbody = document.getElementById('historyTableBody');
             const monthVal = document.getElementById('monthFilter').value;
@@ -1266,14 +1372,11 @@
             const rawSearch = (document.getElementById('mainSearchInput').value || '').trim();
             const searchLower = rawSearch.toLowerCase();
 
-            // الشرائح التي تمت عليها حركة صرف أو مرتجع
             const activeSims = simsList.filter(s => s.status === 'dispatched' || s.status === 'returned');
 
             const filtered = activeSims.filter(s => {
-                // فلتر الحالة
                 if (statusVal !== 'ALL' && s.status !== statusVal) return false;
 
-                // فلتر الشهر المحاسبي (في حال عدم كتابة بحث محدد، أو مع البحث)
                 if (monthVal) {
                     const effectiveDate = s.actionDate || (s.status === 'returned' ? s.returnDate : s.dispatchDate) || s.date;
                     const effectiveTs = s.returnTimestamp || s.dispatchTimestamp || s.timestamp;
@@ -1291,14 +1394,12 @@
                 return codeMatch || tagMatch || clientMatch || shopMatch;
             });
 
-            // تحديث العدادات العلوية بناءً على النتائج المعروضة
             const dispCount = filtered.filter(s => s.status === 'dispatched').length;
             const retCount = filtered.filter(s => s.status === 'returned').length;
             document.getElementById('statDispatchedCount').innerText = dispCount;
             document.getElementById('statReturnedCount').innerText = retCount;
             document.getElementById('statNetCount').innerText = dispCount;
 
-            // إظهار ملخص العملاء المجمع إذا كان المستخدم يبحث برمز (مثل N115) أو اسم عميل
             const tagSummaryBox = document.getElementById('tagSummaryBox');
             if (rawSearch && filtered.length > 0) {
                 const clientsMap = {};
@@ -1367,7 +1468,6 @@
             }).join('');
         }
 
-        // نافذة تعديل / تصحيح حالة شريحة
         function openEditSimModal(code) {
             const sim = simsList.find(s => s.code === code);
             if (!sim) return;
@@ -1405,6 +1505,7 @@
             const sim = simsList[idx];
             sim.status = newStatus;
             sim.tagCode = newTag;
+            sim.updatedAt = Date.now();
 
             if (custIdx !== '' && customersList[custIdx]) {
                 const c = customersList[custIdx];
