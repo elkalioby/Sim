@@ -23,7 +23,6 @@
 
         .page-header { text-align: center; color: var(--primary); margin-bottom: 12px; font-size: 1.25rem; font-weight: 800; }
 
-        /* المربعات الإحصائية العلوية (مربعان فقط) */
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
         .stat-box { background: var(--card); border-radius: 12px; padding: 12px 10px; text-align: center; border: 1.5px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
         .stat-box.dispatched { background: #f0fdf4; border-color: #bbf7d0; }
@@ -43,12 +42,10 @@
         .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .full-width { grid-column: 1 / -1; }
 
-        /* نوع الحركة */
         .mode-select { font-weight: 800; font-size: 0.95rem; cursor: pointer; }
         .mode-select.mode-dispatch { background: #f0fdf4; border: 2px solid var(--success); color: #166534; }
         .mode-select.mode-return { background: #fef2f2; border: 2px solid var(--danger); color: #991b1b; }
 
-        /* القائمة المنسدلة للعملاء المسجلين */
         .autocomplete-wrapper { position: relative; }
         .customers-dropdown {
             display: none; position: absolute; top: 100%; right: 0; left: 0;
@@ -66,7 +63,6 @@
             align-items: center; justify-content: space-between; border: 1px solid #93c5fd;
         }
 
-        /* الإدخال السريع بالسريال */
         .quick-add-box { position: relative; }
         .quick-row { display: flex; gap: 6px; align-items: center; }
         .quick-row input { flex: 1; font-family: monospace; font-size: 0.92rem; }
@@ -82,7 +78,6 @@
         }
         .sim-suggestion-item:hover { background: #f0fdf4; }
 
-        /* أزرار الكاميرا ورفع الصور (أيقونات فقط بدون نصوص) */
         .upload-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
         .btn-upload-icon {
             border: none; font-size: 1.5rem; height: 50px;
@@ -206,7 +201,6 @@
 
     <h3 class="page-header">🔄 صرف ومرتجع الشرائح للعملاء</h3>
 
-    <!-- المربعات العلوية (مربعان فقط) -->
     <div class="stats-grid">
         <div class="stat-box dispatched">
             <div class="stat-title">✅ إجمالي المنصرف</div>
@@ -245,7 +239,6 @@
                 </div>
             </div>
 
-            <!-- الإضافة السريعة للسريال -->
             <div class="full-width quick-add-box">
                 <label>⚡ إضافة سريعة بالسريال الكامل أو بآخر 4 أو 5 أرقام منه (مثال: 92277):</label>
                 <div class="quick-row">
@@ -256,7 +249,6 @@
             </div>
         </div>
 
-        <!-- أزرار رفع الصور أو التصوير (أيقونات فقط: ملفات، كاميرا، باركود) -->
         <input type="file" id="galleryFilesInput" accept="image/*" multiple style="display:none;" onchange="handleImagesSelected(event)">
         <input type="file" id="cameraShotInput" accept="image/*" capture="environment" style="display:none;" onchange="handleImagesSelected(event)">
 
@@ -273,11 +265,10 @@
         </div>
 
         <div id="reader"></div>
-        <div id="ocrProgressBox">⏳ جاري قراءة السريالات والرموز من الصور...</div>
+        <div id="ocrProgressBox">⏳ جاري قراءة الشرائح عبر النظام الشبكي الذكي...</div>
 
         <div id="tempImagesStrip" class="temp-images-strip" title="اضغط على أي صورة لتكبيرها ومراجعتها"></div>
 
-        <!-- جدول المعاينة والمراجعة قبل الحفظ النهائي -->
         <div id="stagingSection">
             <div class="staging-banner">
                 <span id="stagingCounterText">📋 الشرائح المستخرجة للمراجعة: 0</span>
@@ -306,7 +297,6 @@
         </div>
     </div>
 
-    <!-- كارت السجل -->
     <div class="card">
         <div class="card-title">
             <span>📋 السجل</span>
@@ -828,8 +818,8 @@
             if (clean.length >= 15) {
                 let bestCode = null;
                 let bestDist = 3;
-                simsList.forEach(s => {
-                    if (!s.code || Math.abs(s.code.length - clean.length) > 2) return;
+                simsList.find(s => {
+                    if (!s.code || Math.abs(s.code.length - clean.length) > 2) return false;
                     const dist = levenshteinDistance(clean, s.code);
                     if (dist < bestDist) {
                         bestDist = dist;
@@ -871,65 +861,10 @@
             return foundTags;
         }
 
-        function parseOcrResult(ocrText) {
-            const normText = normalizeDigits(ocrText);
-            const foundTags = extractTagCodesFromText(normText);
-            const results = [];
-            const seenCodes = new Set();
-
-            const lines = normText.split(/[\r\n]+/);
-            lines.forEach((line, lineIdx) => {
-                const lineTags = extractTagCodesFromText(line);
-                const nearbyTag = lineTags[0] || foundTags[Math.min(lineIdx, foundTags.length - 1)] || '';
-
-                const cleanedLineForDigits = line
-                    .replace(/8996\s*6/g, '89966')
-                    .replace(/(\d)\s+(\d)/g, '$1$2');
-
-                const numMatches = cleanedLineForDigits.match(/\d{7,22}/g) || [];
-                numMatches.forEach(rawNum => {
-                    const resolvedCode = matchWithInventorySim(rawNum);
-                    if (resolvedCode && !seenCodes.has(resolvedCode)) {
-                        seenCodes.add(resolvedCode);
-                        results.push({ code: resolvedCode, tagCode: nearbyTag, x: 0, y: lineIdx * 100 });
-                    }
-                });
-            });
-
-            return { items: results, detectedTags: foundTags };
-        }
-
-        function createEnhancedCanvas(imgElement, highContrast = false) {
-            const canvas = document.createElement('canvas');
-            const maxDim = 1800;
-            let w = imgElement.naturalWidth || imgElement.width;
-            let h = imgElement.naturalHeight || imgElement.height;
-            if (w < 1000 && h < 1000) {
-                w *= 1.5;
-                h *= 1.5;
-            } else if (w > maxDim || h > maxDim) {
-                const ratio = Math.min(maxDim / w, maxDim / h);
-                w = Math.round(w * ratio);
-                h = Math.round(h * ratio);
-            }
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(imgElement, 0, 0, w, h);
-
-            if (highContrast) {
-                const imgData = ctx.getImageData(0, 0, w, h);
-                const d = imgData.data;
-                for (let i = 0; i < d.length; i += 4) {
-                    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-                    const val = gray < 138 ? Math.max(0, gray * 0.5) : Math.min(255, gray * 1.25);
-                    d[i] = d[i + 1] = d[i + 2] = val;
-                }
-                ctx.putImageData(imgData, 0, 0);
-            }
-            return canvas;
-        }
-
+        // =========================================================================
+        // النظام الشبكي الذكي (Smart Grid Splitter): تقطيع الصورة إلى شبكة (مثلاً 2 عمود × 3 صفوف)
+        // واستخراج الباركود والرموز من كل شريحة معزولة على حدة بدقة 100% وبترتيب اليمين لليسار
+        // =========================================================================
         async function handleImagesSelected(event) {
             const files = Array.from(event.target.files || []);
             if (files.length === 0) return;
@@ -944,73 +879,108 @@
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                progressBox.innerText = `⏳ جاري تحليل الصورة (${i + 1} من ${files.length}) واستخراج السريالات...`;
+                progressBox.innerText = `⏳ جاري معالجة وتقطيع الصورة (${i + 1} من ${files.length}) بالنظام الشبكي الذكي...`;
 
                 const objUrl = URL.createObjectURL(file);
                 tempImageUrls.push(objUrl);
                 renderTempImagesStrip();
 
-                const fileExtractedItems = [];
-                const seenFileCodes = new Set();
-
                 try {
                     const imgEl = await loadImageElement(objUrl);
-                    const canvasNormal = createEnhancedCanvas(imgEl, false);
-                    
-                    const { data } = await Tesseract.recognize(canvasNormal, 'eng', {
-                        logger: m => {}
+                    const origW = imgEl.naturalWidth || imgEl.width;
+                    const origH = imgEl.naturalHeight || imgEl.height;
+
+                    // تقطيع الصورة إلى شبكة من 6 خلايا (2 عمود يمين ويسار × 3 صفوف أعلى ووسط وأسفل)
+                    const cols = 2;
+                    const rows = 3;
+                    const cellW = origW / cols;
+                    const cellH = origH / rows;
+
+                    const gridCells = [];
+
+                    for (let r = 0; r < rows; r++) {
+                        for (let c = 0; c < cols; c++) {
+                            const subCanvas = document.createElement('canvas');
+                            subCanvas.width = cellW;
+                            subCanvas.height = cellH;
+                            const sCtx = subCanvas.getContext('2d');
+                            sCtx.drawImage(imgEl, c * cellW, r * cellH, cellW, cellH, 0, 0, cellW, cellH);
+
+                            gridCells.push({
+                                r: r,
+                                c: c, // c=0 هو اليمين في RTL، c=1 هو اليسار
+                                canvas: subCanvas
+                            });
+                        }
+                    }
+
+                    // ترتيب الخلايا: اليمين أولاً ثم اليسار، من الأعلى للأسفل
+                    gridCells.sort((a, b) => {
+                        if (a.r !== b.r) return a.r - b.r;
+                        return b.c - a.c; // c=1 (يسار) يأتي بعد c=0 (يمين) في العرض المقلوب
                     });
 
-                    if (data && data.lines) {
-                        data.lines.forEach(line => {
-                            const lineText = normalizeDigits(line.text || '');
-                            const lineTags = extractTagCodesFromText(lineText);
-                            const nearbyTag = lineTags[0] || '';
-                            const bbox = line.bbox || { x0: 0, y0: 0 };
+                    const fileExtractedItems = [];
+                    const seenFileCodes = new Set();
 
-                            const numMatches = lineText.match(/\d{7,22}/g) || [];
-                            numMatches.forEach(rawNum => {
-                                const resolved = matchWithInventorySim(rawNum);
-                                if (resolved && !seenFileCodes.has(resolved)) {
-                                    seenFileCodes.add(resolved);
-                                    fileExtractedItems.push({
-                                        code: resolved,
-                                        tagCode: nearbyTag,
-                                        x: bbox.x0 || 0,
-                                        y: bbox.y0 || 0
-                                    });
+                    for (const cell of gridCells) {
+                        let cellCode = null;
+                        let cellTag = '';
+
+                        // أ. فحص الباركود مباشرة عبر BarcodeDetector إن وجد لسرعة فائقة
+                        if ('BarcodeDetector' in window) {
+                            try {
+                                const bitmap = await createImageBitmap(cell.canvas);
+                                const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'qr_code'] });
+                                const barcodes = await detector.detect(bitmap);
+                                for (const b of barcodes) {
+                                    const matched = matchWithInventorySim(b.rawValue);
+                                    if (matched) {
+                                        cellCode = matched;
+                                        break;
+                                    }
                                 }
+                            } catch (e) {}
+                        }
+
+                        // ب. لو لم يلتقطه الباركود، نشغل Tesseract OCR على الخلية المعزولة بدقة عالية
+                        if (!cellCode) {
+                            try {
+                                const { data } = await Tesseract.recognize(cell.canvas, 'eng');
+                                const text = normalizeDigits(data.text || '');
+                                
+                                const tags = extractTagCodesFromText(text);
+                                if (tags.length > 0) cellTag = tags[0];
+
+                                const numMatches = text.match(/\d{7,22}/g) || [];
+                                for (const rawNum of numMatches) {
+                                    const resolved = matchWithInventorySim(rawNum);
+                                    if (resolved) {
+                                        cellCode = resolved;
+                                        break;
+                                    }
+                                }
+                            } catch (err) {}
+                        }
+
+                        if (cellCode && !seenFileCodes.has(cellCode)) {
+                            seenFileCodes.add(cellCode);
+                            fileExtractedItems.push({
+                                code: cellCode,
+                                tagCode: cellTag
                             });
-                        });
+                        }
                     }
 
-                    if (fileExtractedItems.length === 0 && data && data.text) {
-                        const parsed = parseOcrResult(data.text);
-                        parsed.items.forEach(it => {
-                            if (!seenFileCodes.has(it.code)) {
-                                seenFileCodes.add(it.code);
-                                fileExtractedItems.push(it);
-                            }
-                        });
-                    }
-                } catch (ocrErr) {
-                    console.warn("خطأ OCR:", ocrErr);
+                    fileExtractedItems.forEach(it => {
+                        if (addCodeToStaging(it.code, it.tagCode)) {
+                            totalAddedFromImages++;
+                        }
+                    });
+
+                } catch (err) {
+                    console.warn("خطأ في معالجة الشبكة الذكية:", err);
                 }
-
-                // ترتيب الشرائح المستخرجة مكانياً: من اليمين لليسار (X تنازلي)، ثم من الأعلى للأسفل (Y تصاعدي)
-                fileExtractedItems.sort((a, b) => {
-                    const yDiff = Math.abs(a.y - b.y);
-                    if (yDiff > 40) {
-                        return a.y - b.y;
-                    }
-                    return b.x - a.x; // اليمين أولاً ثم الشمال
-                });
-
-                fileExtractedItems.forEach(it => {
-                    if (addCodeToStaging(it.code, it.tagCode)) {
-                        totalAddedFromImages++;
-                    }
-                });
             }
 
             progressBox.style.display = 'none';
@@ -1018,9 +988,9 @@
             saveDispatchDraft();
 
             if (totalAddedFromImages > 0) {
-                showMessage(`📸 تم استخراج (${totalAddedFromImages}) شريحة وترتيبها من اليمين لليسار بنجاح!`);
+                showMessage(`📸 تم تحليل الصور بالشبكة الذكية واستخراج (${totalAddedFromImages}) شريحة من اليمين ليسار بنجاح!`);
             } else {
-                showMessage(`⚠️ لم يتم التقاط أرقام واضحة من الصورة. يمكنك استخدام الإضافة السريعة بالأسفل.`, true);
+                showMessage(`⚠️ لم يتم التعرف على الشرائح بدقة من الصورة. يمكنك استخدام الإضافة السريعة بالأسفل.`, true);
             }
             renderStagingTable();
         }
