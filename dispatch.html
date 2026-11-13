@@ -482,11 +482,18 @@
         let customersList = [];
         let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
         let durationsList = ['30', '60'];
-        let geminiApiKey = (localStorage.getItem('gemini_api_key') || '').trim();
+        let geminiApiKey = extractCleanApiKey(localStorage.getItem('gemini_api_key') || '');
         let selectedCustomer = null;
         let stagingList = [];
         let tempImageUrls = [];
         let pendingFilesAfterKey = null;
+
+        // تنظيف مفتاح API في حال تم نسخ رابط كامل أو مسافات بالخطأ
+        function extractCleanApiKey(rawInput) {
+            const str = String(rawInput || '').trim();
+            const match = str.match(/AIza[0-9A-Za-z\-_]{30,45}/);
+            return match ? match[0] : str;
+        }
 
         const scannerConfig = {
             experimentalFeatures: { useBarCodeDetectorIfSupported: true },
@@ -619,7 +626,8 @@
         }
 
         async function saveGeminiApiKey() {
-            const val = document.getElementById('geminiApiKeyInput').value.trim();
+            const rawVal = document.getElementById('geminiApiKeyInput').value;
+            const val = extractCleanApiKey(rawVal);
             if (!val) {
                 showMessage('⚠️ يرجى لصق مفتاح Gemini API أولاً.', true);
                 return;
@@ -734,7 +742,7 @@
                 categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
                 durationsList = localConfig.durationsList || ['30', '60'];
                 if (localConfig.geminiApiKey) {
-                    geminiApiKey = String(localConfig.geminiApiKey).trim();
+                    geminiApiKey = extractCleanApiKey(localConfig.geminiApiKey);
                     localStorage.setItem('gemini_api_key', geminiApiKey);
                 }
             }
@@ -812,7 +820,7 @@
                         categoriesList = cData.categoriesList || cData.customItems || categoriesList;
                         durationsList = cData.durationsList || durationsList;
                         if (cData.geminiApiKey) {
-                            geminiApiKey = String(cData.geminiApiKey).trim();
+                            geminiApiKey = extractCleanApiKey(cData.geminiApiKey);
                             localStorage.setItem('gemini_api_key', geminiApiKey);
                         }
                         renderDurationDropdowns();
@@ -1078,7 +1086,6 @@
             return out;
         }
 
-        // فحص الشبكة الذكي للباركود (يدعم شبكة 2×3 عمودية وشبكة 3×2 أفقية مع تدوير كل خلية 0° و 90° و 270°)
         async function detectGridBarcodesMultiAngle(imgEl) {
             if (!('BarcodeDetector' in window)) return [];
             const found = [];
@@ -1087,7 +1094,6 @@
             const origW = imgEl.naturalWidth || imgEl.width;
             const origH = imgEl.naturalHeight || imgEl.height;
 
-            // تجربة تخطيطين: (3 أعمدة × 2 صف) و (2 عمود × 3 صفوف) من اليمين لليسار
             const layouts = origW >= origH
                 ? [{ rows: 2, cols: 3 }, { rows: 3, cols: 2 }]
                 : [{ rows: 3, cols: 2 }, { rows: 2, cols: 3 }];
@@ -1095,7 +1101,6 @@
             for (const layout of layouts) {
                 const { rows, cols } = layout;
                 for (let r = 0; r < rows; r++) {
-                    // من اليمين لليسار (c من cols-1 نزولاً إلى 0)
                     for (let c = cols - 1; c >= 0; c--) {
                         const y0 = Math.max(0, (r / rows) - 0.04) * origH;
                         const y1 = Math.min(1, ((r + 1) / rows) + 0.04) * origH;
@@ -1128,7 +1133,6 @@
             return found;
         }
 
-        // محلل مرن جداً لرد Gemini سواء كان Array أو Object أو نص
         function parseGeminiResponseText(rawText) {
             if (!rawText) return [];
             const cleaned = String(rawText).replace(/```json|```/gi, '').trim();
@@ -1163,7 +1167,6 @@
                     if (single) return [single];
                 }
             } catch (e) {
-                // محاولة استخراج أول مصفوفة [...] من النص
                 const arrStart = cleaned.indexOf('[');
                 const arrEnd = cleaned.lastIndexOf(']');
                 if (arrStart !== -1 && arrEnd > arrStart) {
@@ -1176,7 +1179,6 @@
                 }
             }
 
-            // استخراج احتياطي بالأرقام من النص الخام لو لم يكن JSON
             const fallbackItems = [];
             const iccidRegex = /89966\d{12,15}/g;
             const tagRegex = /\b([A-Za-z]\s*\d{1,4})\b/g;
@@ -1191,8 +1193,45 @@
             return fallbackItems;
         }
 
+        // جلب قائمة الموديلات المتاحة تلقائياً من حساب المستخدم في حال تغيير أسمائها من جوجل
+        async function discoverAvailableFlashModels(apiKeyToUse) {
+            try {
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKeyToUse)}`);
+                if (!resp.ok) return [];
+                const data = await resp.json();
+                const models = (data.models || [])
+                    .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+                    .map(m => String(m.name || '').replace(/^models\//, ''))
+                    .filter(name => name.includes('gemini') && (name.includes('flash') || name.includes('pro')));
+
+                // ترتيب الموديلات بحيث نفضل الإصدارات الأحدث (3.5 ثم 3.0 ثم flash)
+                models.sort((a, b) => {
+                    const score = (n) => (n.includes('3.5') ? 40 : n.includes('3.0') ? 30 : n.includes('flash') ? 20 : 10);
+                    return score(b) - score(a);
+                });
+                return models;
+            } catch (e) {
+                return [];
+            }
+        }
+
+        // =====================================================================
+        // استدعاء Gemini Vision AI بالموديلات الجديدة (gemini-3.5-flash-lite / gemini-3.5-flash)
+        // مع كشف تلقائي عن الموديلات المتاحة في حسابك
+        // =====================================================================
         async function analyzeImageWithGemini(base64Jpeg, apiKeyToUse) {
-            const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
+            const cleanKey = extractCleanApiKey(apiKeyToUse);
+            const defaultModels = [
+                'gemini-3.5-flash-lite',
+                'gemini-3.5-flash',
+                'gemini-3.0-flash',
+                'gemini-flash-latest',
+                'gemini-2.5-flash'
+            ];
+
+            const discovered = await discoverAvailableFlashModels(cleanKey);
+            const modelsToTry = [...new Set([...defaultModels, ...discovered])];
+
             const promptText = `Analyze this image of telecom SIM cards (Mobily, STC, Zain, Redbull).
 There are multiple SIM cards in the photo (for example 6 SIM cards arranged in a 2x3 or 3x2 grid, either horizontal or rotated 90 degrees vertically).
 Read ALL SIM cards in the image, ordered row by row from TOP to BOTTOM, and within each row from RIGHT to LEFT.
@@ -1200,13 +1239,14 @@ For every SIM card, extract:
 1. "code": The 19-digit ICCID serial number printed beside the long barcode (starts with 8996603430... or 89966...). Note: the last 8 digits are also printed inside the white SIM chip window. Read every single digit carefully.
 2. "tagCode": The handwritten English letter + digits written with a pen/marker on the blue surface of the card (such as "N120", "N78", "N74", "N64", "N76", "N73", "N52"). Format as uppercase English letter followed by digits without spaces (e.g. "N120"). Ignore any scribble on top of the QR code.
 
-Return a JSON array of objects, where each object has "code" and "tagCode".`;
+Return ONLY a JSON array of objects, where each object has "code" and "tagCode", like:
+[{"code": "8996603430267292232", "tagCode": "N120"}]`;
 
             let lastErr = null;
 
             for (const modelName of modelsToTry) {
                 try {
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKeyToUse)}`;
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(cleanKey)}`;
                     const resp = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1219,18 +1259,7 @@ Return a JSON array of objects, where each object has "code" and "tagCode".`;
                             }],
                             generationConfig: {
                                 temperature: 0.1,
-                                responseMimeType: "application/json",
-                                responseSchema: {
-                                    type: "ARRAY",
-                                    items: {
-                                        type: "OBJECT",
-                                        properties: {
-                                            code: { type: "STRING" },
-                                            tagCode: { type: "STRING" }
-                                        },
-                                        required: ["code", "tagCode"]
-                                    }
-                                }
+                                responseMimeType: "application/json"
                             }
                         })
                     });
@@ -1239,7 +1268,14 @@ Return a JSON array of objects, where each object has "code" and "tagCode".`;
                         const errJson = await resp.json().catch(() => ({}));
                         const errMsg = (errJson.error && errJson.error.message) || `HTTP ${resp.status}`;
                         const errObj = new Error(errMsg);
-                        if (resp.status === 400 || resp.status === 403 || errMsg.includes('API_KEY') || errMsg.includes('API key') || errMsg.includes('SERVICE_DISABLED') || errMsg.includes(' blocked')) {
+
+                        // إذا كان الموديل غير متاح، ننتقل فوراً للموديل التالي في القائمة
+                        if (resp.status === 404 || errMsg.includes('no longer available') || errMsg.includes('not found') || errMsg.includes('not supported')) {
+                            lastErr = errObj;
+                            continue;
+                        }
+
+                        if (resp.status === 400 || resp.status === 403 || errMsg.includes('API_KEY') || errMsg.includes('API key') || errMsg.includes('SERVICE_DISABLED')) {
                             errObj.isKeyError = true;
                             throw errObj;
                         }
@@ -1302,7 +1338,6 @@ Return a JSON array of objects, where each object has "code" and "tagCode".`;
                     const imgEl = await loadImageElement(objUrl);
                     const base64Jpeg = imageToBase64Jpeg(imgEl, 1600);
 
-                    // تشغيل تحليل Gemini بالتوازي مع الفحص الشبكي للباركود (0° و 90° و 270°)
                     const [geminiResult, gridBarcodes] = await Promise.allSettled([
                         analyzeImageWithGemini(base64Jpeg, geminiApiKey),
                         detectGridBarcodesMultiAngle(imgEl)
@@ -1318,7 +1353,7 @@ Return a JSON array of objects, where each object has "code" and "tagCode".`;
                             progressBox.style.display = 'none';
                             pendingFilesAfterKey = files.slice(i);
                             openGeminiKeyModal();
-                            showMessage(`🔑 مفتاح Gemini غير مفعل أو غير صحيح (${err.message}). يرجى لصق المفتاح الصحيح من Google AI Studio.`, true);
+                            showMessage(`🔑 مفتاح Gemini غير صالح (${err.message}). يرجى لصق المفتاح فقط (الذي يبدأ بـ AIzaSy) من Google AI Studio.`, true);
                             return;
                         }
                         lastErrorText = (err && err.message) ? err.message : '';
@@ -1326,7 +1361,6 @@ Return a JSON array of objects, where each object has "code" and "tagCode".`;
 
                     const seenInFile = new Set();
 
-                    // 1. إضافة نتائج Gemini (السريال + الرمز المكتوب بخط اليد)
                     geminiItems.forEach(item => {
                         const rawCode = String(item.code || '').trim();
                         const resolvedCode = matchWithInventorySim(rawCode) || normalizeDigits(rawCode).replace(/[^0-9]/g, '');
@@ -1340,7 +1374,6 @@ Return a JSON array of objects, where each object has "code" and "tagCode".`;
                         }
                     });
 
-                    // 2. استكمال أي باركود إضافي التقطه الفحص الشبكي متعدد الزوايا
                     const dominantTag = geminiItems.find(it => it.tagCode)?.tagCode || '';
                     barcodeList.forEach(bCode => {
                         if (!seenInFile.has(bCode)) {
@@ -1407,9 +1440,6 @@ Return a JSON array of objects, where each object has "code" and "tagCode".`;
             }
         }
 
-        // =====================================================================
-        // نظام المسح المباشر للباركود مطابق لملف إضافة شريحة (barcode.html)
-        // =====================================================================
         async function applyZoom(val) {
             document.getElementById('zoomVal').innerText = val + 'x';
             if (!isLiveCamRunning) return;
