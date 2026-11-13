@@ -42,12 +42,10 @@
         .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .full-width { grid-column: 1 / -1; }
 
-        /* نوع الحركة */
         .mode-select { font-weight: 800; font-size: 0.95rem; cursor: pointer; }
         .mode-select.mode-dispatch { background: #f0fdf4; border: 2px solid var(--success); color: #166534; }
         .mode-select.mode-return { background: #fef2f2; border: 2px solid var(--danger); color: #991b1b; }
 
-        /* القائمة المنسدلة للعملاء المسجلين */
         .autocomplete-wrapper { position: relative; }
         .customers-dropdown {
             display: none; position: absolute; top: 100%; right: 0; left: 0;
@@ -163,8 +161,16 @@
         .icon-edit-btn { background: #fef3c7; color: #b45309; }
         .icon-del-btn { background: #fee2e2; color: #dc2626; }
 
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; justify-content: center; align-items: center; padding: 15px; }
-        .modal-img { max-width: 95%; max-height: 85vh; border-radius: 12px; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; padding: 15px; }
+        .modal-content-wrap { position: relative; max-width: 95%; max-height: 90vh; display: flex; justify-content: center; align-items: center; }
+        .modal-img { max-width: 100%; max-height: 85vh; border-radius: 12px; }
+        .modal-close-btn {
+            position: absolute; top: -15px; right: -15px; background: #dc2626; color: white;
+            border: none; width: 38px; height: 38px; border-radius: 50%; font-size: 1.2rem;
+            font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 1010;
+        }
+
         .modal-box { background: #fff; padding: 18px; border-radius: 14px; width: 100%; max-width: 420px; }
 
         @media (max-width: 600px) {
@@ -349,8 +355,11 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="imgModal" onclick="this.style.display='none'">
-        <img id="imgModalTarget" class="modal-img" src="" alt="معاينة">
+    <div class="modal-overlay" id="imgModal" onclick="closeImgModal(event)">
+        <div class="modal-content-wrap">
+            <button type="button" class="modal-close-btn" onclick="closeImgModal(null)">✕</button>
+            <img id="imgModalTarget" class="modal-img" src="" alt="معاينة">
+        </div>
     </div>
 
     <div class="modal-overlay" id="editSimModal">
@@ -784,7 +793,7 @@
         }
 
         function normalizeDigits(str) {
-            return String(str || '').replace(/[٠-٩]/g, d => '٠١ي٣٤٥٦٧٨٩'.indexOf(d));
+            return String(str || '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
         }
 
         function levenshteinDistance(a, b) {
@@ -877,7 +886,7 @@
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                progressBox.innerText = `⏳ جاري معالجة وتقطيع الصورة (${i + 1} من ${files.length}) بالنظام الشبكي الذكي...`;
+                progressBox.innerText = `⏳ جاري تحليل الشرائح بالذكاء الاصطناعي وتطبيق الشبكة الذكية (${i + 1} من ${files.length})...`;
 
                 const objUrl = URL.createObjectURL(file);
                 tempImageUrls.push(objUrl);
@@ -913,7 +922,7 @@
 
                     gridCells.sort((a, b) => {
                         if (a.r !== b.r) return a.r - b.r;
-                        return b.c - a.c; // من اليمين لليسار
+                        return b.c - a.c;
                     });
 
                     const fileExtractedItems = [];
@@ -938,14 +947,14 @@
                             } catch (e) {}
                         }
 
-                        if (!cellCode) {
-                            try {
-                                const { data } = await Tesseract.recognize(cell.canvas, 'eng');
-                                const text = normalizeDigits(data.text || '');
-                                
-                                const tags = extractTagCodesFromText(text);
-                                if (tags.length > 0) cellTag = tags[0];
+                        try {
+                            const { data } = await Tesseract.recognize(cell.canvas, 'eng');
+                            const text = normalizeDigits(data.text || '');
+                            
+                            const tags = extractTagCodesFromText(text);
+                            if (tags.length > 0) cellTag = tags[0];
 
+                            if (!cellCode) {
                                 const numMatches = text.match(/\d{7,22}/g) || [];
                                 for (const rawNum of numMatches) {
                                     const resolved = matchWithInventorySim(rawNum);
@@ -954,8 +963,8 @@
                                         break;
                                     }
                                 }
-                            } catch (err) {}
-                        }
+                            }
+                        } catch (err) {}
 
                         if (cellCode && !seenFileCodes.has(cellCode)) {
                             seenFileCodes.add(cellCode);
@@ -973,7 +982,7 @@
                     });
 
                 } catch (err) {
-                    console.warn("خطأ في معالجة الشبكة الذكية:", err);
+                    console.warn("خطأ في تحليل الصورة:", err);
                 }
             }
 
@@ -984,7 +993,7 @@
             if (totalAddedFromImages > 0) {
                 showMessage(`📸 تم استخراج (${totalAddedFromImages}) شريحة وترتيبها من اليمين لليسار بنجاح!`);
             } else {
-                showMessage(`⚠️ لم يتم التعرف على الشرائح بدقة من الصورة. يمكنك استخدام الإضافة السريعة بالأسفل.`, true);
+                showMessage(`⚠️ لم يتم التعرف على الشرائح بدقة. يمكنك استخدام الإضافة السريعة بالأسفل.`, true);
             }
             renderStagingTable();
         }
@@ -1014,6 +1023,12 @@
         function openImgModal(url) {
             document.getElementById('imgModalTarget').src = url;
             document.getElementById('imgModal').style.display = 'flex';
+        }
+
+        function closeImgModal(e) {
+            if (!e || e.target.id === 'imgModal' || e.target.classList.contains('modal-close-btn')) {
+                document.getElementById('imgModal').style.display = 'none';
+            }
         }
 
         async function toggleLiveScanner() {
@@ -1134,7 +1149,7 @@
 
         function updateStagingRowTag(idx, newTag) {
             if (stagingList[idx]) {
-                stagingList[idx].tagCode = newTag.trim().toUpperCase();
+                stagingList[idx].tagCode = String(newTag || '').trim().toUpperCase();
                 saveDispatchDraft();
             }
         }
@@ -1235,7 +1250,7 @@
                             <input type="text" value="${item.code}" style="font-family:monospace; font-weight:800; text-align:center; min-width:170px;" onchange="updateStagingRowCode(${idx}, this.value)">
                         </td>
                         <td>
-                            <input type="text" value="${item.tagCode || ''}" placeholder="N115" style="font-family:monospace; font-weight:800; text-align:center; max-width:95px;" oninput="this.value=this.value.toUpperCase(); updateStagingRowTag(${idx}, this.value)">
+                            <input type="text" value="${item.tagCode || ''}" placeholder="N115" style="font-family:sans-serif; font-weight:800; text-align:center; max-width:95px; background:#fff;" oninput="updateStagingRowTag(${idx}, this.value)">
                         </td>
                         <td><span class="cat-badge">${check.category}</span></td>
                         <td><span class="dur-badge">${check.duration}</span></td>
@@ -1315,6 +1330,9 @@
             });
 
             localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
+            localStorage.removeItem('sim_dispatch_draft');
+            tempImageUrls = [];
+            renderTempImagesStrip();
             await recalculateAndSyncGlobalStock();
 
             try {
