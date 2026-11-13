@@ -172,11 +172,6 @@
         }
 
         .modal-box { background: #fff; padding: 18px; border-radius: 14px; width: 100%; max-width: 420px; }
-
-        @media (max-width: 600px) {
-            .form-grid { grid-template-columns: 1fr; }
-            .filters-bar { grid-template-columns: 1fr; }
-        }
     </style>
 
     <script type="module">
@@ -273,7 +268,7 @@
         </div>
 
         <div id="reader"></div>
-        <div id="ocrProgressBox">⏳ جاري قراءة الشرائح عبر النظام الشبكي الذكي...</div>
+        <div id="ocrProgressBox">⏳ جاري قراءة الباركود والكتابة اليدوية بدقة لكل الشريحة...</div>
 
         <div id="tempImagesStrip" class="temp-images-strip" title="اضغط على أي صورة لتكبيرها ومراجعتها"></div>
 
@@ -886,7 +881,7 @@
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                progressBox.innerText = `⏳ جاري تحليل الشرائح بالذكاء الاصطناعي وتطبيق الشبكة الذكية (${i + 1} من ${files.length})...`;
+                progressBox.innerText = `⏳ جاري تحليل الشرائح واستخراج الباركود والرموز (${i + 1} من ${files.length})...`;
 
                 const objUrl = URL.createObjectURL(file);
                 tempImageUrls.push(objUrl);
