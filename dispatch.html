@@ -39,8 +39,8 @@
         input, select, button { padding: 10px 12px; width: 100%; font-size: 0.92rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; outline: none; }
         input:focus, select:focus { border-color: var(--primary-light); }
 
-        /* تعديل عرض الأعمدة: جعل نوع الحركة أكبر والتاريخ أصغر */
-        .form-grid { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 10px; }
+        /* فرض التوزيع جنباً إلى جنب إجبارياً (نوع الحركة أوسع والتاريخ أصغر) بدون تأثر بحجم الشاشة */
+        .form-grid { display: grid; grid-template-columns: 1.35fr 0.65fr; gap: 8px; }
         .full-width { grid-column: 1 / -1; }
 
         .mode-select { font-weight: 800; font-size: 0.95rem; cursor: pointer; }
@@ -120,6 +120,7 @@
 
         #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: 800; display: none; margin-bottom: 10px; font-size: 0.9rem; }
 
+        /* فرض ظهور فلاتر السجل جنباً إلى جنب إجبارياً */
         .filters-bar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; background: #f1f5f9; padding: 10px; border-radius: 10px; align-items: end; }
         .filter-item { display: flex; flex-direction: column; }
         .filter-row-flex { display: flex; gap: 6px; align-items: center; }
