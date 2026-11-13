@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صرف ومرتجع الشرائح - متجر سيم</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-light: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 12px; max-width: 960px; margin: 0 auto; }
+
+        .page-header { text-align: center; color: var(--primary); margin-bottom: 12px; font-size: 1.25rem; font-weight: 800; }
+
+        /* المربعات الإحصائية العلوية */
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+        .stat-box { background: var(--card); border-radius: 12px; padding: 10px 8px; text-align: center; border: 1.5px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
+        .stat-box.dispatched { background: #f0fdf4; border-color: #bbf7d0; }
+        .stat-box.returned { background: #fef2f2; border-color: #fecaca; }
+        .stat-box.net { background: #eff6ff; border-color: #bfdbfe; }
+        .stat-title { font-size: 0.78rem; font-weight: 800; color: #475569; margin-bottom: 4px; }
+        .stat-val { font-size: 1.25rem; font-weight: 900; }
+        .stat-box.dispatched .stat-val { color: var(--success); }
+        .stat-box.returned .stat-val { color: var(--danger); }
+        .stat-box.net .stat-val { color: var(--primary-light); }
+
+        .card { background: var(--card); padding: 16px; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid var(--border); }
+        .card-title { font-size: 1.05rem; font-weight: 800; color: var(--primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+        label { display: block; margin-top: 10px; margin-bottom: 4px; font-weight: 700; font-size: 0.85rem; color: #334155; }
+        input, select, button { padding: 10px 12px; width: 100%; font-size: 0.92rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; outline: none; }
+        input:focus, select:focus { border-color: var(--primary-light); }
+
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .full-width { grid-column: span 2; }
+
+        /* نوع الحركة */
+        .mode-select { font-weight: 800; font-size: 0.95rem; cursor: pointer; }
+        .mode-select.mode-dispatch { background: #f0fdf4; border: 2px solid var(--success); color: #166534; }
+        .mode-select.mode-return { background: #fef2f2; border: 2px solid var(--danger); color: #991b1b; }
+
+        /* القائمة المنسدلة للعملاء المسجلين */
+        .autocomplete-wrapper { position: relative; }
+        .customers-dropdown {
+            display: none; position: absolute; top: 100%; right: 0; left: 0;
+            background: #fff; border: 1.5px solid var(--primary-light); border-radius: 10px;
+            max-height: 220px; overflow-y: auto; z-index: 600; box-shadow: 0 6px 18px rgba(0,0,0,0.12); margin-top: 4px;
+        }
+        .customer-option { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; flex-direction: column; gap: 3px; }
+        .customer-option:hover { background: #eff6ff; }
+        .customer-option-main { font-weight: 700; font-size: 0.9rem; color: var(--primary); }
+        .customer-option-sub { font-size: 0.78rem; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .selected-customer-pill {
+            display: none; margin-top: 6px; background: #dbeafe; color: var(--primary);
+            padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.85rem;
+            align-items: center; justify-content: space-between; border: 1px solid #93c5fd;
+        }
+
+        /* أزرار الكاميرا ورفع الصور */
+        .upload-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+        .btn-upload {
+            border: none; font-weight: 800; font-size: 0.88rem; padding: 12px 10px;
+            cursor: pointer; border-radius: 10px; color: white; display: flex;
+            align-items: center; justify-content: center; gap: 6px; transition: 0.2s;
+        }
+        .btn-upload:active { transform: scale(0.98); }
+        .btn-gallery { background: #0284c7; }
+        .btn-camera-shot { background: #7c3aed; }
+        .btn-live-cam { background: #2563eb; }
+
+        #reader { width: 100%; margin-top: 10px; border-radius: 10px; overflow: hidden; }
+        #ocrProgressBox {
+            display: none; margin-top: 10px; background: #eff6ff; border: 1px dashed #60a5fa;
+            padding: 12px; border-radius: 10px; text-align: center; font-weight: 800; color: var(--primary); font-size: 0.88rem;
+        }
+
+        /* شريط معاينة الصور المؤقتة (في الذاكرة فقط) */
+        .temp-images-strip {
+            display: none; gap: 8px; overflow-x: auto; padding: 8px; margin-top: 10px;
+            background: #f8fafc; border-radius: 10px; border: 1px solid var(--border);
+        }
+        .temp-img-thumb {
+            width: 68px; height: 68px; object-fit: cover; border-radius: 8px;
+            border: 2px solid #cbd5e1; cursor: pointer; flex-shrink: 0;
+        }
+
+        /* الإدخال السريع بالسريال أو آخر أرقامه */
+        .quick-add-box { position: relative; margin-top: 10px; }
+        .quick-row { display: flex; gap: 6px; align-items: center; }
+        .quick-row input { flex: 1; font-family: monospace; font-size: 0.92rem; }
+        .btn-quick-add { width: auto; background: var(--success); color: white; border: none; font-weight: 800; padding: 10px 16px; cursor: pointer; white-space: nowrap; }
+        .sim-suggestions {
+            display: none; position: absolute; top: 100%; right: 0; left: 0;
+            background: #fff; border: 1.5px solid var(--primary-light); border-radius: 10px;
+            max-height: 200px; overflow-y: auto; z-index: 550; box-shadow: 0 6px 18px rgba(0,0,0,0.12); margin-top: 4px;
+        }
+        .sim-suggestion-item {
+            padding: 9px 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;
+        }
+        .sim-suggestion-item:hover { background: #f0fdf4; }
+
+        /* جدول المعاينة قبل الاعتماد */
+        #stagingSection { display: none; margin-top: 14px; border-top: 2px dashed #cbd5e1; padding-top: 12px; }
+        .staging-banner {
+            background: #fef3c7; color: #92400e; padding: 10px 12px; border-radius: 8px;
+            font-weight: 800; font-size: 0.88rem; margin-bottom: 10px; display: flex;
+            justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+        }
+        .btn-confirm-batch {
+            background: var(--success); color: white; border: none; font-weight: 900;
+            font-size: 1rem; padding: 13px; border-radius: 10px; cursor: pointer; margin-top: 10px;
+        }
+        .btn-confirm-batch.return-btn { background: var(--danger); }
+
+        #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: 800; display: none; margin-bottom: 10px; font-size: 0.9rem; }
+
+        /* الفلتر والبحث */
+        .filters-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-bottom: 12px; background: #f1f5f9; padding: 10px; border-radius: 10px; }
+        .search-input { font-size: 0.95rem; font-weight: 700; border: 2px solid #cbd5e1; padding: 11px 14px; margin-bottom: 12px; }
+
+        /* ملخص العملاء عند البحث بالرمز مثل N115 */
+        #tagSummaryBox {
+            display: none; background: #eff6ff; border: 1.5px solid #93c5fd;
+            border-radius: 12px; padding: 12px; margin-bottom: 12px;
+        }
+        .tag-summary-title { font-weight: 900; color: var(--primary); font-size: 0.92rem; margin-bottom: 8px; }
+        .tag-clients-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .client-chip {
+            background: #fff; border: 1px solid #bfdbfe; padding: 6px 12px;
+            border-radius: 8px; font-size: 0.82rem; font-weight: 800; color: #1e293b;
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        /* الجداول */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+        th, td { border: 1px solid var(--border); padding: 9px 7px; text-align: center; white-space: nowrap; }
+        th { background: #1e293b; color: white; font-weight: 700; }
+        .serial-cell { font-family: monospace; font-weight: 800; font-size: 0.86rem; letter-spacing: 0.4px; }
+        .tag-badge { background: #ede9fe; color: #5b21b6; padding: 3px 9px; border-radius: 6px; font-weight: 900; font-family: monospace; font-size: 0.85rem; }
+        .cat-badge { background: #dbeafe; color: var(--primary); padding: 3px 8px; border-radius: 6px; font-weight: 700; }
+        .status-ok { font-size: 1.05rem; font-weight: 900; color: var(--success); }
+        .status-ret { font-size: 1.05rem; font-weight: 900; color: var(--danger); }
+
+        .warn-pill { background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; display: inline-block; }
+        .ready-pill { background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; display: inline-block; }
+
+        .btn-sm { width: auto; padding: 5px 9px; font-size: 0.76rem; font-weight: 800; border: none; border-radius: 6px; cursor: pointer; }
+        .btn-sm-warn { background: #fef3c7; color: #b45309; }
+        .btn-sm-danger { background: #fee2e2; color: #dc2626; }
+        .btn-sm-blue { background: #e0f2fe; color: #0369a1; }
+
+        /* نافذة تكبير الصورة وتعديل السجل */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; justify-content: center; align-items: center; padding: 15px; }
+        .modal-img { max-width: 95%; max-height: 85vh; border-radius: 12px; }
+        .modal-box { background: #fff; padding: 18px; border-radius: 14px; width: 100%; max-width: 420px; }
+
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .full-width { grid-column: span 1; }
+            .upload-actions { grid-template-columns: 1fr; }
+        }
+    </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
+            authDomain: "ahmed-hassan-bb80b.firebaseapp.com",
+            projectId: "ahmed-hassan-bb80b",
+            storageBucket: "ahmed-hassan-bb80b.firebasestorage.app",
+            messagingSenderId: "503682153846",
+            appId: "1:503682153846:web:93b3a174ab31e351a04e57"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.collection = collection;
+        window.getDocs = getDocs;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+
+        if (window.initDispatchApp) { window.initDispatchApp(); }
+    </script>
+</head>
+<body>
+
+    <h3 class="page-header">🔄 صرف ومرتجع الشرائح للعملاء</h3>
+
+    <!-- عدادات الإحصائيات السريعة -->
+    <div class="stats-grid">
+        <div class="stat-box dispatched">
+            <div class="stat-title">✅ إجمالي المنصرف</div>
+            <div class="stat-val" id="statDispatchedCount">0</div>
+        </div>
+        <div class="stat-box returned">
+            <div class="stat-title">❌ إجمالي المرتجع</div>
+            <div class="stat-val" id="statReturnedCount">0</div>
+        </div>
+        <div class="stat-box net">
+            <div class="stat-title">📦 الصافي لدى العملاء</div>
+            <div class="stat-val" id="statNetCount">0</div>
+        </div>
+    </div>
+
+    <!-- كارت تسجيل حركة صرف أو مرتجع -->
+    <div class="card">
+        <div class="card-title">
+            <span>📸 تسجيل حركة شرائح بالصور أو الكاميرا</span>
+        </div>
+
+        <div id="msg"></div>
+
+        <div class="form-grid">
+            <div>
+                <label>نوع الحركة *</label>
+                <select id="operationMode" class="mode-select mode-dispatch" onchange="onModeChange()">
+                    <option value="dispatch">📤 صرف (بيع وتسليم للعميل ✅)</option>
+                    <option value="return">📥 مرتجع (استرجاع من العميل ❌)</option>
+                </select>
+            </div>
+
+            <div>
+                <label>التاريخ *</label>
+                <input type="date" id="actionDate">
+            </div>
+
+            <!-- اختيار العميل من قائمة العملاء المسجلين فقط -->
+            <div id="customerSelectWrap" class="full-width autocomplete-wrapper">
+                <label>اختر العميل (من العملاء المسجلين فقط) *</label>
+                <input type="text" id="customerSearchInput" autocomplete="off" placeholder="🔍 ابحث باسم العميل أو المحل أو الجوال لاختياره..." oninput="filterCustomersList()" onfocus="filterCustomersList()">
+                <div id="customersDropdown" class="customers-dropdown"></div>
+                <div id="selectedCustomerPill" class="selected-customer-pill">
+                    <span id="selectedCustomerText"></span>
+                    <button type="button" class="btn-sm btn-sm-danger" onclick="clearSelectedCustomer()">تغيير ✕</button>
+                </div>
+            </div>
+
+            <!-- خانة تثبيت الرمز (مثل N115) -->
+            <div class="full-width">
+                <label>تثبيت الرمز المكتوب على الشرائح (اختياري - مثال: N115)</label>
+                <div class="quick-row">
+                    <input type="text" id="fixedTagInput" placeholder="🔤 اكتب الحرف والرقم مثل N115 ليُطبق تلقائياً أو يُستخرج من الصورة..." oninput="this.value = this.value.toUpperCase()">
+                    <button type="button" class="btn-quick-add" style="background:#0284c7;" onclick="applyFixedTagToStaging()">تطبيق على القائمة</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- أزرار رفع الصور أو التصوير -->
+        <input type="file" id="galleryFilesInput" accept="image/*" multiple style="display:none;" onchange="handleImagesSelected(event)">
+        <input type="file" id="cameraShotInput" accept="image/*" capture="environment" style="display:none;" onchange="handleImagesSelected(event)">
+
+        <div class="upload-actions">
+            <button type="button" class="btn-upload btn-gallery" onclick="document.getElementById('galleryFilesInput').click()">
+                📁 رفع صور الشرائح (صورة أو أكثر)
+            </button>
+            <button type="button" class="btn-upload btn-camera-shot" onclick="document.getElementById('cameraShotInput').click()">
+                📷 تصوير الشرائح بالكاميرا
+            </button>
+            <button type="button" id="liveScanBtn" class="btn-upload btn-live-cam" onclick="toggleLiveScanner()">
+                🎥 مسح مباشر للباركود
+            </button>
+        </div>
+
+        <div id="reader"></div>
+        <div id="ocrProgressBox">⏳ جاري قراءة السريالات والرموز من الصور...</div>
+
+        <!-- معاينة الصور المؤقتة بدون حفظها في قاعدة البيانات -->
+        <div id="tempImagesStrip" class="temp-images-strip" title="اضغط على أي صورة لتكبيرها ومراجعتها"></div>
+
+        <!-- البحث والإدخال اليدوي السريع بالسريال أو آخر 4-5 أرقام -->
+        <div class="quick-add-box">
+            <label>⚡ إضافة سريعة بالسريال الكامل أو بآخر 4 أو 5 أرقام منه (مثال: 92277):</label>
+            <div class="quick-row">
+                <input type="text" id="quickSerialInput" inputmode="numeric" placeholder="✍️ اكتب السريال أو آخر أرقام منه للبحث الفوري في المخزون..." oninput="onQuickSerialInput()" onkeydown="if(event.key==='Enter') addQuickSerial()">
+                <button type="button" class="btn-quick-add" onclick="addQuickSerial()">➕ إضافة للقائمة</button>
+            </div>
+            <div id="simSuggestions" class="sim-suggestions"></div>
+        </div>
+
+        <!-- جدول المعاينة والمراجعة قبل الحفظ النهائي -->
+        <div id="stagingSection">
+            <div class="staging-banner">
+                <span id="stagingCounterText">📋 الشرائح المستخرجة للمراجعة: 0</span>
+                <button type="button" class="btn-sm btn-sm-danger" onclick="clearStagingList()">🗑️ مسح القائمة المؤقتة</button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>حذف</th>
+                            <th>السريال (ICCID)</th>
+                            <th>الرمز (مثل N115)</th>
+                            <th>التصنيف</th>
+                            <th>حالة الفحص والمطابقة مع المخزون</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stagingTableBody"></tbody>
+                </table>
+            </div>
+
+            <button type="button" id="confirmBatchBtn" class="btn-confirm-batch" onclick="commitStagingBatch()">
+                ✅ اعتماد وتسجيل الصرف للعميل
+            </button>
+        </div>
+    </div>
+
+    <!-- كارت البحث والفلتر والجدول المجمع (صرف ومرتجع) -->
+    <div class="card">
+        <div class="card-title">
+            <span>📋 سجل الصرف والمرتجع والبحث الذكي</span>
+        </div>
+
+        <div class="filters-bar">
+            <div>
+                <label style="margin-top:0;">📅 فلتر الشهر المحاسبي (من يوم 5):</label>
+                <div style="display:flex; gap:6px;">
+                    <input type="month" id="monthFilter" onchange="renderHistoryTable()">
+                    <button type="button" class="btn-sm btn-sm-blue" onclick="document.getElementById('monthFilter').value=''; renderHistoryTable();">الكل</button>
+                </div>
+            </div>
+            <div>
+                <label style="margin-top:0;">🔄 فلتر نوع الحركة:</label>
+                <select id="statusFilter" onchange="renderHistoryTable()">
+                    <option value="ALL">الكل (صرف ✅ + مرتجع ❌)</option>
+                    <option value="dispatched">المنصرف فقط (✅)</option>
+                    <option value="returned">المرتجع فقط (❌)</option>
+                </select>
+            </div>
+        </div>
+
+        <input type="text" id="mainSearchInput" class="search-input" placeholder="🔍 ابحث بالسريال (أو آخر أرقامه مثل 92277)، أو بالرمز (مثل N115)، أو باسم العميل..." oninput="renderHistoryTable()">
+
+        <!-- صندوق ملخص العملاء عند البحث برمز مثل N115 -->
+        <div id="tagSummaryBox">
+            <div class="tag-summary-title" id="tagSummaryTitle"></div>
+            <div class="tag-clients-chips" id="tagSummaryChips"></div>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>الحالة</th>
+                        <th>السريال الكامل</th>
+                        <th>الرمز</th>
+                        <th>اسم العميل والمحل</th>
+                        <th>التصنيف</th>
+                        <th>تاريخ الصرف</th>
+                        <th>تاريخ المرتجع</th>
+                        <th>تعديل / تصحيح</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- نافذة تكبير الصورة -->
+    <div class="modal-overlay" id="imgModal" onclick="this.style.display='none'">
+        <img id="imgModalTarget" class="modal-img" src="" alt="معاينة">
+    </div>
+
+    <!-- نافذة تصحيح / تعديل سجل شريحة -->
+    <div class="modal-overlay" id="editSimModal">
+        <div class="modal-box">
+            <h3 style="color:var(--primary); margin-bottom:12px; font-size:1.05rem;">✏️ تعديل / تصحيح حالة الشريحة</h3>
+            <input type="hidden" id="editSimCode">
+            <div style="font-family:monospace; font-weight:800; background:#f1f5f9; padding:8px; border-radius:6px; text-align:center; margin-bottom:10px;" id="editSimCodeDisplay"></div>
+
+            <label>الحالة:</label>
+            <select id="editSimStatus">
+                <option value="dispatched">✅ منصرف للعميل</option>
+                <option value="returned">❌ مرتجع من العميل (يُخصم من الرصيد)</option>
+                <option value="">🔄 إلغاء الصرف (إرجاع للمخزون كمتاح بدون علامة)</option>
+            </select>
+
+            <label>الرمز المكتوب (مثل N115):</label>
+            <input type="text" id="editSimTag" oninput="this.value = this.value.toUpperCase()">
+
+            <label>العميل المسجل:</label>
+            <select id="editSimCustomerSelect"></select>
+
+            <div style="display:flex; gap:8px; margin-top:14px;">
+                <button type="button" style="background:var(--primary-light); color:white; font-weight:800; border:none; cursor:pointer;" onclick="saveEditedSim()">💾 حفظ التعديل</button>
+                <button type="button" style="background:#e2e8f0; color:#334155; font-weight:800; border:none; cursor:pointer;" onclick="closeEditSimModal()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
+        let simsList = [];
+        let customersList = [];
+        let selectedCustomer = null;
+        let stagingList = [];
+        let tempImageUrls = [];
+        let html5QrScanner = null;
+        let isLiveCamRunning = false;
+
+        function getTodayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        // الشهر المحاسبي الموحد (يبدأ من يوم 5 ويمتد حتى يوم 4 من الشهر التالي)
+        function getAccountingMonth(dateStr, timestampFallback) {
+            let year = NaN, month = NaN, day = NaN;
+            if (dateStr) {
+                const clean = String(dateStr).trim();
+                const isoMatch = clean.match(/^(\d{4})[-/](\d{1,2})(?:[-/](\d{1,2}))?/);
+                if (isoMatch) {
+                    year = parseInt(isoMatch[1], 10);
+                    month = parseInt(isoMatch[2], 10);
+                    day = isoMatch[3] ? parseInt(isoMatch[3], 10) : 5;
+                }
+            }
+            if ((isNaN(year) || isNaN(month)) && timestampFallback) {
+                const d = new Date(Number(timestampFallback));
+                if (!isNaN(d.getTime())) {
+                    year = d.getFullYear();
+                    month = d.getMonth() + 1;
+                    day = d.getDate();
+                }
+            }
+            if (isNaN(year) || isNaN(month)) return '';
+            if (!isNaN(day) && day < 5) {
+                month -= 1;
+                if (month < 1) { month = 12; year -= 1; }
+            }
+            return `${year}-${String(month).padStart(2, '0')}`;
+        }
+
+        document.getElementById('actionDate').value = getTodayStr();
+        document.getElementById('monthFilter').value = getAccountingMonth(getTodayStr(), Date.now());
+
+        function showMessage(text, isError = false) {
+            const msg = document.getElementById('msg');
+            msg.style.display = 'block';
+            msg.style.background = isError ? '#fee2e2' : '#dcfce7';
+            msg.style.color = isError ? '#991b1b' : '#166534';
+            msg.innerText = text;
+        }
+
+        document.addEventListener('click', (e) => {
+            const custWrap = document.getElementById('customerSelectWrap');
+            if (custWrap && !custWrap.contains(e.target)) {
+                document.getElementById('customersDropdown').style.display = 'none';
+            }
+            const quickWrap = document.querySelector('.quick-add-box');
+            if (quickWrap && !quickWrap.contains(e.target)) {
+                document.getElementById('simSuggestions').style.display = 'none';
+            }
+        });
+
+        function loadLocalData() {
+            simsList = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
+            customersList = JSON.parse(localStorage.getItem('customers_records_offline') || '[]');
+        }
+
+        // إعادة حساب الرصيد الممسوح والمتاح في كل الموقع مع استبعاد الشرائح المرتجعة (❌)
+        async function recalculateAndSyncGlobalStock() {
+            const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            const stockOffsets = existingConfig.stockOffsets || {};
+            const deletedStockItems = existingConfig.deletedStockItems || [];
+            const salesRecords = JSON.parse(localStorage.getItem('sales_records_offline') || '[]');
+
+            const autoStock = {};
+            simsList.forEach(item => {
+                // خصم الشرائح المرتجعة ❌ من الرصيد الممسوح والمتاح
+                if (item.status === 'returned') return;
+
+                const cat = item.category || item.company || 'Mobily';
+                let dur = item.duration;
+                if (!dur || dur === '-' || dur === 'غير محدد' || dur === '') {
+                    dur = (cat === 'Redbull') ? '30' : '60';
+                }
+                const itemKey = `${cat} (${dur})`;
+                autoStock[itemKey] = (autoStock[itemKey] || 0) + 1;
+            });
+
+            salesRecords.forEach(r => {
+                if (r.cartItems && Array.isArray(r.cartItems)) {
+                    r.cartItems.forEach(ci => {
+                        if (autoStock[ci.item] === undefined) autoStock[ci.item] = 0;
+                        autoStock[ci.item] -= (parseFloat(ci.qty) || 0);
+                    });
+                }
+            });
+
+            const stockInventory = {};
+            const allKeys = new Set([...Object.keys(autoStock), ...Object.keys(stockOffsets)]);
+            allKeys.forEach(key => {
+                if (!key.includes('(')) return;
+                const base = autoStock[key] || 0;
+                const offset = stockOffsets[key] !== undefined ? parseFloat(stockOffsets[key]) : 0;
+                const finalQty = base + offset;
+                stockInventory[key] = finalQty >= 0 ? finalQty : 0;
+            });
+
+            deletedStockItems.forEach(delItem => delete stockInventory[delItem]);
+
+            const updatedConfig = {
+                ...existingConfig,
+                stockInventory,
+                configUpdatedAt: Date.now()
+            };
+            localStorage.setItem('app_config', JSON.stringify(updatedConfig));
+
+            try {
+                if (window.db) {
+                    await window.setDoc(window.doc(window.db, "settings", "app_config"), {
+                        stockInventory,
+                        configUpdatedAt: updatedConfig.configUpdatedAt
+                    }, { merge: true });
+                }
+            } catch (e) {}
+        }
+
+        window.initDispatchApp = async function() {
+            loadLocalData();
+            renderHistoryTable();
+
+            try {
+                if (window.db) {
+                    const simsSnap = await window.getDocs(window.collection(window.db, "scanned_sims"));
+                    const cloudSims = [];
+                    simsSnap.forEach(d => {
+                        const data = d.data();
+                        if (!data.category && data.company) data.category = data.company;
+                        cloudSims.push(data);
+                    });
+                    if (cloudSims.length > 0) {
+                        simsList = cloudSims;
+                        localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
+                    }
+
+                    const custSnap = await window.getDocs(window.collection(window.db, "customers"));
+                    const cloudCust = [];
+                    custSnap.forEach(d => cloudCust.push({ id: d.id, ...d.data() }));
+                    if (cloudCust.length > 0) {
+                        customersList = cloudCust;
+                        localStorage.setItem('customers_records_offline', JSON.stringify(customersList));
+                    }
+                }
+            } catch (e) {
+                console.log("وضع الأوفلاين مفعل.");
+            }
+
+            await recalculateAndSyncGlobalStock();
+            renderStagingTable();
+            renderHistoryTable();
+        };
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'scanned_sims_offline' || e.key === 'customers_records_offline') {
+                loadLocalData();
+                renderStagingTable();
+                renderHistoryTable();
+            }
+        });
+
+        function onModeChange() {
+            const mode = document.getElementById('operationMode').value;
+            const selectEl = document.getElementById('operationMode');
+            const custWrap = document.getElementById('customerSelectWrap');
+            const confirmBtn = document.getElementById('confirmBatchBtn');
+
+            if (mode === 'dispatch') {
+                selectEl.className = 'mode-select mode-dispatch';
+                custWrap.style.display = 'block';
+                confirmBtn.className = 'btn-confirm-batch';
+                confirmBtn.innerText = '✅ اعتماد وتسجيل الصرف للعميل';
+            } else {
+                selectEl.className = 'mode-select mode-return';
+                custWrap.style.display = 'none';
+                confirmBtn.className = 'btn-confirm-batch return-btn';
+                confirmBtn.innerText = '❌ اعتماد المرتجع وخصمه من الرصيد';
+            }
+            renderStagingTable();
+        }
+
+        // اختيار العميل من قائمة العملاء المسجلين حصرياً
+        function filterCustomersList() {
+            const input = document.getElementById('customerSearchInput');
+            const dropdown = document.getElementById('customersDropdown');
+            const q = (input.value || '').trim().toLowerCase();
+
+            if (!customersList || customersList.length === 0) {
+                dropdown.innerHTML = `<div style="padding:12px; color:#dc2626; font-weight:800; text-align:center;">⚠️ لا يوجد عملاء مسجلون! يرجى إضافة العميل في تاب (العملاء) أولاً.</div>`;
+                dropdown.style.display = 'block';
+                return;
+            }
+
+            const matched = customersList.filter(c => {
+                const cName = (c.clientName || '').toLowerCase();
+                const sName = (c.shopName || '').toLowerCase();
+                const mName = (c.marketName || '').toLowerCase();
+                const phone = (c.phone || '');
+                if (!q) return true;
+                return cName.includes(q) || sName.includes(q) || mName.includes(q) || phone.includes(q);
+            });
+
+            if (matched.length === 0) {
+                dropdown.innerHTML = `<div style="padding:12px; color:#dc2626; font-weight:800; text-align:center;">⚠️ هذا العميل غير مسجل في تاب (العملاء). يجب إضافته هناك أولاً قبل الصرف.</div>`;
+                dropdown.style.display = 'block';
+                return;
+            }
+
+            dropdown.innerHTML = matched.map((c, idx) => {
+                const name = (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName : (c.shopName || 'عميل');
+                return `
+                    <div class="customer-option" onclick="selectRegisteredCustomer('${c.id || idx}')">
+                        <div class="customer-option-main">👤 ${name} ${c.shopName ? `— 🏪 ${c.shopName}` : ''}</div>
+                        <div class="customer-option-sub">
+                            ${c.marketName ? `<span>📍 ${c.marketName}</span>` : ''}
+                            ${c.phone ? `<span>📞 ${c.phone}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            dropdown.style.display = 'block';
+        }
+
+        function selectRegisteredCustomer(idOrIdx) {
+            const c = customersList.find((item, idx) => String(item.id || idx) === String(idOrIdx));
+            if (!c) return;
+
+            selectedCustomer = {
+                id: c.id || '',
+                clientName: (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName : (c.shopName || 'بدون اسم'),
+                shopName: c.shopName || '',
+                phone: c.phone || ''
+            };
+
+            document.getElementById('customerSearchInput').style.display = 'none';
+            document.getElementById('customersDropdown').style.display = 'none';
+
+            const pill = document.getElementById('selectedCustomerPill');
+            document.getElementById('selectedCustomerText').innerText = `👤 ${selectedCustomer.clientName} ${selectedCustomer.shopName ? `(${selectedCustomer.shopName})` : ''}`;
+            pill.style.display = 'flex';
+        }
+
+        function clearSelectedCustomer() {
+            selectedCustomer = null;
+            const input = document.getElementById('customerSearchInput');
+            input.value = '';
+            input.style.display = 'block';
+            document.getElementById('selectedCustomerPill').style.display = 'none';
+            input.focus();
+        }
+
+        // دوال الذكاء لاستخراج السريال والرمز (مثل N115) ومطابقتها مع المخزون
+        function normalizeDigits(str) {
+            return String(str || '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+        }
+
+        function levenshteinDistance(a, b) {
+            if (a.length === 0) return b.length;
+            if (b.length === 0) return a.length;
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+                    }
+                }
+            }
+            return matrix[b.length][a.length];
+        }
+
+        // مطابقة ذكية للسريال المقروء من الصورة مع قاعدة بيانات الشرائح الممسوحة مسبقاً
+        function matchWithInventorySim(rawCandidate) {
+            const clean = normalizeDigits(rawCandidate).replace(/[^0-9]/g, '');
+            if (clean.length < 6) return null;
+
+            // 1. مطابقة تامة
+            const exact = simsList.find(s => s.code === clean);
+            if (exact) return exact.code;
+
+            // 2. مطابقة بجزء من السريال (آخر 7 أرقام أو أكثر)
+            if (clean.length >= 7) {
+                const subMatches = simsList.filter(s => s.code && (s.code.includes(clean) || clean.includes(s.code)));
+                if (subMatches.length === 1) return subMatches[0].code;
+            }
+
+            // 3. مطابقة تقريبية لو الكاميرا أخطأت في رقم أو رقمين بسبب خط القلم على الشريحة
+            if (clean.length >= 15) {
+                let bestCode = null;
+                let bestDist = 3; // يسمح باختلاف رقم أو رقمين كحد أقصى
+                simsList.forEach(s => {
+                    if (!s.code || Math.abs(s.code.length - clean.length) > 2) return;
+                    const dist = levenshteinDistance(clean, s.code);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestCode = s.code;
+                    }
+                });
+                if (bestCode) return bestCode;
+            }
+
+            // لو لم يكن في المخزون ولكن طوله سريال كامل (12 رقم فأكثر) نرجعه ليظهر تحذير أنه غير مضاف بالمخزون
+            const iccidIdx = clean.indexOf('89966');
+            if (iccidIdx >= 0 && clean.substring(iccidIdx).length >= 12) {
+                return clean.substring(iccidIdx, iccidIdx + 20);
+            }
+            if (clean.length >= 12) return clean;
+            return null;
+        }
+
+        // استخراج الرموز المكتوبة بخط اليد مثل N115 من النص المستخرج
+        function extractTagCodesFromText(text) {
+            const norm = normalizeDigits(text);
+            const ignoredWords = new Set(['SIM', 'PIN', 'PUK', 'STC', 'ZAIN', 'MOBILY', 'DIAL', 'CALL', 'GSM', 'LTE', 'HTTP', 'HTTPS', 'WWW', 'COM', 'NET']);
+            const regex = /\b([A-Za-z]{1,2})\s*([0-9IlOoSs]{1,5})\b/g;
+            const foundTags = [];
+            let match;
+            while ((match = regex.exec(norm)) !== null) {
+                const letters = match[1].toUpperCase();
+                if (ignoredWords.has(letters)) continue;
+                let digits = match[2]
+                    .replace(/[Il]/g, '1')
+                    .replace(/[Oo]/g, '0')
+                    .replace(/[Ss]/g, '5')
+                    .replace(/[^0-9]/g, '');
+                if (digits.length >= 1 && digits.length <= 5) {
+                    const candidate = `${letters}${digits}`;
+                    // استبعاد أرقام خدمة العملاء المطبوعة مثل 1100 أو 901
+                    if (!['R901', 'L1100', 'D1100', 'D901'].includes(candidate)) {
+                        foundTags.push(candidate);
+                    }
+                }
+            }
+            return foundTags;
+        }
+
+        // استخراج السريالات والرموز من نص الصورة بالكامل
+        function parseOcrResult(ocrText) {
+            const normText = normalizeDigits(ocrText);
+            const foundTags = extractTagCodesFromText(normText);
+            const defaultTag = document.getElementById('fixedTagInput').value.trim().toUpperCase() || (foundTags[0] || '');
+
+            const results = [];
+            const seenCodes = new Set();
+
+            // البحث عن السريالات التي تبدأ بـ 89966 أو الأرقام الطويلة (حتى لو بينها مسافات بسيطة)
+            const lines = normText.split(/[\r\n]+/);
+            lines.forEach((line, lineIdx) => {
+                // البحث عن رمز في نفس السطر أو السطور القريبة
+                const lineTags = extractTagCodesFromText(line);
+                const nearbyTag = lineTags[0] || foundTags[Math.min(lineIdx, foundTags.length - 1)] || defaultTag;
+
+                // تجميع الأرقام المتجاورة في السطر
+                const cleanedLineForDigits = line
+                    .replace(/8996\s*6/g, '89966')
+                    .replace(/(\d)\s+(\d)/g, '$1$2');
+
+                const numMatches = cleanedLineForDigits.match(/\d{7,22}/g) || [];
+                numMatches.forEach(rawNum => {
+                    const resolvedCode = matchWithInventorySim(rawNum);
+                    if (resolvedCode && !seenCodes.has(resolvedCode)) {
+                        seenCodes.add(resolvedCode);
+                        results.push({ code: resolvedCode, tagCode: nearbyTag });
+                    }
+                });
+            });
+
+            // فحص إضافي للنص الكامل متصل في حال انقسم السريال على سطرين
+            const compactDigits = normText.replace(/\s+/g, '');
+            const iccidRegex = /89966\d{10,15}/g;
+            let m;
+            while ((m = iccidRegex.exec(compactDigits)) !== null) {
+                const resolvedCode = matchWithInventorySim(m[0]);
+                if (resolvedCode && !seenCodes.has(resolvedCode)) {
+                    seenCodes.add(resolvedCode);
+                    results.push({ code: resolvedCode, tagCode: defaultTag });
+                }
+            }
+
+            return { items: results, detectedTags: foundTags };
+        }
+
+        // تحسين تباين الصورة على Canvas لزيادة دقة قراءة الأرقام وخط اليد
+        function createEnhancedCanvas(imgElement, highContrast = false) {
+            const canvas = document.createElement('canvas');
+            const maxDim = 1800;
+            let w = imgElement.naturalWidth || imgElement.width;
+            let h = imgElement.naturalHeight || imgElement.height;
+            if (w < 1000 && h < 1000) {
+                w *= 1.5;
+                h *= 1.5;
+            } else if (w > maxDim || h > maxDim) {
+                const ratio = Math.min(maxDim / w, maxDim / h);
+                w = Math.round(w * ratio);
+                h = Math.round(h * ratio);
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imgElement, 0, 0, w, h);
+
+            if (highContrast) {
+                const imgData = ctx.getImageData(0, 0, w, h);
+                const d = imgData.data;
+                for (let i = 0; i < d.length; i += 4) {
+                    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+                    const val = gray < 138 ? Math.max(0, gray * 0.5) : Math.min(255, gray * 1.25);
+                    d[i] = d[i + 1] = d[i + 2] = val;
+                }
+                ctx.putImageData(imgData, 0, 0);
+            }
+            return canvas;
+        }
+
+        // معالجة الصور المرفوعة أو الملتقطة بالكاميرا
+        async function handleImagesSelected(event) {
+            const files = Array.from(event.target.files || []);
+            if (files.length === 0) return;
+
+            const progressBox = document.getElementById('ocrProgressBox');
+            progressBox.style.display = 'block';
+
+            const strip = document.getElementById('tempImagesStrip');
+            strip.style.display = 'flex';
+
+            let totalAddedFromImages = 0;
+            let lastDetectedTag = document.getElementById('fixedTagInput').value.trim().toUpperCase();
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                progressBox.innerText = `⏳ جاري تحليل الصورة (${i + 1} من ${files.length}) واستخراج السريالات والرمز...`;
+
+                const objUrl = URL.createObjectURL(file);
+                tempImageUrls.push(objUrl);
+                renderTempImagesStrip();
+
+                const codesFromThisFile = new Set();
+                let tagsFromThisFile = [];
+
+                // 1. محاولة قراءة الباركود المباشر عبر BarcodeDetector أو Html5Qrcode
+                if ('BarcodeDetector' in window) {
+                    try {
+                        const bitmap = await createImageBitmap(file);
+                        const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'qr_code'] });
+                        const barcodes = await detector.detect(bitmap);
+                        barcodes.forEach(b => {
+                            const matched = matchWithInventorySim(b.rawValue);
+                            if (matched) codesFromThisFile.add(matched);
+                        });
+                    } catch (e) {}
+                }
+
+                // 2. قراءة الأرقام المطبوعة والرمز المكتوب بخط اليد (مثل N115) عبر Tesseract OCR
+                try {
+                    const imgEl = await loadImageElement(objUrl);
+                    const canvasNormal = createEnhancedCanvas(imgEl, false);
+                    const { data } = await Tesseract.recognize(canvasNormal, 'eng');
+                    const parsed1 = parseOcrResult(data.text || '');
+                    parsed1.items.forEach(it => codesFromThisFile.add(it.code));
+                    if (parsed1.detectedTags.length > 0) tagsFromThisFile.push(...parsed1.detectedTags);
+
+                    // إذا لم يلتقط كل الأرقام، نعمل مسح إضافي عالي التباين
+                    const canvasContrast = createEnhancedCanvas(imgEl, true);
+                    const { data: data2 } = await Tesseract.recognize(canvasContrast, 'eng');
+                    const parsed2 = parseOcrResult(data2.text || '');
+                    parsed2.items.forEach(it => codesFromThisFile.add(it.code));
+                    if (parsed2.detectedTags.length > 0) tagsFromThisFile.push(...parsed2.detectedTags);
+                } catch (ocrErr) {
+                    console.warn("خطأ أثناء قراءة OCR:", ocrErr);
+                }
+
+                const chosenTag = document.getElementById('fixedTagInput').value.trim().toUpperCase() || tagsFromThisFile[0] || lastDetectedTag || '';
+                if (chosenTag && !document.getElementById('fixedTagInput').value) {
+                    document.getElementById('fixedTagInput').value = chosenTag;
+                    lastDetectedTag = chosenTag;
+                }
+
+                codesFromThisFile.forEach(code => {
+                    const added = addCodeToStaging(code, chosenTag);
+                    if (added) totalAddedFromImages++;
+                });
+            }
+
+            progressBox.style.display = 'none';
+            event.target.value = '';
+
+            if (totalAddedFromImages > 0) {
+                showMessage(`📸 تم استخراج (${totalAddedFromImages}) شريحة من الصور بنجاح! راجع الجدول بالأسفل قبل الاعتماد.`);
+            } else {
+                showMessage(`⚠️ لم يتم التقاط أرقام واضحة من الصورة. يمكنك استخدام البحث السريع بآخر 4-5 أرقام من السريال بالأسفل.`, true);
+            }
+            renderStagingTable();
+        }
+
+        function loadImageElement(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = url;
+            });
+        }
+
+        function renderTempImagesStrip() {
+            const strip = document.getElementById('tempImagesStrip');
+            if (tempImageUrls.length === 0) {
+                strip.style.display = 'none';
+                strip.innerHTML = '';
+                return;
+            }
+            strip.style.display = 'flex';
+            strip.innerHTML = tempImageUrls.map(url => `
+                <img src="${url}" class="temp-img-thumb" onclick="openImgModal('${url}')" alt="صورة مؤقتة">
+            `).join('');
+        }
+
+        function openImgModal(url) {
+            document.getElementById('imgModalTarget').src = url;
+            document.getElementById('imgModal').style.display = 'flex';
+        }
+
+        // الكاميرا الحية السريعة لمسح الباركود
+        async function toggleLiveScanner() {
+            const btn = document.getElementById('liveScanBtn');
+            if (isLiveCamRunning && html5QrScanner) {
+                await html5QrScanner.stop();
+                isLiveCamRunning = false;
+                btn.innerText = '🎥 مسح مباشر للباركود';
+                btn.style.background = '#2563eb';
+                return;
+            }
+
+            if (!html5QrScanner) {
+                html5QrScanner = new Html5Qrcode("reader");
+            }
+
+            try {
+                await html5QrScanner.start(
+                    { facingMode: "environment" },
+                    { fps: 15, qrbox: { width: 280, height: 120 } },
+                    (decodedText) => {
+                        const matched = matchWithInventorySim(decodedText);
+                        if (matched) {
+                            const tag = document.getElementById('fixedTagInput').value.trim().toUpperCase();
+                            if (addCodeToStaging(matched, tag)) {
+                                renderStagingTable();
+                                showMessage(`✅ تم التقاط السريال: ${matched}`);
+                            }
+                        }
+                    }
+                );
+                isLiveCamRunning = true;
+                btn.innerText = '⏹️ إيقاف الكاميرا المباشرة';
+                btn.style.background = '#dc2626';
+            } catch (e) {
+                showMessage('⚠️ تعذر تشغيل الكاميرا المباشرة.', true);
+            }
+        }
+
+        // البحث والإضافة السريعة بآخر أرقام السريال
+        function onQuickSerialInput() {
+            const input = document.getElementById('quickSerialInput');
+            const box = document.getElementById('simSuggestions');
+            const val = normalizeDigits(input.value).replace(/[^0-9]/g, '');
+
+            if (val.length < 3) {
+                box.style.display = 'none';
+                return;
+            }
+
+            const matches = simsList.filter(s => s.code && s.code.includes(val)).slice(0, 12);
+            if (matches.length === 0) {
+                box.style.display = 'none';
+                return;
+            }
+
+            box.innerHTML = matches.map(s => {
+                const stBadge = s.status === 'dispatched'
+                    ? `<span style="color:#16a34a; font-weight:800;">✅ منصرف (${s.clientName || ''})</span>`
+                    : (s.status === 'returned' ? `<span style="color:#dc2626; font-weight:800;">❌ مرتجع</span>` : `<span style="color:#0284c7; font-weight:800;">متاح بالمخزون</span>`);
+                return `
+                    <div class="sim-suggestion-item" onclick="selectSuggestedSim('${s.code}')">
+                        <span style="font-family:monospace; font-weight:800;">${s.code}</span>
+                        <span>${s.category || s.company || ''} (${s.duration || '60'}) — ${stBadge}</span>
+                    </div>
+                `;
+            }).join('');
+            box.style.display = 'block';
+        }
+
+        function selectSuggestedSim(code) {
+            const tag = document.getElementById('fixedTagInput').value.trim().toUpperCase();
+            addCodeToStaging(code, tag);
+            document.getElementById('quickSerialInput').value = '';
+            document.getElementById('simSuggestions').style.display = 'none';
+            renderStagingTable();
+        }
+
+        function addQuickSerial() {
+            const input = document.getElementById('quickSerialInput');
+            const raw = normalizeDigits(input.value).replace(/[^0-9]/g, '');
+            if (!raw) return;
+
+            const matched = matchWithInventorySim(raw) || raw;
+            const tag = document.getElementById('fixedTagInput').value.trim().toUpperCase();
+            addCodeToStaging(matched, tag);
+            input.value = '';
+            document.getElementById('simSuggestions').style.display = 'none';
+            renderStagingTable();
+        }
+
+        function addCodeToStaging(code, tagCode = '') {
+            const cleanCode = normalizeDigits(code).replace(/[^0-9]/g, '');
+            if (!cleanCode || cleanCode.length < 6) return false;
+            if (stagingList.some(item => item.code === cleanCode)) return false;
+
+            const existingSim = simsList.find(s => s.code === cleanCode);
+            const finalTag = tagCode || (existingSim && existingSim.tagCode) || document.getElementById('fixedTagInput').value.trim().toUpperCase() || '';
+
+            stagingList.push({
+                code: cleanCode,
+                tagCode: finalTag
+            });
+            return true;
+        }
+
+        function applyFixedTagToStaging() {
+            const fixedTag = document.getElementById('fixedTagInput').value.trim().toUpperCase();
+            if (!fixedTag) return;
+            stagingList.forEach(item => { item.tagCode = fixedTag; });
+            renderStagingTable();
+        }
+
+        function updateStagingRowCode(idx, newVal) {
+            const clean = normalizeDigits(newVal).replace(/[^0-9]/g, '');
+            if (stagingList[idx]) {
+                stagingList[idx].code = matchWithInventorySim(clean) || clean;
+                renderStagingTable();
+            }
+        }
+
+        function updateStagingRowTag(idx, newTag) {
+            if (stagingList[idx]) {
+                stagingList[idx].tagCode = newTag.trim().toUpperCase();
+            }
+        }
+
+        function removeStagingRow(idx) {
+            stagingList.splice(idx, 1);
+            renderStagingTable();
+        }
+
+        function clearStagingList() {
+            stagingList = [];
+            tempImageUrls = [];
+            renderTempImagesStrip();
+            renderStagingTable();
+        }
+
+        // فحص حالة كل سريال في جدول المعاينة (تحذير غير مضاف بالمخزون + منع تكرار الصرف)
+        function inspectSimForStaging(code, mode) {
+            const sim = simsList.find(s => s.code === code);
+            if (!sim) {
+                return {
+                    valid: false,
+                    category: '-',
+                    html: `<span class="warn-pill">⚠️ غير مضافة مسبقاً في تاب (إضافة شريحة)!</span>`
+                };
+            }
+
+            const cat = `${sim.category || sim.company || 'Mobily'} (${sim.duration || '60'})`;
+
+            if (mode === 'dispatch') {
+                if (sim.status === 'dispatched') {
+                    return {
+                        valid: false,
+                        category: cat,
+                        html: `<span class="warn-pill">🚫 مصروفة مسبقاً للعميل: ${sim.clientName || 'غير محدد'} (${sim.tagCode || '-'}) بتاريخ ${sim.dispatchDate || '-'}</span>`
+                    };
+                }
+                if (sim.status === 'returned') {
+                    return {
+                        valid: false,
+                        category: cat,
+                        html: `<span class="warn-pill">❌ مسجلة كمرتجع سابقاً (${sim.clientName || 'غير محدد'})</span>`
+                    };
+                }
+                return {
+                    valid: true,
+                    category: cat,
+                    html: `<span class="ready-pill">✅ مضافة بالمخزون وجاهزة للصرف</span>`
+                };
+            } else {
+                // وضع المرتجع
+                if (sim.status === 'returned') {
+                    return {
+                        valid: false,
+                        category: cat,
+                        html: `<span class="warn-pill">⚠️ مسجلة كمرتجع (❌) بالفعل مسبقاً!</span>`
+                    };
+                }
+                const prevClient = sim.clientName ? `👤 العميل: ${sim.clientName} (${sim.tagCode || 'بدون رمز'})` : `⚠️ لم تُسجل كمنصرف لعميل من قبل`;
+                return {
+                    valid: true,
+                    category: cat,
+                    html: `<span class="ready-pill">📥 جاهزة للمرتجع — ${prevClient}</span>`
+                };
+            }
+        }
+
+        function renderStagingTable() {
+            const section = document.getElementById('stagingSection');
+            const tbody = document.getElementById('stagingTableBody');
+            const counterEl = document.getElementById('stagingCounterText');
+            const mode = document.getElementById('operationMode').value;
+
+            if (stagingList.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            let validCount = 0;
+            let warnCount = 0;
+
+            tbody.innerHTML = stagingList.map((item, idx) => {
+                const check = inspectSimForStaging(item.code, mode);
+                if (check.valid) validCount++; else warnCount++;
+
+                return `
+                    <tr>
+                        <td><button type="button" class="btn-sm btn-sm-danger" onclick="removeStagingRow(${idx})">✕</button></td>
+                        <td>
+                            <input type="text" value="${item.code}" style="font-family:monospace; font-weight:800; text-align:center; min-width:175px;" onchange="updateStagingRowCode(${idx}, this.value)">
+                        </td>
+                        <td>
+                            <input type="text" value="${item.tagCode || ''}" placeholder="مثال: N115" style="font-family:monospace; font-weight:800; text-align:center; max-width:110px;" oninput="this.value=this.value.toUpperCase(); updateStagingRowTag(${idx}, this.value)">
+                        </td>
+                        <td><span class="cat-badge">${check.category}</span></td>
+                        <td>${check.html}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            counterEl.innerText = `📋 إجمالي الشرائح المستخرجة: (${stagingList.length}) — صالحة للتنفيذ: (${validCount}) | تحذيرات: (${warnCount})`;
+        }
+
+        // اعتماد وحفظ حركة الصرف أو المرتجع
+        async function commitStagingBatch() {
+            const mode = document.getElementById('operationMode').value;
+            const actionDate = document.getElementById('actionDate').value || getTodayStr();
+
+            if (stagingList.length === 0) return;
+
+            if (mode === 'dispatch' && !selectedCustomer) {
+                showMessage('⚠️ يجب اختيار العميل أولاً من قائمة العملاء المسجلين قبل اعتماد الصرف!', true);
+                document.getElementById('customerSearchInput').focus();
+                return;
+            }
+
+            // التأكد من عدم وجود شرائح غير مضافة بالمخزون أو مكررة الصرف
+            const invalidItems = stagingList.filter(it => !inspectSimForStaging(it.code, mode).valid);
+            if (invalidItems.length > 0) {
+                showMessage(`⚠️ يوجد عدد (${invalidItems.length}) شريحة بها تحذير (غير مضافة بالمخزون أو مصروفة مسبقاً). يرجى مراجعتها أو حذفها من القائمة المؤقتة أولاً.`, true);
+                return;
+            }
+
+            if (mode === 'dispatch') {
+                const missingTag = stagingList.some(it => !it.tagCode || !it.tagCode.trim());
+                if (missingTag) {
+                    if (!confirm('توجد شرائح بدون رمز (مثل N115). هل تريد المتابعة وحفظها بدون رمز؟')) return;
+                }
+            }
+
+            const btn = document.getElementById('confirmBatchBtn');
+            btn.disabled = true;
+            btn.innerText = '⏳ جاري الحفظ والمزامنة...';
+
+            const now = Date.now();
+            const updatedSimsForCloud = [];
+
+            stagingList.forEach(stItem => {
+                const simIdx = simsList.findIndex(s => s.code === stItem.code);
+                if (simIdx === -1) return;
+
+                const sim = simsList[simIdx];
+                if (mode === 'dispatch') {
+                    sim.status = 'dispatched';
+                    sim.tagCode = (stItem.tagCode || '').trim().toUpperCase();
+                    sim.clientName = selectedCustomer.clientName;
+                    sim.shopName = selectedCustomer.shopName || '';
+                    sim.clientPhone = selectedCustomer.phone || '';
+                    sim.clientId = selectedCustomer.id || '';
+                    sim.dispatchDate = actionDate;
+                    sim.actionDate = actionDate;
+                    sim.dispatchTimestamp = now;
+                    sim.dispatchedBy = currentUser.username || 'admin';
+                } else {
+                    sim.status = 'returned';
+                    if (stItem.tagCode) sim.tagCode = stItem.tagCode.trim().toUpperCase();
+                    sim.returnDate = actionDate;
+                    sim.actionDate = actionDate;
+                    sim.returnTimestamp = now;
+                    sim.returnedBy = currentUser.username || 'admin';
+                }
+
+                simsList[simIdx] = sim;
+                updatedSimsForCloud.push(sim);
+            });
+
+            localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
+            await recalculateAndSyncGlobalStock();
+
+            try {
+                if (window.db) {
+                    for (const sim of updatedSimsForCloud) {
+                        await window.setDoc(window.doc(window.db, "scanned_sims", sim.code), sim, { merge: true });
+                    }
+                }
+            } catch (e) {
+                console.warn("تم الحفظ محلياً وسيتم المزامنة لاحقاً.");
+            }
+
+            const countDone = updatedSimsForCloud.length;
+            clearStagingList();
+            onModeChange();
+            btn.disabled = false;
+
+            if (mode === 'dispatch') {
+                showMessage(`✅ تم صرف (${countDone}) شريحة للعميل (${selectedCustomer.clientName}) والتعليم عليها بـ (✅) بنجاح!`);
+            } else {
+                showMessage(`❌ تم تسجيل (${countDone}) شريحة كمرتجع والتعليم عليها بـ (❌) وخصمها من الرصيد الممسوح والمتاح بنجاح!`);
+            }
+
+            renderHistoryTable();
+        }
+
+        // عرض جدول الصرف والمرتجع والبحث بالسريال أو بالرمز (مثل N115) أو بالعميل
+        function renderHistoryTable() {
+            const tbody = document.getElementById('historyTableBody');
+            const monthVal = document.getElementById('monthFilter').value;
+            const statusVal = document.getElementById('statusFilter').value;
+            const rawSearch = (document.getElementById('mainSearchInput').value || '').trim();
+            const searchLower = rawSearch.toLowerCase();
+
+            // الشرائح التي تمت عليها حركة صرف أو مرتجع
+            const activeSims = simsList.filter(s => s.status === 'dispatched' || s.status === 'returned');
+
+            const filtered = activeSims.filter(s => {
+                // فلتر الحالة
+                if (statusVal !== 'ALL' && s.status !== statusVal) return false;
+
+                // فلتر الشهر المحاسبي (في حال عدم كتابة بحث محدد، أو مع البحث)
+                if (monthVal) {
+                    const effectiveDate = s.actionDate || (s.status === 'returned' ? s.returnDate : s.dispatchDate) || s.date;
+                    const effectiveTs = s.returnTimestamp || s.dispatchTimestamp || s.timestamp;
+                    const recMonth = getAccountingMonth(effectiveDate, effectiveTs);
+                    if (recMonth !== monthVal) return false;
+                }
+
+                if (!searchLower) return true;
+
+                const codeMatch = s.code && s.code.toLowerCase().includes(searchLower);
+                const tagMatch = s.tagCode && s.tagCode.toLowerCase().includes(searchLower);
+                const clientMatch = s.clientName && s.clientName.toLowerCase().includes(searchLower);
+                const shopMatch = s.shopName && s.shopName.toLowerCase().includes(searchLower);
+
+                return codeMatch || tagMatch || clientMatch || shopMatch;
+            });
+
+            // تحديث العدادات العلوية بناءً على النتائج المعروضة
+            const dispCount = filtered.filter(s => s.status === 'dispatched').length;
+            const retCount = filtered.filter(s => s.status === 'returned').length;
+            document.getElementById('statDispatchedCount').innerText = dispCount;
+            document.getElementById('statReturnedCount').innerText = retCount;
+            document.getElementById('statNetCount').innerText = dispCount;
+
+            // إظهار ملخص العملاء المجمع إذا كان المستخدم يبحث برمز (مثل N115) أو اسم عميل
+            const tagSummaryBox = document.getElementById('tagSummaryBox');
+            if (rawSearch && filtered.length > 0) {
+                const clientsMap = {};
+                filtered.forEach(s => {
+                    const cKey = s.clientName || 'غير محدد';
+                    if (!clientsMap[cKey]) {
+                        clientsMap[cKey] = { shop: s.shopName || '', dispatched: 0, returned: 0, tags: new Set() };
+                    }
+                    if (s.status === 'dispatched') clientsMap[cKey].dispatched++;
+                    if (s.status === 'returned') clientsMap[cKey].returned++;
+                    if (s.tagCode) clientsMap[cKey].tags.add(s.tagCode);
+                });
+
+                document.getElementById('tagSummaryTitle').innerText = `📊 العملاء المطابقون للبحث "${rawSearch}" (إجمالي: ${filtered.length} شريحة):`;
+                document.getElementById('tagSummaryChips').innerHTML = Object.entries(clientsMap).map(([cName, info]) => {
+                    const tagsStr = Array.from(info.tags).join(', ');
+                    return `
+                        <div class="client-chip">
+                            <span>👤 ${cName} ${info.shop ? `(${info.shop})` : ''}</span>
+                            ${tagsStr ? `<span class="tag-badge">${tagsStr}</span>` : ''}
+                            <span style="color:#16a34a;">✅ ${info.dispatched}</span>
+                            ${info.returned > 0 ? `<span style="color:#dc2626;">❌ ${info.returned}</span>` : ''}
+                        </div>
+                    `;
+                }).join('');
+                tagSummaryBox.style.display = 'block';
+            } else {
+                tagSummaryBox.style.display = 'none';
+            }
+
+            filtered.sort((a, b) => {
+                const tB = b.returnTimestamp || b.dispatchTimestamp || b.timestamp || 0;
+                const tA = a.returnTimestamp || a.dispatchTimestamp || a.timestamp || 0;
+                return tB - tA;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="padding:18px; color:#64748b; font-weight:800;">لا توجد سجلات صرف أو مرتجع مطابقة للبحث.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(s => {
+                const statusIcon = s.status === 'dispatched'
+                    ? `<span class="status-ok" title="تم الصرف">✅</span>`
+                    : `<span class="status-ret" title="مرتجع">❌</span>`;
+
+                const cat = `${s.category || s.company || '-'} (${s.duration || '60'})`;
+                const clientDisplay = s.clientName
+                    ? `<strong>👤 ${s.clientName}</strong>${s.shopName ? ` <span style="color:#64748b; font-size:0.78rem;">(${s.shopName})</span>` : ''}`
+                    : '-';
+
+                return `
+                    <tr>
+                        <td>${statusIcon}</td>
+                        <td class="serial-cell">${s.code}</td>
+                        <td>${s.tagCode ? `<span class="tag-badge">${s.tagCode}</span>` : '-'}</td>
+                        <td>${clientDisplay}</td>
+                        <td><span class="cat-badge">${cat}</span></td>
+                        <td>${s.dispatchDate || '-'}</td>
+                        <td style="color:#dc2626; font-weight:700;">${s.returnDate || '-'}</td>
+                        <td>
+                            <button type="button" class="btn-sm btn-sm-warn" onclick="openEditSimModal('${s.code}')">✏️ تعديل</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // نافذة تعديل / تصحيح حالة شريحة
+        function openEditSimModal(code) {
+            const sim = simsList.find(s => s.code === code);
+            if (!sim) return;
+
+            document.getElementById('editSimCode').value = sim.code;
+            document.getElementById('editSimCodeDisplay').innerText = sim.code;
+            document.getElementById('editSimStatus').value = sim.status || '';
+            document.getElementById('editSimTag').value = sim.tagCode || '';
+
+            const custSelect = document.getElementById('editSimCustomerSelect');
+            let html = `<option value="">-- اختر العميل --</option>`;
+            customersList.forEach((c, idx) => {
+                const cName = (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName : (c.shopName || 'بدون اسم');
+                const selected = (sim.clientName === cName) ? 'selected' : '';
+                html += `<option value="${idx}" ${selected}>${cName} ${c.shopName ? `— ${c.shopName}` : ''}</option>`;
+            });
+            custSelect.innerHTML = html;
+
+            document.getElementById('editSimModal').style.display = 'flex';
+        }
+
+        function closeEditSimModal() {
+            document.getElementById('editSimModal').style.display = 'none';
+        }
+
+        async function saveEditedSim() {
+            const code = document.getElementById('editSimCode').value;
+            const newStatus = document.getElementById('editSimStatus').value;
+            const newTag = document.getElementById('editSimTag').value.trim().toUpperCase();
+            const custIdx = document.getElementById('editSimCustomerSelect').value;
+
+            const idx = simsList.findIndex(s => s.code === code);
+            if (idx === -1) return;
+
+            const sim = simsList[idx];
+            sim.status = newStatus;
+            sim.tagCode = newTag;
+
+            if (custIdx !== '' && customersList[custIdx]) {
+                const c = customersList[custIdx];
+                sim.clientName = (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName : (c.shopName || 'بدون اسم');
+                sim.shopName = c.shopName || '';
+                sim.clientPhone = c.phone || '';
+            }
+
+            if (newStatus === 'returned' && !sim.returnDate) {
+                sim.returnDate = getTodayStr();
+                sim.actionDate = getTodayStr();
+                sim.returnTimestamp = Date.now();
+            } else if (newStatus === 'dispatched') {
+                sim.returnDate = '';
+                if (!sim.dispatchDate) sim.dispatchDate = getTodayStr();
+                sim.actionDate = sim.dispatchDate;
+            } else if (newStatus === '') {
+                sim.tagCode = '';
+                sim.clientName = '';
+                sim.shopName = '';
+                sim.dispatchDate = '';
+                sim.returnDate = '';
+                sim.actionDate = '';
+            }
+
+            simsList[idx] = sim;
+            localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
+            await recalculateAndSyncGlobalStock();
+
+            try {
+                if (window.db) {
+                    await window.setDoc(window.doc(window.db, "scanned_sims", sim.code), sim, { merge: true });
+                }
+            } catch (e) {}
+
+            closeEditSimModal();
+            renderHistoryTable();
+            showMessage(`✅ تم تحديث حالة الشريحة (${code}) وتحديث الأرصدة بنجاح!`);
+        }
+    </script>
+</body>
+</html>

@@ -42,6 +42,7 @@
         .btn-del-row { background: #dc2626; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; width: auto; margin: 0; }
         .badge { background: #dbeafe; color: #1e3a8a; padding: 3px 10px; border-radius: 8px; font-weight: bold; }
         .user-badge { background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 10px; font-weight: bold; }
+        .status-cell { font-size: 15px; font-weight: bold; }
     </style>
 
     <script type="module">
@@ -138,12 +139,13 @@
             <table>
                 <thead>
                     <tr>
-                        <th>حذف</th>
+                        <th>الحالة</th>
                         <th>الباركود الكامل</th>
                         <th>التصنيف</th>
                         <th>المدة</th>
                         <th>التاريخ</th>
                         <th>اسم اليوزر</th>
+                        <th>حذف</th>
                     </tr>
                 </thead>
                 <tbody id="simTable"></tbody>
@@ -270,7 +272,7 @@
             }
         }
 
-        // إعادة حساب الرصيد الفعلي مع خصم الفواتير المباعة ومراعاة التعديلات اليدوية
+        // إعادة حساب الرصيد الفعلي مع خصم الشرائح المرتجعة (❌) والفواتير المباعة
         function recalculateUnifiedStock() {
             const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             const stockOffsets = existingConfig.stockOffsets || {};
@@ -287,6 +289,9 @@
                     dur = (cat === 'Redbull') ? '30' : '60';
                     item.duration = dur;
                 }
+                // استبعاد الشرائح المرتجعة (❌) من الرصيد الممسوح والمتاح
+                if (item.status === 'returned') return;
+
                 const itemKey = `${cat} (${dur})`;
                 scannedCountsByGroup[itemKey] = (scannedCountsByGroup[itemKey] || 0) + 1;
                 autoStock[itemKey] = (autoStock[itemKey] || 0) + 1;
@@ -431,6 +436,14 @@
             renderDropdowns();
             renderTable();
         };
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'scanned_sims_offline') {
+                simsList = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
+                recalculateUnifiedStock();
+                renderTable();
+            }
+        });
 
         async function saveConfigAndSync() {
             recalculateUnifiedStock();
@@ -611,6 +624,7 @@
                 duration: duration,
                 date: inDate,
                 addedBy: currentUser.username,
+                status: '',
                 timestamp: now
             };
 
@@ -664,8 +678,9 @@
             const tbody = document.getElementById('simTable');
             const search = document.getElementById('searchInput').value.trim().toLowerCase();
             
+            const activeScannedCount = simsList.filter(s => s.status !== 'returned').length;
             const statsDiv = document.getElementById('dynamicStats');
-            let statsHtml = `<span class="stat-badge total">إجمالي الممسوح: ${simsList.length}</span>`;
+            let statsHtml = `<span class="stat-badge total">إجمالي الممسوح الصافي: ${activeScannedCount}</span>`;
             Object.keys(scannedCountsByGroup).forEach(key => {
                 statsHtml += `<span class="stat-badge">${key}: ${scannedCountsByGroup[key]}</span>`;
             });
@@ -684,21 +699,30 @@
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="padding:15px; color:#64748b; font-weight:bold;">لا توجد شرائح مسجلة</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="padding:15px; color:#64748b; font-weight:bold;">لا توجد شرائح مسجلة</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = filtered.map(item => {
                 const cat = item.category || item.company || '-';
                 const dur = getFixedDuration(item);
+                // عمود الحالة في أول خانة يمين: فارغ عند المسح، صح عند الصرف، إكس عند المرتجع
+                let statusMark = '';
+                if (item.status === 'dispatched') {
+                    statusMark = `<span title="تم الصرف للعميل: ${item.clientName || ''} (${item.tagCode || ''})">✅</span>`;
+                } else if (item.status === 'returned') {
+                    statusMark = `<span title="مرتجع من العميل: ${item.clientName || ''}">❌</span>`;
+                }
+
                 return `
                     <tr>
-                        <td><button class="btn-del-row" onclick="deleteSim('${item.code}')">❌</button></td>
+                        <td class="status-cell">${statusMark}</td>
                         <td class="barcode-cell">${item.code}</td>
                         <td><span class="badge">${cat}</span></td>
                         <td><span class="badge" style="background:#fef3c7; color:#b45309;">${dur}</span></td>
                         <td>${item.date || '-'}</td>
                         <td><span class="user-badge">${item.addedBy || '-'}</span></td>
+                        <td><button class="btn-del-row" onclick="deleteSim('${item.code}')">🗑️</button></td>
                     </tr>
                 `;
             }).join('');

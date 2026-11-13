@@ -1683,6 +1683,9 @@
             });
 
             simsList.forEach(sim => {
+                // خصم الشرائح المرتجعة (❌) من الرصيد الممسوح والمتاح في الإحصائيات
+                if (sim.status === 'returned') return;
+
                 const { company, duration } = parseCompanyAndDuration(sim.category || sim.company || '', sim.duration);
                 const key = `${company}_${duration}`;
                 allScannedMap[key] = (allScannedMap[key] || 0) + 1;

@@ -554,6 +554,9 @@
 
             autoStockInventory = {};
             sims.forEach(item => {
+                // استبعاد الشرائح المرتجعة (❌) من الرصيد الممسوح والمتاح
+                if (item.status === 'returned') return;
+
                 const cat = item.category || item.company || 'Mobily';
                 let dur = item.duration;
                 if (!dur || dur === '-' || dur === 'غير محدد' || dur === '') {

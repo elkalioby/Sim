@@ -119,6 +119,8 @@
         .hero-btn.btn-sales .hero-icon { background: rgba(255,255,255,0.2); }
         .hero-btn.btn-barcode { background: #16a34a; color: white; border-color: #16a34a; }
         .hero-btn.btn-barcode .hero-icon { background: rgba(255,255,255,0.2); }
+        .hero-btn.btn-dispatch { background: #7c3aed; color: white; border-color: #7c3aed; }
+        .hero-btn.btn-dispatch .hero-icon { background: rgba(255,255,255,0.2); }
         .hero-btn.btn-customers { background: #0f172a; color: white; border-color: #0f172a; }
         .hero-btn.btn-customers .hero-icon { background: rgba(255,255,255,0.15); }
         .hero-btn.btn-expenses { background: #d97706; color: white; border-color: #d97706; }
@@ -154,7 +156,6 @@
         }
     </style>
 
-    <!-- ربط Firebase للتخزين السحابي والمزامنة التلقائية -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -175,7 +176,6 @@
         window.getDoc = getDoc;
         window.setDoc = setDoc;
 
-        // مزامنة الإعدادات العامة تلقائياً مع السحابة
         async function syncGlobalConfig() {
             try {
                 const configSnap = await getDoc(doc(db, "settings", "app_config"));
@@ -229,6 +229,9 @@
             <button class="tab-btn" id="barcodeTabBtn" onclick="switchTab('barcode.html', this)">
                 <span class="tab-icon">📱</span> إضافة شريحة
             </button>
+            <button class="tab-btn" id="dispatchTabBtn" onclick="switchTab('dispatch.html', this)">
+                <span class="tab-icon">🔄</span> صرف ومرتجع
+            </button>
             <button class="tab-btn" id="customersTabBtn" onclick="switchTab('customers.html', this)">
                 <span class="tab-icon">🏪</span> العملاء
             </button>
@@ -246,7 +249,7 @@
         <div class="frame-wrapper" id="frameContainer">
             <div class="welcome-hero" id="welcomeScreen">
                 <h2>أهلاً بك في متجر سيم</h2>
-                <p>يمكنك إدارة المبيعات، المخزون، العملاء، المصروفات، حفظ المواقع، ومتابعة المديونيات بكل سهولة عبر الأقسام المتاحة.</p>
+                <p>يمكنك إدارة المبيعات، المخزون، الصرف والمرتجع، العملاء، المصروفات، حفظ المواقع، ومتابعة المديونيات بكل سهولة عبر الأقسام المتاحة.</p>
                 <div class="hero-actions">
                     <button class="hero-btn btn-invoices" onclick="switchTab('invoice.html', document.getElementById('invoiceTabBtn'))">
                         <span class="hero-icon">📄</span>
@@ -259,6 +262,10 @@
                     <button class="hero-btn btn-barcode" onclick="switchTab('barcode.html', document.getElementById('barcodeTabBtn'))">
                         <span class="hero-icon">📱</span>
                         <span>إضافة شريحة للمخزون</span>
+                    </button>
+                    <button class="hero-btn btn-dispatch" onclick="switchTab('dispatch.html', document.getElementById('dispatchTabBtn'))">
+                        <span class="hero-icon">🔄</span>
+                        <span>صرف ومرتجع الشرائح</span>
                     </button>
                     <button class="hero-btn btn-customers" onclick="switchTab('customers.html', document.getElementById('customersTabBtn'))">
                         <span class="hero-icon">🏪</span>
@@ -288,6 +295,7 @@
             'invoice.html': 'invoiceTabBtn',
             'sales.html': 'salesTabBtn',
             'barcode.html': 'barcodeTabBtn',
+            'dispatch.html': 'dispatchTabBtn',
             'customers.html': 'customersTabBtn',
             'expenses.html': 'expensesTabBtn',
             'locations.html': 'locationsTabBtn',
@@ -310,7 +318,6 @@
                 if (heroUsersBtn) heroUsersBtn.style.display = 'flex';
             }
 
-            // استرجاع آخر تبويب كان مفتوحاً تلقائياً
             const lastSavedTab = localStorage.getItem('sim_active_tab');
             if (lastSavedTab && lastSavedTab !== 'home' && tabButtonsMap[lastSavedTab]) {
                 if (lastSavedTab === 'users.html' && loggedUser.role !== 'admin') {
@@ -325,7 +332,6 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
             
-            // حفظ تلقائي للتبويب المفتوح محلياً وسحابياً
             localStorage.setItem('sim_active_tab', page);
             if (window.db && loggedUser) {
                 window.setDoc(window.doc(window.db, "settings", "last_state_" + loggedUser.username), {
