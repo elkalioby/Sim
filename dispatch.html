@@ -40,7 +40,7 @@
         input, select, button { padding: 10px 12px; width: 100%; font-size: 0.92rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; outline: none; }
         input:focus, select:focus { border-color: var(--primary-light); }
 
-        .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .full-width { grid-column: 1 / -1; }
 
         /* نوع الحركة */
@@ -66,7 +66,7 @@
             align-items: center; justify-content: space-between; border: 1px solid #93c5fd;
         }
 
-        /* الإدخال السريع بالسريال أو آخر أرقامه */
+        /* الإدخال السريع بالسريال */
         .quick-add-box { position: relative; }
         .quick-row { display: flex; gap: 6px; align-items: center; }
         .quick-row input { flex: 1; font-family: monospace; font-size: 0.92rem; }
@@ -101,7 +101,6 @@
             padding: 12px; border-radius: 10px; text-align: center; font-weight: 800; color: var(--primary); font-size: 0.88rem;
         }
 
-        /* شريط معاينة الصور المؤقتة */
         .temp-images-strip {
             display: none; gap: 8px; overflow-x: auto; padding: 8px; margin-top: 10px;
             background: #f8fafc; border-radius: 10px; border: 1px solid var(--border);
@@ -111,7 +110,6 @@
             border: 2px solid #cbd5e1; cursor: pointer; flex-shrink: 0;
         }
 
-        /* جدول المعاينة قبل الاعتماد */
         #stagingSection { display: none; margin-top: 14px; border-top: 2px dashed #cbd5e1; padding-top: 12px; }
         .staging-banner {
             background: #fef3c7; color: #92400e; padding: 10px 12px; border-radius: 8px;
@@ -126,11 +124,9 @@
 
         #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: 800; display: none; margin-bottom: 10px; font-size: 0.9rem; }
 
-        /* الفلتر والبحث */
         .filters-bar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; background: #f1f5f9; padding: 10px; border-radius: 10px; }
         .search-input { font-size: 0.95rem; font-weight: 700; border: 2px solid #cbd5e1; padding: 11px 14px; margin-bottom: 12px; }
 
-        /* ملخص العملاء عند البحث بالرمز مثل N115 */
         #tagSummaryBox {
             display: none; background: #eff6ff; border: 1.5px solid #93c5fd;
             border-radius: 12px; padding: 12px; margin-bottom: 12px;
@@ -143,7 +139,6 @@
             display: flex; align-items: center; gap: 6px;
         }
 
-        /* الجداول */
         .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
         th, td { border: 1px solid var(--border); padding: 9px 7px; text-align: center; white-space: nowrap; }
@@ -159,8 +154,7 @@
         .ready-pill { background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; display: inline-block; }
 
         .btn-sm { width: auto; padding: 5px 9px; font-size: 0.78rem; font-weight: 800; border: none; border-radius: 6px; cursor: pointer; }
-        .btn-sm-warn { background: #fef3c7; color: #b45309; }
-        .btn-sm-danger { background: #fee2e2; color: #dc2626; }
+        .btn-sm-danger { background: #fee2e2; color: var(--danger); }
         .btn-sm-blue { background: #e0f2fe; color: #0369a1; }
 
         .action-btns-wrap { display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
@@ -172,7 +166,6 @@
         .icon-edit-btn { background: #fef3c7; color: #b45309; }
         .icon-del-btn { background: #fee2e2; color: #dc2626; }
 
-        /* نافذة تكبير الصورة وتعديل السجل */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; justify-content: center; align-items: center; padding: 15px; }
         .modal-img { max-width: 95%; max-height: 85vh; border-radius: 12px; }
         .modal-box { background: #fff; padding: 18px; border-radius: 14px; width: 100%; max-width: 420px; }
@@ -213,7 +206,7 @@
 
     <h3 class="page-header">🔄 صرف ومرتجع الشرائح للعملاء</h3>
 
-    <!-- عدادات الإحصائيات السريعة (المنصرف والمرتجع فقط) -->
+    <!-- المربعات العلوية (مربعان فقط) -->
     <div class="stats-grid">
         <div class="stat-box dispatched">
             <div class="stat-title">✅ إجمالي المنصرف</div>
@@ -225,7 +218,6 @@
         </div>
     </div>
 
-    <!-- كارت تسجيل حركة صرف أو مرتجع (بدون عناوين زائدة) -->
     <div class="card">
         <div id="msg"></div>
 
@@ -239,18 +231,10 @@
             </div>
 
             <div>
-                <label>المدة</label>
-                <select id="durationSelect" onchange="onDurationSelectChange()">
-                    <option value="">تلقائي (حسب المخزون)</option>
-                </select>
-            </div>
-
-            <div>
                 <label>التاريخ *</label>
                 <input type="date" id="actionDate" onchange="saveDispatchDraft()">
             </div>
 
-            <!-- اختيار العميل من قائمة العملاء المسجلين فقط -->
             <div id="customerSelectWrap" class="full-width autocomplete-wrapper">
                 <label>اختر العميل (من العملاء المسجلين فقط) *</label>
                 <input type="text" id="customerSearchInput" autocomplete="off" placeholder="🔍 ابحث باسم العميل أو المحل أو الجوال لاختياره..." oninput="filterCustomersList(); saveDispatchDraft();" onfocus="filterCustomersList()">
@@ -261,16 +245,7 @@
                 </div>
             </div>
 
-            <!-- خانة تثبيت الرمز (مثل N115) -->
-            <div class="full-width">
-                <label>تثبيت الرمز المكتوب على الشرائح (مثال: N115)</label>
-                <div class="quick-row">
-                    <input type="text" id="fixedTagInput" placeholder="🔤 اكتب الحرف والرقم مثل N115..." oninput="this.value = this.value.toUpperCase(); saveDispatchDraft();">
-                    <button type="button" class="btn-quick-add" style="background:#0284c7;" onclick="applyFixedTagToStaging()">تطبيق</button>
-                </div>
-            </div>
-
-            <!-- الإضافة السريعة للسريال تحت تثبيت الرمز مباشرة -->
+            <!-- الإضافة السريعة للسريال -->
             <div class="full-width quick-add-box">
                 <label>⚡ إضافة سريعة بالسريال الكامل أو بآخر 4 أو 5 أرقام منه (مثال: 92277):</label>
                 <div class="quick-row">
@@ -300,7 +275,6 @@
         <div id="reader"></div>
         <div id="ocrProgressBox">⏳ جاري قراءة السريالات والرموز من الصور...</div>
 
-        <!-- معاينة الصور المؤقتة بدون حفظها في قاعدة البيانات -->
         <div id="tempImagesStrip" class="temp-images-strip" title="اضغط على أي صورة لتكبيرها ومراجعتها"></div>
 
         <!-- جدول المعاينة والمراجعة قبل الحفظ النهائي -->
@@ -358,7 +332,6 @@
 
         <input type="text" id="mainSearchInput" class="search-input" placeholder="🔍 ابحث بالسريال (أو آخر أرقامه مثل 92277)، أو بالرمز (مثل N115)، أو باسم العميل..." oninput="saveDispatchDraft(); renderHistoryTable();">
 
-        <!-- صندوق ملخص العملاء عند البحث برمز مثل N115 -->
         <div id="tagSummaryBox">
             <div class="tag-summary-title" id="tagSummaryTitle"></div>
             <div class="tag-clients-chips" id="tagSummaryChips"></div>
@@ -384,12 +357,10 @@
         </div>
     </div>
 
-    <!-- نافذة تكبير الصورة -->
     <div class="modal-overlay" id="imgModal" onclick="this.style.display='none'">
         <img id="imgModalTarget" class="modal-img" src="" alt="معاينة">
     </div>
 
-    <!-- نافذة تصحيح / تعديل سجل شريحة -->
     <div class="modal-overlay" id="editSimModal">
         <div class="modal-box">
             <h3 style="color:var(--primary); margin-bottom:12px; font-size:1.05rem;">✏️ تعديل بيانات الشريحة</h3>
@@ -436,7 +407,6 @@
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        // الشهر المحاسبي الموحد (يبدأ من يوم 5 ويمتد حتى يوم 4 من الشهر التالي)
         function getAccountingMonth(dateStr, timestampFallback) {
             let year = NaN, month = NaN, day = NaN;
             if (dateStr) {
@@ -467,7 +437,6 @@
         document.getElementById('actionDate').value = getTodayStr();
         document.getElementById('monthFilter').value = getAccountingMonth(getTodayStr(), Date.now());
 
-        // تحديد التصنيف والمدة بدقة من المخزون أو رقم السريال
         function detectCategoryByCode(code) {
             const c = String(code || '');
             if (c.startsWith('8996601') || c.includes('8996601')) return 'STC';
@@ -484,26 +453,14 @@
         }
 
         function resolveSimDuration(sim, catFallback = '') {
-            const selectedDur = document.getElementById('durationSelect')?.value || '';
             if (sim && sim.duration && sim.duration !== '-' && sim.duration !== 'غير محدد') {
                 return sim.duration;
             }
-            if (selectedDur) return selectedDur;
             const cat = catFallback || resolveSimCategory(sim);
             return (cat === 'Redbull') ? '30' : '60';
         }
 
-        function renderDurationDropdowns(selectedVal = '') {
-            const durSelect = document.getElementById('durationSelect');
-            if (durSelect) {
-                const current = selectedVal !== undefined ? selectedVal : durSelect.value;
-                let html = `<option value="">تلقائي (حسب المخزون)</option>`;
-                durationsList.forEach(d => {
-                    html += `<option value="${d}" ${String(d) === String(current) ? 'selected' : ''}>${d}</option>`;
-                });
-                durSelect.innerHTML = html;
-            }
-
+        function renderDurationDropdowns() {
             const editDurSelect = document.getElementById('editSimDuration');
             if (editDurSelect) {
                 let editHtml = '';
@@ -514,24 +471,12 @@
             }
         }
 
-        function onDurationSelectChange() {
-            const chosenDur = document.getElementById('durationSelect').value;
-            if (chosenDur) {
-                stagingList.forEach(item => { item.duration = chosenDur; });
-            }
-            saveDispatchDraft();
-            renderStagingTable();
-        }
-
-        // حفظ واسترجاع المسودة التلقائي في حال إغلاق المتصفح بالخطأ
         function saveDispatchDraft() {
             const draft = {
                 operationMode: document.getElementById('operationMode').value,
-                durationSelect: document.getElementById('durationSelect').value,
                 actionDate: document.getElementById('actionDate').value,
                 selectedCustomer: selectedCustomer,
                 customerSearchText: document.getElementById('customerSearchInput').value,
-                fixedTagInput: document.getElementById('fixedTagInput').value,
                 quickSerialInput: document.getElementById('quickSerialInput').value,
                 stagingList: stagingList,
                 monthFilter: document.getElementById('monthFilter').value,
@@ -551,14 +496,8 @@
                 if (draft.operationMode) {
                     document.getElementById('operationMode').value = draft.operationMode;
                 }
-                if (draft.durationSelect !== undefined) {
-                    renderDurationDropdowns(draft.durationSelect);
-                }
                 if (draft.actionDate) {
                     document.getElementById('actionDate').value = draft.actionDate;
-                }
-                if (draft.fixedTagInput !== undefined) {
-                    document.getElementById('fixedTagInput').value = draft.fixedTagInput;
                 }
                 if (draft.quickSerialInput !== undefined) {
                     document.getElementById('quickSerialInput').value = draft.quickSerialInput;
@@ -588,7 +527,7 @@
 
                 onModeChange(false);
             } catch (e) {
-                console.error("خطأ في استرجاع مسودة الصرف والمرتجع:", e);
+                console.error("خطأ في استرجاع المسودة:", e);
             }
         }
 
@@ -619,10 +558,9 @@
             }
             simsList = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
             customersList = JSON.parse(localStorage.getItem('customers_records_offline') || '[]');
-            renderDurationDropdowns(document.getElementById('durationSelect')?.value || '');
+            renderDurationDropdowns();
         }
 
-        // إعادة حساب الرصيد الممسوح والمتاح في كل الموقع مع استبعاد الشرائح المرتجعة (❌)
         async function recalculateAndSyncGlobalStock() {
             const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             const stockOffsets = existingConfig.stockOffsets || {};
@@ -632,7 +570,6 @@
             const autoStock = {};
             simsList.forEach(item => {
                 if (item.status === 'returned') return;
-
                 const cat = resolveSimCategory(item);
                 const dur = resolveSimDuration(item, cat);
                 const itemKey = `${cat} (${dur})`;
@@ -692,7 +629,7 @@
                         const cData = configSnap.data();
                         categoriesList = cData.categoriesList || cData.customItems || categoriesList;
                         durationsList = cData.durationsList || durationsList;
-                        renderDurationDropdowns(document.getElementById('durationSelect').value);
+                        renderDurationDropdowns();
                     }
 
                     const localMap = new Map();
@@ -937,15 +874,13 @@
         function parseOcrResult(ocrText) {
             const normText = normalizeDigits(ocrText);
             const foundTags = extractTagCodesFromText(normText);
-            const defaultTag = document.getElementById('fixedTagInput').value.trim().toUpperCase() || (foundTags[0] || '');
-
             const results = [];
             const seenCodes = new Set();
 
             const lines = normText.split(/[\r\n]+/);
             lines.forEach((line, lineIdx) => {
                 const lineTags = extractTagCodesFromText(line);
-                const nearbyTag = lineTags[0] || foundTags[Math.min(lineIdx, foundTags.length - 1)] || defaultTag;
+                const nearbyTag = lineTags[0] || foundTags[Math.min(lineIdx, foundTags.length - 1)] || '';
 
                 const cleanedLineForDigits = line
                     .replace(/8996\s*6/g, '89966')
@@ -956,21 +891,10 @@
                     const resolvedCode = matchWithInventorySim(rawNum);
                     if (resolvedCode && !seenCodes.has(resolvedCode)) {
                         seenCodes.add(resolvedCode);
-                        results.push({ code: resolvedCode, tagCode: nearbyTag });
+                        results.push({ code: resolvedCode, tagCode: nearbyTag, x: 0, y: lineIdx * 100 });
                     }
                 });
             });
-
-            const compactDigits = normText.replace(/\s+/g, '');
-            const iccidRegex = /89966\d{10,15}/g;
-            let m;
-            while ((m = iccidRegex.exec(compactDigits)) !== null) {
-                const resolvedCode = matchWithInventorySim(m[0]);
-                if (resolvedCode && !seenCodes.has(resolvedCode)) {
-                    seenCodes.add(resolvedCode);
-                    results.push({ code: resolvedCode, tagCode: defaultTag });
-                }
-            }
 
             return { items: results, detectedTags: foundTags };
         }
@@ -1017,57 +941,78 @@
             strip.style.display = 'flex';
 
             let totalAddedFromImages = 0;
-            let lastDetectedTag = document.getElementById('fixedTagInput').value.trim().toUpperCase();
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                progressBox.innerText = `⏳ جاري تحليل الصورة (${i + 1} من ${files.length}) واستخراج السريالات والرمز...`;
+                progressBox.innerText = `⏳ جاري تحليل الصورة (${i + 1} من ${files.length}) واستخراج السريالات...`;
 
                 const objUrl = URL.createObjectURL(file);
                 tempImageUrls.push(objUrl);
                 renderTempImagesStrip();
 
-                const codesFromThisFile = new Set();
-                let tagsFromThisFile = [];
+                const fileExtractedItems = [];
+                const seenFileCodes = new Set();
 
-                if ('BarcodeDetector' in window) {
-                    try {
-                        const bitmap = await createImageBitmap(file);
-                        const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'qr_code'] });
-                        const barcodes = await detector.detect(bitmap);
-                        barcodes.forEach(b => {
-                            const matched = matchWithInventorySim(b.rawValue);
-                            if (matched) codesFromThisFile.add(matched);
-                        });
-                    } catch (e) {}
-                }
-
+                // 1. فحص الباركود بـ Tesseract مع استخراج تفاصيل الإحداثيات المكانية (bbox) لترتيب اليمين لليسار
                 try {
                     const imgEl = await loadImageElement(objUrl);
                     const canvasNormal = createEnhancedCanvas(imgEl, false);
-                    const { data } = await Tesseract.recognize(canvasNormal, 'eng');
-                    const parsed1 = parseOcrResult(data.text || '');
-                    parsed1.items.forEach(it => codesFromThisFile.add(it.code));
-                    if (parsed1.detectedTags.length > 0) tagsFromThisFile.push(...parsed1.detectedTags);
+                    
+                    // استخدام وضع أسطر blocks لاستخراج إحداثيات X و Y بدقة لترتيب اليمين لليسار
+                    const { data } = await Tesseract.recognize(canvasNormal, 'eng', {
+                        logger: m => {}
+                    });
 
-                    const canvasContrast = createEnhancedCanvas(imgEl, true);
-                    const { data: data2 } = await Tesseract.recognize(canvasContrast, 'eng');
-                    const parsed2 = parseOcrResult(data2.text || '');
-                    parsed2.items.forEach(it => codesFromThisFile.add(it.code));
-                    if (parsed2.detectedTags.length > 0) tagsFromThisFile.push(...parsed2.detectedTags);
+                    if (data && data.lines) {
+                        data.lines.forEach(line => {
+                            const lineText = normalizeDigits(line.text || '');
+                            const lineTags = extractTagCodesFromText(lineText);
+                            const nearbyTag = lineTags[0] || '';
+                            const bbox = line.bbox || { x0: 0, y0: 0 };
+
+                            const numMatches = lineText.match(/\d{7,22}/g) || [];
+                            numMatches.forEach(rawNum => {
+                                const resolved = matchWithInventorySim(rawNum);
+                                if (resolved && !seenFileCodes.has(resolved)) {
+                                    seenFileCodes.add(resolved);
+                                    fileExtractedItems.push({
+                                        code: resolved,
+                                        tagCode: nearbyTag,
+                                        x: bbox.x0 || 0,
+                                        y: bbox.y0 || 0
+                                    });
+                                }
+                            });
+                        });
+                    }
+
+                    // في حال لم تلتقط الـ lines بوضوح، نلجأ للطريقة العامة
+                    if (fileExtractedItems.length === 0 && data && data.text) {
+                        const parsed = parseOcrResult(data.text);
+                        parsed.items.forEach(it => {
+                            if (!seenFileCodes.has(it.code)) {
+                                seenFileCodes.add(it.code);
+                                fileExtractedItems.push(it);
+                            }
+                        });
+                    }
                 } catch (ocrErr) {
-                    console.warn("خطأ أثناء قراءة OCR:", ocrErr);
+                    console.warn("خطأ OCR:", ocrErr);
                 }
 
-                const chosenTag = document.getElementById('fixedTagInput').value.trim().toUpperCase() || tagsFromThisFile[0] || lastDetectedTag || '';
-                if (chosenTag && !document.getElementById('fixedTagInput').value) {
-                    document.getElementById('fixedTagInput').value = chosenTag;
-                    lastDetectedTag = chosenTag;
-                }
+                // ترتيب الشرائح المستخرجة مكانياً: من اليمين لليسار (X تنازلي)، ثم من الأعلى للأسفل (Y تصاعدي)
+                fileExtractedItems.sort((a, b) => {
+                    const yDiff = Math.abs(a.y - b.y);
+                    if (yDiff > 40) {
+                        return a.y - b.y; // من الأعلى للأسفل
+                    }
+                    return b.x - a.x; // في نفس السطر: من اليمين لليسار
+                });
 
-                codesFromThisFile.forEach(code => {
-                    const added = addCodeToStaging(code, chosenTag);
-                    if (added) totalAddedFromImages++;
+                fileExtractedItems.forEach(it => {
+                    if (addCodeToStaging(it.code, it.tagCode)) {
+                        totalAddedFromImages++;
+                    }
                 });
             }
 
@@ -1076,9 +1021,9 @@
             saveDispatchDraft();
 
             if (totalAddedFromImages > 0) {
-                showMessage(`📸 تم استخراج (${totalAddedFromImages}) شريحة من الصور بنجاح! راجع الجدول بالأسفل قبل الاعتماد.`);
+                showMessage(`📸 تم استخراج (${totalAddedFromImages}) شريحة وترتيبها من اليمين لليسار بنجاح!`);
             } else {
-                showMessage(`⚠️ لم يتم التقاط أرقام واضحة من الصورة. يمكنك استخدام البحث السريع بآخر 4-5 أرقام من السريال.`, true);
+                showMessage(`⚠️ لم يتم التقاط أرقام واضحة من الصورة. يمكنك استخدام الإضافة السريعة بالأسفل.`, true);
             }
             renderStagingTable();
         }
@@ -1131,8 +1076,7 @@
                     (decodedText) => {
                         const matched = matchWithInventorySim(decodedText);
                         if (matched) {
-                            const tag = document.getElementById('fixedTagInput').value.trim().toUpperCase();
-                            if (addCodeToStaging(matched, tag)) {
+                            if (addCodeToStaging(matched, '')) {
                                 saveDispatchDraft();
                                 renderStagingTable();
                                 showMessage(`✅ تم التقاط السريال: ${matched}`);
@@ -1181,8 +1125,7 @@
         }
 
         function selectSuggestedSim(code) {
-            const tag = document.getElementById('fixedTagInput').value.trim().toUpperCase();
-            addCodeToStaging(code, tag);
+            addCodeToStaging(code, '');
             document.getElementById('quickSerialInput').value = '';
             document.getElementById('simSuggestions').style.display = 'none';
             saveDispatchDraft();
@@ -1195,8 +1138,7 @@
             if (!raw) return;
 
             const matched = matchWithInventorySim(raw) || raw;
-            const tag = document.getElementById('fixedTagInput').value.trim().toUpperCase();
-            addCodeToStaging(matched, tag);
+            addCodeToStaging(matched, '');
             input.value = '';
             document.getElementById('simSuggestions').style.display = 'none';
             saveDispatchDraft();
@@ -1209,8 +1151,8 @@
             if (stagingList.some(item => item.code === cleanCode)) return false;
 
             const existingSim = simsList.find(s => s.code === cleanCode);
-            const finalTag = tagCode || (existingSim && existingSim.tagCode) || document.getElementById('fixedTagInput').value.trim().toUpperCase() || '';
-            const chosenDur = document.getElementById('durationSelect').value || resolveSimDuration(existingSim);
+            const finalTag = tagCode || (existingSim && existingSim.tagCode) || '';
+            const chosenDur = resolveSimDuration(existingSim);
 
             stagingList.push({
                 code: cleanCode,
@@ -1218,14 +1160,6 @@
                 duration: chosenDur
             });
             return true;
-        }
-
-        function applyFixedTagToStaging() {
-            const fixedTag = document.getElementById('fixedTagInput').value.trim().toUpperCase();
-            if (!fixedTag) return;
-            stagingList.forEach(item => { item.tagCode = fixedTag; });
-            saveDispatchDraft();
-            renderStagingTable();
         }
 
         function updateStagingRowCode(idx, newVal) {
@@ -1258,10 +1192,10 @@
             renderStagingTable();
         }
 
-        function inspectSimForStaging(code, mode, overrideDur = '') {
+        function inspectSimForStaging(code, mode) {
             const sim = simsList.find(s => s.code === code);
             const category = resolveSimCategory(sim, code);
-            const duration = overrideDur || resolveSimDuration(sim, category);
+            const duration = resolveSimDuration(sim, category);
 
             if (!sim) {
                 return {
@@ -1330,7 +1264,7 @@
             let warnCount = 0;
 
             tbody.innerHTML = stagingList.map((item, idx) => {
-                const check = inspectSimForStaging(item.code, mode, item.duration);
+                const check = inspectSimForStaging(item.code, mode);
                 if (check.valid) validCount++; else warnCount++;
 
                 return `
@@ -1355,7 +1289,6 @@
         async function commitStagingBatch() {
             const mode = document.getElementById('operationMode').value;
             const actionDate = document.getElementById('actionDate').value || getTodayStr();
-            const selectedDur = document.getElementById('durationSelect').value;
 
             if (stagingList.length === 0) return;
 
@@ -1365,7 +1298,7 @@
                 return;
             }
 
-            const invalidItems = stagingList.filter(it => !inspectSimForStaging(it.code, mode, it.duration).valid);
+            const invalidItems = stagingList.filter(it => !inspectSimForStaging(it.code, mode).valid);
             if (invalidItems.length > 0) {
                 showMessage(`⚠️ يوجد عدد (${invalidItems.length}) شريحة بها تحذير (غير مضافة بالمخزون أو مصروفة مسبقاً). يرجى مراجعتها أو حذفها أولاً.`, true);
                 return;
@@ -1392,7 +1325,7 @@
                 const sim = simsList[simIdx];
                 sim.category = resolveSimCategory(sim, stItem.code);
                 sim.company = sim.category;
-                sim.duration = selectedDur || stItem.duration || resolveSimDuration(sim, sim.category);
+                sim.duration = resolveSimDuration(sim, sim.category);
 
                 if (mode === 'dispatch') {
                     sim.status = 'dispatched';
@@ -1566,7 +1499,7 @@
             document.getElementById('editSimStatus').value = sim.status || '';
             document.getElementById('editSimTag').value = sim.tagCode || '';
 
-            renderDurationDropdowns(document.getElementById('durationSelect').value);
+            renderDurationDropdowns();
             const editDurSelect = document.getElementById('editSimDuration');
             const curDur = resolveSimDuration(sim);
             if (editDurSelect) editDurSelect.value = curDur;
@@ -1644,7 +1577,6 @@
             showMessage(`✅ تم تحديث بيانات الشريحة (${code}) بنجاح!`);
         }
 
-        // زر إكس (✕) لحذف حركة الصرف/المرتجع وإرجاع الشريحة لحالتها الأصلية بالمخزون
         window.deleteDispatchRecord = async function(code) {
             const idx = simsList.findIndex(s => s.code === code);
             if (idx === -1) return;
