@@ -398,7 +398,7 @@
                 const cloudList = [];
                 querySnapshot.forEach((docSnap) => {
                     const data = docSnap.data();
-                    cloudList.push({ id: docSnap.id, ...data });
+                    cloudList.push({ ...data, id: docSnap.id });
                     if (data.marketName && data.marketName.trim()) {
                         mergedMarkets.add(data.marketName.trim());
                     }
@@ -418,6 +418,68 @@
             } finally {
                 renderMarketsDropdown();
                 renderCustomers();
+            }
+        }
+
+        // دالة لتحديث اسم العميل في المبيعات والفواتير المرتبطة به تلقائياً
+        async function cascadeCustomerUpdateToSales(oldName, newData) {
+            if (!oldName) return;
+            const cleanOldName = oldName.trim();
+            const cleanNewName = newData.clientName.trim();
+
+            const localSales = JSON.parse(localStorage.getItem('sales_records_offline') || '[]');
+            let localChanged = false;
+
+            if (Array.isArray(localSales)) {
+                localSales.forEach(sale => {
+                    if (sale.clientName && sale.clientName.trim() === cleanOldName) {
+                        sale.clientName = cleanNewName;
+                        if (newData.shopName) sale.shopName = newData.shopName;
+                        if (newData.marketName) sale.marketName = newData.marketName;
+                        if (newData.phone) sale.phone = newData.phone;
+                        localChanged = true;
+                    }
+                    if (sale.customerName && sale.customerName.trim() === cleanOldName) {
+                        sale.customerName = cleanNewName;
+                        localChanged = true;
+                    }
+                });
+                if (localChanged) {
+                    localStorage.setItem('sales_records_offline', JSON.stringify(localSales));
+                }
+            }
+
+            if (window.db) {
+                const salesCollections = ["sales", "sales_records"];
+                for (const colName of salesCollections) {
+                    try {
+                        const snap = await window.getDocs(window.collection(window.db, colName));
+                        const updatePromises = [];
+                        snap.forEach(docSnap => {
+                            const sData = docSnap.data();
+                            const updates = {};
+                            if (sData.clientName && sData.clientName.trim() === cleanOldName) {
+                                updates.clientName = cleanNewName;
+                                if (newData.shopName) updates.shopName = newData.shopName;
+                                if (newData.marketName) updates.marketName = newData.marketName;
+                                if (newData.phone) updates.phone = newData.phone;
+                            }
+                            if (sData.customerName && sData.customerName.trim() === cleanOldName) {
+                                updates.customerName = cleanNewName;
+                            }
+                            if (Object.keys(updates).length > 0) {
+                                updatePromises.push(
+                                    window.updateDoc(window.doc(window.db, colName, docSnap.id), updates)
+                                );
+                            }
+                        });
+                        if (updatePromises.length > 0) {
+                            await Promise.all(updatePromises);
+                        }
+                    } catch (e) {
+                        console.warn(`تعذر تحديث المجموعة ${colName}:`, e);
+                    }
+                }
             }
         }
 
@@ -453,40 +515,49 @@
 
             try {
                 if (editId) {
-                    const index = customers.findIndex(c => c.id === editId);
+                    const index = customers.findIndex(c => String(c.id) === String(editId));
+                    let oldClientName = '';
+
                     if (index !== -1) {
+                        oldClientName = customers[index].clientName || '';
                         customerData.createdAt = customers[index].createdAt || Date.now();
-                        customers[index] = { id: editId, ...customerData };
+                        customers[index] = { ...customerData, id: editId };
                     }
-                    if (window.db && !editId.startsWith('local_')) {
-                        const docRef = window.doc(window.db, "customers", editId);
+
+                    // حفظ محلي فوري أولاً
+                    localStorage.setItem('customers_records_offline', JSON.stringify(customers));
+
+                    if (window.db && !String(editId).startsWith('local_')) {
+                        const docRef = window.doc(window.db, "customers", String(editId));
                         await window.updateDoc(docRef, customerData);
+                    }
+
+                    if (oldClientName && oldClientName !== customerData.clientName) {
+                        await cascadeCustomerUpdateToSales(oldClientName, customerData);
                     }
                 } else {
                     customerData.createdAt = Date.now();
                     if (window.db) {
                         const docRef = await window.addDoc(window.collection(window.db, "customers"), customerData);
-                        customers.unshift({ id: docRef.id, ...customerData });
+                        customers.unshift({ ...customerData, id: docRef.id });
                     } else {
-                        customers.unshift({ id: 'local_' + Date.now(), ...customerData });
+                        customers.unshift({ ...customerData, id: 'local_' + Date.now() });
                     }
+                    localStorage.setItem('customers_records_offline', JSON.stringify(customers));
                 }
 
-                localStorage.setItem('customers_records_offline', JSON.stringify(customers));
                 resetForm();
                 renderCustomers();
             } catch (error) {
                 console.error("خطأ أثناء حفظ العميل:", error);
                 if (!editId) {
                     customerData.createdAt = Date.now();
-                    customers.unshift({ id: 'local_' + Date.now(), ...customerData });
-                    localStorage.setItem('customers_records_offline', JSON.stringify(customers));
-                    resetForm();
-                    renderCustomers();
-                    alert('تم حفظ العميل محلياً على الجهاز (تعذر الاتصال بالسحابة حالياً).');
-                } else {
-                    alert('حدث خطأ أثناء تحديث بيانات العميل.');
+                    customers.unshift({ ...customerData, id: 'local_' + Date.now() });
                 }
+                localStorage.setItem('customers_records_offline', JSON.stringify(customers));
+                resetForm();
+                renderCustomers();
+                alert('تم حفظ البيانات محلياً على الجهاز (تعذر الاتصال بالسحابة حالياً).');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = '💾 حفظ بيانات العميل';
@@ -561,7 +632,7 @@
         }
 
         function editCustomer(id) {
-            const c = customers.find(item => item.id === id);
+            const c = customers.find(item => String(item.id) === String(id));
             if (!c) return;
 
             document.getElementById('editCustomerId').value = c.id;
@@ -589,13 +660,13 @@
         async function deleteCustomer(id) {
             if (!confirm('هل أنت متأكد من حذف هذا العميل؟')) return;
 
-            customers = customers.filter(c => c.id !== id);
+            customers = customers.filter(c => String(c.id) !== String(id));
             localStorage.setItem('customers_records_offline', JSON.stringify(customers));
             renderCustomers();
 
             try {
-                if (window.db && !id.startsWith('local_')) {
-                    await window.deleteDoc(window.doc(window.db, "customers", id));
+                if (window.db && !String(id).startsWith('local_')) {
+                    await window.deleteDoc(window.doc(window.db, "customers", String(id)));
                 }
             } catch (error) {
                 console.error("خطأ أثناء حذف العميل من السحابة:", error);
