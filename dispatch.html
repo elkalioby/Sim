@@ -38,12 +38,12 @@
         input, select, button { padding: 9px 10px; width: 100%; font-size: 0.9rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; outline: none; }
         input:focus, select:focus { border-color: var(--primary-light); }
 
-        /* تنسيق نوع الحركة (أكبر) والتاريخ (أصغر) جنباً إلى جنب بارتفاع موحد */
-        .form-grid { display: grid; grid-template-columns: 1.35fr 0.65fr; gap: 8px; align-items: end; }
+        /* تنسيق نوع الحركة والتاريخ جنباً إلى جنب مع إظهار التاريخ بالكامل دون قص */
+        .form-grid { display: grid; grid-template-columns: 1.12fr 0.88fr; gap: 8px; align-items: end; }
         .form-grid > div { min-width: 0; }
         .full-width { grid-column: 1 / -1; }
 
-        .mode-select { font-weight: 800; font-size: 0.92rem; cursor: pointer; height: 42px; padding: 6px 10px; }
+        .mode-select { font-weight: 800; font-size: 0.9rem; cursor: pointer; height: 42px; padding: 6px 8px; }
         .mode-select.mode-dispatch { background: #f0fdf4; border: 2px solid var(--success); color: #166534; }
         .mode-select.mode-return { background: #fef2f2; border: 2px solid var(--danger); color: #991b1b; }
         .date-compact-input { height: 42px; padding: 6px 6px; font-size: 0.82rem; font-weight: 700; text-align: center; direction: ltr; }
@@ -146,7 +146,6 @@
             cursor: not-allowed !important; opacity: 0.65;
         }
 
-        /* حقول جدول المعاينة قابلة للكتابة اليدوية بوضوح تام */
         .serial-input-staging {
             font-family: monospace; font-weight: 800; text-align: center;
             width: 185px; min-width: 185px; padding: 7px 6px; font-size: 0.88rem;
@@ -160,10 +159,10 @@
         }
         .tag-input-staging:focus { border-color: var(--primary-light); background: #eff6ff; }
 
-        #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: 800; display: none; margin-bottom: 10px; font-size: 0.9rem; }
+        #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: 800; display: none; margin-bottom: 10px; font-size: 0.9rem; line-height: 1.5; }
 
         .filters-bar {
-            display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 8px;
+            display: grid; grid-template-columns: 1.12fr 0.88fr; gap: 8px;
             margin-bottom: 12px; background: #f1f5f9; padding: 10px; border-radius: 10px; align-items: end;
         }
         .filter-item { display: flex; flex-direction: column; min-width: 0; }
@@ -254,7 +253,6 @@
         window.doc = doc;
         window.setDoc = setDoc;
         window.getDoc = getDoc;
-        window.defaultFirebaseApiKey = firebaseConfig.apiKey;
 
         if (window.initDispatchApp) { window.initDispatchApp(); }
     </script>
@@ -430,7 +428,7 @@
         </div>
     </div>
 
-    <!-- نافذة إعداد مفتاح Gemini API (تُحفظ في Firebase مرة واحدة لكل الأجهزة) -->
+    <!-- نافذة إعداد مفتاح Gemini API -->
     <div class="modal-overlay" id="geminiKeyModal">
         <div class="modal-box">
             <h3 style="color:var(--primary); margin-bottom:8px; font-size:1.05rem;">✨ إعداد مفتاح تحليل الصور (Gemini AI)</h3>
@@ -484,13 +482,12 @@
         let customersList = [];
         let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
         let durationsList = ['30', '60'];
-        let geminiApiKey = localStorage.getItem('gemini_api_key') || '';
+        let geminiApiKey = (localStorage.getItem('gemini_api_key') || '').trim();
         let selectedCustomer = null;
         let stagingList = [];
         let tempImageUrls = [];
         let pendingFilesAfterKey = null;
 
-        // إعداد الماسح المباشر بنفس خصائص صفحة إضافة شريحة (barcode.html)
         const scannerConfig = {
             experimentalFeatures: { useBarCodeDetectorIfSupported: true },
             verbose: false
@@ -737,7 +734,7 @@
                 categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
                 durationsList = localConfig.durationsList || ['30', '60'];
                 if (localConfig.geminiApiKey) {
-                    geminiApiKey = localConfig.geminiApiKey;
+                    geminiApiKey = String(localConfig.geminiApiKey).trim();
                     localStorage.setItem('gemini_api_key', geminiApiKey);
                 }
             }
@@ -815,7 +812,7 @@
                         categoriesList = cData.categoriesList || cData.customItems || categoriesList;
                         durationsList = cData.durationsList || durationsList;
                         if (cData.geminiApiKey) {
-                            geminiApiKey = cData.geminiApiKey;
+                            geminiApiKey = String(cData.geminiApiKey).trim();
                             localStorage.setItem('gemini_api_key', geminiApiKey);
                         }
                         renderDurationDropdowns();
@@ -1044,7 +1041,6 @@
             return null;
         }
 
-        // تحويل الصورة إلى Base64 مضغوط وواضح لإرساله إلى Gemini Vision API بسرعة عالية
         function imageToBase64Jpeg(imgEl, maxDim = 1600) {
             let w = imgEl.naturalWidth || imgEl.width;
             let h = imgEl.naturalHeight || imgEl.height;
@@ -1062,65 +1058,152 @@
             return dataUrl.split(',')[1];
         }
 
-        // فحص الباركود بزوايا متعددة (0° و 90° و 270°) لدعم الصور المقلوبة أو الطولية
-        async function detectBarcodesMultiAngle(imgEl) {
+        function rotateCanvas(srcCanvas, angleDeg) {
+            if (angleDeg === 0) return srcCanvas;
+            const out = document.createElement('canvas');
+            const ctx = out.getContext('2d');
+            const w = srcCanvas.width;
+            const h = srcCanvas.height;
+            if (angleDeg === 90) {
+                out.width = h; out.height = w;
+                ctx.translate(h, 0);
+                ctx.rotate(Math.PI / 2);
+                ctx.drawImage(srcCanvas, 0, 0);
+            } else if (angleDeg === 270) {
+                out.width = h; out.height = w;
+                ctx.translate(0, w);
+                ctx.rotate(-Math.PI / 2);
+                ctx.drawImage(srcCanvas, 0, 0);
+            }
+            return out;
+        }
+
+        // فحص الشبكة الذكي للباركود (يدعم شبكة 2×3 عمودية وشبكة 3×2 أفقية مع تدوير كل خلية 0° و 90° و 270°)
+        async function detectGridBarcodesMultiAngle(imgEl) {
             if (!('BarcodeDetector' in window)) return [];
             const found = [];
             const seen = new Set();
             const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'itf'] });
+            const origW = imgEl.naturalWidth || imgEl.width;
+            const origH = imgEl.naturalHeight || imgEl.height;
 
-            const angles = [0, 90, 270];
-            const w = imgEl.naturalWidth || imgEl.width;
-            const h = imgEl.naturalHeight || imgEl.height;
+            // تجربة تخطيطين: (3 أعمدة × 2 صف) و (2 عمود × 3 صفوف) من اليمين لليسار
+            const layouts = origW >= origH
+                ? [{ rows: 2, cols: 3 }, { rows: 3, cols: 2 }]
+                : [{ rows: 3, cols: 2 }, { rows: 2, cols: 3 }];
 
-            for (const angle of angles) {
-                try {
-                    const cnv = document.createElement('canvas');
-                    const ctx = cnv.getContext('2d');
-                    if (angle === 0) {
-                        cnv.width = w; cnv.height = h;
-                        ctx.drawImage(imgEl, 0, 0);
-                    } else if (angle === 90) {
-                        cnv.width = h; cnv.height = w;
-                        ctx.translate(h, 0);
-                        ctx.rotate(Math.PI / 2);
-                        ctx.drawImage(imgEl, 0, 0);
-                    } else if (angle === 270) {
-                        cnv.width = h; cnv.height = w;
-                        ctx.translate(0, w);
-                        ctx.rotate(-Math.PI / 2);
-                        ctx.drawImage(imgEl, 0, 0);
-                    }
-                    const bitmap = await createImageBitmap(cnv);
-                    const barcodes = await detector.detect(bitmap);
-                    barcodes.forEach(b => {
-                        const matched = matchWithInventorySim(b.rawValue);
-                        if (matched && !seen.has(matched)) {
-                            seen.add(matched);
-                            found.push(matched);
+            for (const layout of layouts) {
+                const { rows, cols } = layout;
+                for (let r = 0; r < rows; r++) {
+                    // من اليمين لليسار (c من cols-1 نزولاً إلى 0)
+                    for (let c = cols - 1; c >= 0; c--) {
+                        const y0 = Math.max(0, (r / rows) - 0.04) * origH;
+                        const y1 = Math.min(1, ((r + 1) / rows) + 0.04) * origH;
+                        const x0 = Math.max(0, (c / cols) - 0.04) * origW;
+                        const x1 = Math.min(1, ((c + 1) / cols) + 0.04) * origW;
+
+                        const cellCnv = document.createElement('canvas');
+                        cellCnv.width = Math.round(x1 - x0);
+                        cellCnv.height = Math.round(y1 - y0);
+                        cellCnv.getContext('2d').drawImage(imgEl, x0, y0, cellCnv.width, cellCnv.height, 0, 0, cellCnv.width, cellCnv.height);
+
+                        for (const ang of [0, 90, 270]) {
+                            try {
+                                const rotCnv = rotateCanvas(cellCnv, ang);
+                                const bitmap = await createImageBitmap(rotCnv);
+                                const bList = await detector.detect(bitmap);
+                                for (const b of bList) {
+                                    const matched = matchWithInventorySim(b.rawValue);
+                                    if (matched && !seen.has(matched)) {
+                                        seen.add(matched);
+                                        found.push(matched);
+                                    }
+                                }
+                            } catch (e) {}
                         }
-                    });
-                } catch (e) {}
+                    }
+                }
+                if (found.length >= 6) break;
             }
             return found;
         }
 
-        // =====================================================================
-        // استدعاء Gemini Vision AI لاستخراج كل الشرائح والرموز اليدوية بدقة 100%
-        // =====================================================================
-        async function analyzeImageWithGemini(base64Jpeg, apiKeyToUse) {
-            const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-            const promptText = `Analyze this image of telecom SIM cards (such as Mobily, STC, Zain, Redbull).
-Extract ALL SIM cards visible in the image (whether arranged 2x3, 3x2, horizontal, or rotated 90 degrees vertically).
-Sort the extracted SIM cards strictly row by row from TOP to BOTTOM, and within each row from RIGHT to LEFT (من اليمين إلى اليسار).
-For each SIM card, return:
-1. "code": The full 19-digit ICCID serial number printed next to the barcode (starts with 89966, e.g. 8996603430267292232). If the long barcode is partially cut, use the 8-9 digit number inside the small SIM chip cutout combined with the 8996603430 prefix.
-2. "tagCode": The handwritten English letter + number written with a marker/pen on the blue body of the card (for example: "N120", "N78", "N74", "N64", "N76", "N73", "N52"). Convert it to uppercase without spaces (e.g. "N120"). Ignore any Arabic letter scribbles like "ع" on the QR code.
+        // محلل مرن جداً لرد Gemini سواء كان Array أو Object أو نص
+        function parseGeminiResponseText(rawText) {
+            if (!rawText) return [];
+            const cleaned = String(rawText).replace(/```json|```/gi, '').trim();
 
-Return ONLY a valid JSON array of objects like:
-[{"code": "8996603430267292232", "tagCode": "N120"}]`;
+            const normalizeItem = (obj) => {
+                if (!obj || typeof obj !== 'object') return null;
+                const rawCode = obj.code || obj.serial || obj.iccid || obj.barcode || obj.number || '';
+                const rawTag = obj.tagCode || obj.tag || obj.handwritten || obj.label || obj.mark || '';
+                const cleanDigits = normalizeDigits(rawCode).replace(/[^0-9]/g, '');
+                if (cleanDigits.length >= 8) {
+                    return {
+                        code: cleanDigits,
+                        tagCode: String(rawTag || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+                    };
+                }
+                return null;
+            };
+
+            try {
+                const parsed = JSON.parse(cleaned);
+                if (Array.isArray(parsed)) {
+                    return parsed.map(normalizeItem).filter(Boolean);
+                }
+                if (parsed && typeof parsed === 'object') {
+                    for (const key of Object.keys(parsed)) {
+                        if (Array.isArray(parsed[key])) {
+                            const arr = parsed[key].map(normalizeItem).filter(Boolean);
+                            if (arr.length > 0) return arr;
+                        }
+                    }
+                    const single = normalizeItem(parsed);
+                    if (single) return [single];
+                }
+            } catch (e) {
+                // محاولة استخراج أول مصفوفة [...] من النص
+                const arrStart = cleaned.indexOf('[');
+                const arrEnd = cleaned.lastIndexOf(']');
+                if (arrStart !== -1 && arrEnd > arrStart) {
+                    try {
+                        const subArr = JSON.parse(cleaned.substring(arrStart, arrEnd + 1));
+                        if (Array.isArray(subArr)) {
+                            return subArr.map(normalizeItem).filter(Boolean);
+                        }
+                    } catch (e2) {}
+                }
+            }
+
+            // استخراج احتياطي بالأرقام من النص الخام لو لم يكن JSON
+            const fallbackItems = [];
+            const iccidRegex = /89966\d{12,15}/g;
+            const tagRegex = /\b([A-Za-z]\s*\d{1,4})\b/g;
+            const codes = cleaned.match(iccidRegex) || [];
+            const tags = (cleaned.match(tagRegex) || []).map(t => t.toUpperCase().replace(/\s+/g, ''));
+            codes.forEach((c, idx) => {
+                fallbackItems.push({
+                    code: c,
+                    tagCode: tags[idx] || tags[0] || ''
+                });
+            });
+            return fallbackItems;
+        }
+
+        async function analyzeImageWithGemini(base64Jpeg, apiKeyToUse) {
+            const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-lite'];
+            const promptText = `Analyze this image of telecom SIM cards (Mobily, STC, Zain, Redbull).
+There are multiple SIM cards in the photo (for example 6 SIM cards arranged in a 2x3 or 3x2 grid, either horizontal or rotated 90 degrees vertically).
+Read ALL SIM cards in the image, ordered row by row from TOP to BOTTOM, and within each row from RIGHT to LEFT.
+For every SIM card, extract:
+1. "code": The 19-digit ICCID serial number printed beside the long barcode (starts with 8996603430... or 89966...). Note: the last 8 digits are also printed inside the white SIM chip window. Read every single digit carefully.
+2. "tagCode": The handwritten English letter + digits written with a pen/marker on the blue surface of the card (such as "N120", "N78", "N74", "N64", "N76", "N73", "N52"). Format as uppercase English letter followed by digits without spaces (e.g. "N120"). Ignore any scribble on top of the QR code.
+
+Return a JSON array of objects, where each object has "code" and "tagCode".`;
 
             let lastErr = null;
+
             for (const modelName of modelsToTry) {
                 try {
                     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKeyToUse)}`;
@@ -1136,7 +1219,18 @@ Return ONLY a valid JSON array of objects like:
                             }],
                             generationConfig: {
                                 temperature: 0.1,
-                                responseMimeType: "application/json"
+                                responseMimeType: "application/json",
+                                responseSchema: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            code: { type: "STRING" },
+                                            tagCode: { type: "STRING" }
+                                        },
+                                        required: ["code", "tagCode"]
+                                    }
+                                }
                             }
                         })
                     });
@@ -1144,33 +1238,41 @@ Return ONLY a valid JSON array of objects like:
                     if (!resp.ok) {
                         const errJson = await resp.json().catch(() => ({}));
                         const errMsg = (errJson.error && errJson.error.message) || `HTTP ${resp.status}`;
-                        lastErr = new Error(errMsg);
-                        // لو المفتاح غير مفعل أو غير صالح، نتوقف ونطلب المفتاح
-                        if (resp.status === 400 || resp.status === 403 || errMsg.includes('API_KEY') || errMsg.includes('API key') || errMsg.includes('SERVICE_DISABLED')) {
-                            lastErr.isKeyError = true;
-                            break;
+                        const errObj = new Error(errMsg);
+                        if (resp.status === 400 || resp.status === 403 || errMsg.includes('API_KEY') || errMsg.includes('API key') || errMsg.includes('SERVICE_DISABLED') || errMsg.includes(' blocked')) {
+                            errObj.isKeyError = true;
+                            throw errObj;
                         }
+                        lastErr = errObj;
                         continue;
                     }
 
                     const result = await resp.json();
-                    const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-                    const cleanedJson = rawText.replace(/```json|```/g, '').trim();
-                    const parsed = JSON.parse(cleanedJson);
-                    if (Array.isArray(parsed)) {
-                        return parsed;
+                    const rawText = result?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('\n') || '';
+                    const extracted = parseGeminiResponseText(rawText);
+                    if (extracted.length > 0) {
+                        return extracted;
                     }
                 } catch (e) {
                     lastErr = e;
+                    if (e && e.isKeyError) throw e;
                 }
             }
-            throw lastErr || new Error("تعذر الاتصال بـ Gemini API");
+            throw lastErr || new Error("لم يتمكن المحرك من قراءة الصورة");
         }
 
         async function handleImagesSelected(event) {
             const files = Array.from(event.target.files || []);
             event.target.value = '';
             if (files.length === 0) return;
+
+            if (!geminiApiKey) {
+                pendingFilesAfterKey = files;
+                openGeminiKeyModal();
+                showMessage('🔑 يرجى لصق مفتاح Gemini API المجاني أولاً لتفعيل قراءة الصور بالذكاء الاصطناعي.', true);
+                return;
+            }
+
             await processFilesWithGemini(files);
         }
 
@@ -1183,7 +1285,8 @@ Return ONLY a valid JSON array of objects like:
             strip.style.display = 'flex';
 
             let totalAddedFromImages = 0;
-            const activeKey = geminiApiKey || window.defaultFirebaseApiKey || '';
+            let totalAlreadyInStaging = 0;
+            let lastErrorText = '';
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -1199,65 +1302,76 @@ Return ONLY a valid JSON array of objects like:
                     const imgEl = await loadImageElement(objUrl);
                     const base64Jpeg = imageToBase64Jpeg(imgEl, 1600);
 
-                    // نشغل فحص الباركود متعدد الزوايا بالتوازي مع تحليل Gemini AI
-                    const [geminiItems, multiAngleBarcodes] = await Promise.all([
-                        analyzeImageWithGemini(base64Jpeg, activeKey),
-                        detectBarcodesMultiAngle(imgEl)
+                    // تشغيل تحليل Gemini بالتوازي مع الفحص الشبكي للباركود (0° و 90° و 270°)
+                    const [geminiResult, gridBarcodes] = await Promise.allSettled([
+                        analyzeImageWithGemini(base64Jpeg, geminiApiKey),
+                        detectGridBarcodesMultiAngle(imgEl)
                     ]);
+
+                    const geminiItems = (geminiResult.status === 'fulfilled' && Array.isArray(geminiResult.value)) ? geminiResult.value : [];
+                    const barcodeList = (gridBarcodes.status === 'fulfilled' && Array.isArray(gridBarcodes.value)) ? gridBarcodes.value : [];
+
+                    if (geminiResult.status === 'rejected') {
+                        const err = geminiResult.reason;
+                        console.warn("خطأ Gemini:", err);
+                        if (err && err.isKeyError) {
+                            progressBox.style.display = 'none';
+                            pendingFilesAfterKey = files.slice(i);
+                            openGeminiKeyModal();
+                            showMessage(`🔑 مفتاح Gemini غير مفعل أو غير صحيح (${err.message}). يرجى لصق المفتاح الصحيح من Google AI Studio.`, true);
+                            return;
+                        }
+                        lastErrorText = (err && err.message) ? err.message : '';
+                    }
 
                     const seenInFile = new Set();
 
-                    if (Array.isArray(geminiItems) && geminiItems.length > 0) {
-                        geminiItems.forEach(item => {
-                            const rawCode = String(item.code || '').trim();
-                            const resolvedCode = matchWithInventorySim(rawCode) || normalizeDigits(rawCode).replace(/[^0-9]/g, '');
-                            let cleanTag = String(item.tagCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    // 1. إضافة نتائج Gemini (السريال + الرمز المكتوب بخط اليد)
+                    geminiItems.forEach(item => {
+                        const rawCode = String(item.code || '').trim();
+                        const resolvedCode = matchWithInventorySim(rawCode) || normalizeDigits(rawCode).replace(/[^0-9]/g, '');
+                        const cleanTag = String(item.tagCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-                            if (resolvedCode && resolvedCode.length >= 8 && !seenInFile.has(resolvedCode)) {
-                                seenInFile.add(resolvedCode);
-                                if (addCodeToStaging(resolvedCode, cleanTag)) {
-                                    totalAddedFromImages++;
-                                }
-                            }
-                        });
-                    }
+                        if (resolvedCode && resolvedCode.length >= 8 && !seenInFile.has(resolvedCode)) {
+                            seenInFile.add(resolvedCode);
+                            const res = addCodeToStaging(resolvedCode, cleanTag);
+                            if (res === 'added') totalAddedFromImages++;
+                            else if (res === 'exists') totalAlreadyInStaging++;
+                        }
+                    });
 
-                    // في حال التقطت العدسة باركود إضافي لم يظهر، نضيفه أيضاً
-                    const commonTag = (geminiItems && geminiItems[0] && geminiItems[0].tagCode)
-                        ? String(geminiItems[0].tagCode).toUpperCase().replace(/[^A-Z0-9]/g, '')
-                        : '';
-                    multiAngleBarcodes.forEach(bCode => {
+                    // 2. استكمال أي باركود إضافي التقطه الفحص الشبكي متعدد الزوايا
+                    const dominantTag = geminiItems.find(it => it.tagCode)?.tagCode || '';
+                    barcodeList.forEach(bCode => {
                         if (!seenInFile.has(bCode)) {
                             seenInFile.add(bCode);
-                            if (addCodeToStaging(bCode, commonTag)) {
-                                totalAddedFromImages++;
-                            }
+                            const res = addCodeToStaging(bCode, dominantTag);
+                            if (res === 'added') totalAddedFromImages++;
+                            else if (res === 'exists') totalAlreadyInStaging++;
                         }
                     });
 
                 } catch (err) {
-                    console.warn("خطأ أثناء تحليل Gemini:", err);
-                    if (err && err.isKeyError) {
-                        progressBox.style.display = 'none';
-                        pendingFilesAfterKey = files.slice(i);
-                        openGeminiKeyModal();
-                        showMessage('🔑 يرجى لصق مفتاح Gemini API المجاني مرة واحدة لتفعيل تحليل Gemini للصور.', true);
-                        return;
-                    }
+                    console.warn("خطأ غير متوقع في معالجة الصورة:", err);
+                    lastErrorText = err.message || '';
                 }
             }
 
             progressBox.style.display = 'none';
             saveDispatchDraft();
+            renderStagingTable();
 
             if (totalAddedFromImages > 0) {
                 playBeep(true);
-                showMessage(`✨ تم تحليل الصورة بواسطة Gemini واستخراج (${totalAddedFromImages}) شريحة بالرموز اليدوية بنجاح!`);
+                showMessage(`✨ تم تحليل الصورة واستخراج (${totalAddedFromImages}) شريحة بالرموز اليدوية بنجاح!`);
+            } else if (totalAlreadyInStaging > 0) {
+                playBeep(true);
+                showMessage(`ℹ️ الشرائح الموجودة في الصورة (${totalAlreadyInStaging}) مضافة بالفعل في جدول المراجعة بالأسفل.`);
             } else {
                 playBeep(false);
-                showMessage(`⚠️ لم يتم استخراج شرائح جديدة (أو أنها مضافة بالفعل في الجدول بالأسفل).`, true);
+                const extraErr = lastErrorText ? ` (${lastErrorText})` : '';
+                showMessage(`⚠️ تعذر استخراج الشرائح من الصورة${extraErr}. تأكد من اتصال الإنترنت أو اضغط 🔑 للتحقق من مفتاح Gemini.`, true);
             }
-            renderStagingTable();
         }
 
         function loadImageElement(url) {
@@ -1294,7 +1408,7 @@ Return ONLY a valid JSON array of objects like:
         }
 
         // =====================================================================
-        // نظام المسح المباشر للباركود مطابق تماماً لملف إضافة شريحة (barcode.html)
+        // نظام المسح المباشر للباركود مطابق لملف إضافة شريحة (barcode.html)
         // =====================================================================
         async function applyZoom(val) {
             document.getElementById('zoomVal').innerText = val + 'x';
@@ -1426,7 +1540,7 @@ Return ONLY a valid JSON array of objects like:
                 return;
             }
 
-            if (addCodeToStaging(matched, '')) {
+            if (addCodeToStaging(matched, '') === 'added') {
                 playBeep(true);
                 saveDispatchDraft();
                 renderStagingTable();
@@ -1495,7 +1609,7 @@ Return ONLY a valid JSON array of objects like:
                 if (tagCode && !stagingList[existingIdx].tagCode) {
                     stagingList[existingIdx].tagCode = tagCode;
                 }
-                return false;
+                return 'exists';
             }
 
             const existingSim = simsList.find(s => s.code === cleanCode);
@@ -1507,7 +1621,7 @@ Return ONLY a valid JSON array of objects like:
                 tagCode: finalTag,
                 duration: chosenDur
             });
-            return true;
+            return 'added';
         }
 
         function updateStagingRowCode(idx, newVal) {
@@ -1639,8 +1753,6 @@ Return ONLY a valid JSON array of objects like:
             }).join('');
 
             counterEl.innerText = `📋 إجمالي الشرائح: (${stagingList.length}) — صالحة: (${validCount}) | تحذيرات: (${warnCount})`;
-
-            // تعطيل زر الاعتماد إذا كانت هناك أي شريحة مصروفة مسبقاً أو بها تحذير
             confirmBtn.disabled = (warnCount > 0);
         }
 
