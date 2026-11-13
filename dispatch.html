@@ -23,27 +23,25 @@
 
         .page-header { text-align: center; color: var(--primary); margin-bottom: 12px; font-size: 1.25rem; font-weight: 800; }
 
-        /* المربعات الإحصائية العلوية */
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-        .stat-box { background: var(--card); border-radius: 12px; padding: 10px 8px; text-align: center; border: 1.5px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
+        /* المربعات الإحصائية العلوية (مربعان فقط) */
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+        .stat-box { background: var(--card); border-radius: 12px; padding: 12px 10px; text-align: center; border: 1.5px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
         .stat-box.dispatched { background: #f0fdf4; border-color: #bbf7d0; }
         .stat-box.returned { background: #fef2f2; border-color: #fecaca; }
-        .stat-box.net { background: #eff6ff; border-color: #bfdbfe; }
-        .stat-title { font-size: 0.78rem; font-weight: 800; color: #475569; margin-bottom: 4px; }
-        .stat-val { font-size: 1.25rem; font-weight: 900; }
+        .stat-title { font-size: 0.82rem; font-weight: 800; color: #475569; margin-bottom: 4px; }
+        .stat-val { font-size: 1.35rem; font-weight: 900; }
         .stat-box.dispatched .stat-val { color: var(--success); }
         .stat-box.returned .stat-val { color: var(--danger); }
-        .stat-box.net .stat-val { color: var(--primary-light); }
 
         .card { background: var(--card); padding: 16px; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid var(--border); }
-        .card-title { font-size: 1.05rem; font-weight: 800; color: var(--primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .card-title { font-size: 1.08rem; font-weight: 800; color: var(--primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
 
         label { display: block; margin-top: 10px; margin-bottom: 4px; font-weight: 700; font-size: 0.85rem; color: #334155; }
         input, select, button { padding: 10px 12px; width: 100%; font-size: 0.92rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; outline: none; }
         input:focus, select:focus { border-color: var(--primary-light); }
 
-        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .full-width { grid-column: span 2; }
+        .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .full-width { grid-column: 1 / -1; }
 
         /* نوع الحركة */
         .mode-select { font-weight: 800; font-size: 0.95rem; cursor: pointer; }
@@ -68,36 +66,8 @@
             align-items: center; justify-content: space-between; border: 1px solid #93c5fd;
         }
 
-        /* أزرار الكاميرا ورفع الصور */
-        .upload-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
-        .btn-upload {
-            border: none; font-weight: 800; font-size: 0.88rem; padding: 12px 10px;
-            cursor: pointer; border-radius: 10px; color: white; display: flex;
-            align-items: center; justify-content: center; gap: 6px; transition: 0.2s;
-        }
-        .btn-upload:active { transform: scale(0.98); }
-        .btn-gallery { background: #0284c7; }
-        .btn-camera-shot { background: #7c3aed; }
-        .btn-live-cam { background: #2563eb; }
-
-        #reader { width: 100%; margin-top: 10px; border-radius: 10px; overflow: hidden; }
-        #ocrProgressBox {
-            display: none; margin-top: 10px; background: #eff6ff; border: 1px dashed #60a5fa;
-            padding: 12px; border-radius: 10px; text-align: center; font-weight: 800; color: var(--primary); font-size: 0.88rem;
-        }
-
-        /* شريط معاينة الصور المؤقتة (في الذاكرة فقط) */
-        .temp-images-strip {
-            display: none; gap: 8px; overflow-x: auto; padding: 8px; margin-top: 10px;
-            background: #f8fafc; border-radius: 10px; border: 1px solid var(--border);
-        }
-        .temp-img-thumb {
-            width: 68px; height: 68px; object-fit: cover; border-radius: 8px;
-            border: 2px solid #cbd5e1; cursor: pointer; flex-shrink: 0;
-        }
-
         /* الإدخال السريع بالسريال أو آخر أرقامه */
-        .quick-add-box { position: relative; margin-top: 10px; }
+        .quick-add-box { position: relative; }
         .quick-row { display: flex; gap: 6px; align-items: center; }
         .quick-row input { flex: 1; font-family: monospace; font-size: 0.92rem; }
         .btn-quick-add { width: auto; background: var(--success); color: white; border: none; font-weight: 800; padding: 10px 16px; cursor: pointer; white-space: nowrap; }
@@ -111,6 +81,35 @@
             display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;
         }
         .sim-suggestion-item:hover { background: #f0fdf4; }
+
+        /* أزرار الكاميرا ورفع الصور (أيقونات فقط بدون نصوص) */
+        .upload-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+        .btn-upload-icon {
+            border: none; font-size: 1.5rem; height: 50px;
+            cursor: pointer; border-radius: 12px; color: white; display: flex;
+            align-items: center; justify-content: center; transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .btn-upload-icon:active { transform: scale(0.96); }
+        .btn-gallery { background: #0284c7; }
+        .btn-camera-shot { background: #7c3aed; }
+        .btn-live-cam { background: #2563eb; }
+
+        #reader { width: 100%; margin-top: 10px; border-radius: 10px; overflow: hidden; }
+        #ocrProgressBox {
+            display: none; margin-top: 10px; background: #eff6ff; border: 1px dashed #60a5fa;
+            padding: 12px; border-radius: 10px; text-align: center; font-weight: 800; color: var(--primary); font-size: 0.88rem;
+        }
+
+        /* شريط معاينة الصور المؤقتة */
+        .temp-images-strip {
+            display: none; gap: 8px; overflow-x: auto; padding: 8px; margin-top: 10px;
+            background: #f8fafc; border-radius: 10px; border: 1px solid var(--border);
+        }
+        .temp-img-thumb {
+            width: 68px; height: 68px; object-fit: cover; border-radius: 8px;
+            border: 2px solid #cbd5e1; cursor: pointer; flex-shrink: 0;
+        }
 
         /* جدول المعاينة قبل الاعتماد */
         #stagingSection { display: none; margin-top: 14px; border-top: 2px dashed #cbd5e1; padding-top: 12px; }
@@ -128,7 +127,7 @@
         #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: 800; display: none; margin-bottom: 10px; font-size: 0.9rem; }
 
         /* الفلتر والبحث */
-        .filters-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-bottom: 12px; background: #f1f5f9; padding: 10px; border-radius: 10px; }
+        .filters-bar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; background: #f1f5f9; padding: 10px; border-radius: 10px; }
         .search-input { font-size: 0.95rem; font-weight: 700; border: 2px solid #cbd5e1; padding: 11px 14px; margin-bottom: 12px; }
 
         /* ملخص العملاء عند البحث بالرمز مثل N115 */
@@ -151,19 +150,27 @@
         th { background: #1e293b; color: white; font-weight: 700; }
         .serial-cell { font-family: monospace; font-weight: 800; font-size: 0.86rem; letter-spacing: 0.4px; }
         .tag-badge { background: #ede9fe; color: #5b21b6; padding: 3px 9px; border-radius: 6px; font-weight: 900; font-family: monospace; font-size: 0.85rem; }
-        .cat-badge { background: #dbeafe; color: var(--primary); padding: 3px 8px; border-radius: 6px; font-weight: 700; }
+        .cat-badge { background: #dbeafe; color: var(--primary); padding: 3px 9px; border-radius: 6px; font-weight: 800; }
+        .dur-badge { background: #fef3c7; color: #b45309; padding: 3px 9px; border-radius: 6px; font-weight: 800; }
         .status-ok { font-size: 1.05rem; font-weight: 900; color: var(--success); }
         .status-ret { font-size: 1.05rem; font-weight: 900; color: var(--danger); }
 
         .warn-pill { background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; display: inline-block; }
         .ready-pill { background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; display: inline-block; }
 
-        .btn-sm { width: auto; padding: 5px 9px; font-size: 0.76rem; font-weight: 800; border: none; border-radius: 6px; cursor: pointer; }
+        .btn-sm { width: auto; padding: 5px 9px; font-size: 0.78rem; font-weight: 800; border: none; border-radius: 6px; cursor: pointer; }
         .btn-sm-warn { background: #fef3c7; color: #b45309; }
         .btn-sm-danger { background: #fee2e2; color: #dc2626; }
         .btn-sm-blue { background: #e0f2fe; color: #0369a1; }
 
-        .sync-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; background: #dcfce7; color: #166534; font-weight: 800; }
+        .action-btns-wrap { display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
+        .icon-action-btn {
+            width: 32px; height: 32px; padding: 0; border: none; border-radius: 7px;
+            cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+            font-size: 0.9rem; font-weight: bold;
+        }
+        .icon-edit-btn { background: #fef3c7; color: #b45309; }
+        .icon-del-btn { background: #fee2e2; color: #dc2626; }
 
         /* نافذة تكبير الصورة وتعديل السجل */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; justify-content: center; align-items: center; padding: 15px; }
@@ -172,8 +179,7 @@
 
         @media (max-width: 600px) {
             .form-grid { grid-template-columns: 1fr; }
-            .full-width { grid-column: span 1; }
-            .upload-actions { grid-template-columns: 1fr; }
+            .filters-bar { grid-template-columns: 1fr; }
         }
     </style>
 
@@ -207,7 +213,7 @@
 
     <h3 class="page-header">🔄 صرف ومرتجع الشرائح للعملاء</h3>
 
-    <!-- عدادات الإحصائيات السريعة -->
+    <!-- عدادات الإحصائيات السريعة (المنصرف والمرتجع فقط) -->
     <div class="stats-grid">
         <div class="stat-box dispatched">
             <div class="stat-title">✅ إجمالي المنصرف</div>
@@ -217,27 +223,25 @@
             <div class="stat-title">❌ إجمالي المرتجع</div>
             <div class="stat-val" id="statReturnedCount">0</div>
         </div>
-        <div class="stat-box net">
-            <div class="stat-title">📦 الصافي لدى العملاء</div>
-            <div class="stat-val" id="statNetCount">0</div>
-        </div>
     </div>
 
-    <!-- كارت تسجيل حركة صرف أو مرتجع -->
+    <!-- كارت تسجيل حركة صرف أو مرتجع (بدون عناوين زائدة) -->
     <div class="card">
-        <div class="card-title">
-            <span>📸 تسجيل حركة شرائح بالصور أو الكاميرا</span>
-            <span class="sync-badge" id="syncStatusBadge">☁️ مزامنة وحفظ تلقائي</span>
-        </div>
-
         <div id="msg"></div>
 
         <div class="form-grid">
             <div>
                 <label>نوع الحركة *</label>
                 <select id="operationMode" class="mode-select mode-dispatch" onchange="onModeChange()">
-                    <option value="dispatch">📤 صرف (بيع وتسليم للعميل ✅)</option>
-                    <option value="return">📥 مرتجع (استرجاع من العميل ❌)</option>
+                    <option value="dispatch">📤 صرف (✅)</option>
+                    <option value="return">📥 مرتجع (❌)</option>
+                </select>
+            </div>
+
+            <div>
+                <label>المدة</label>
+                <select id="durationSelect" onchange="onDurationSelectChange()">
+                    <option value="">تلقائي (حسب المخزون)</option>
                 </select>
             </div>
 
@@ -259,27 +263,37 @@
 
             <!-- خانة تثبيت الرمز (مثل N115) -->
             <div class="full-width">
-                <label>تثبيت الرمز المكتوب على الشرائح (اختياري - مثال: N115)</label>
+                <label>تثبيت الرمز المكتوب على الشرائح (مثال: N115)</label>
                 <div class="quick-row">
-                    <input type="text" id="fixedTagInput" placeholder="🔤 اكتب الحرف والرقم مثل N115 ليُطبق تلقائياً أو يُستخرج من الصورة..." oninput="this.value = this.value.toUpperCase(); saveDispatchDraft();">
-                    <button type="button" class="btn-quick-add" style="background:#0284c7;" onclick="applyFixedTagToStaging()">تطبيق على القائمة</button>
+                    <input type="text" id="fixedTagInput" placeholder="🔤 اكتب الحرف والرقم مثل N115..." oninput="this.value = this.value.toUpperCase(); saveDispatchDraft();">
+                    <button type="button" class="btn-quick-add" style="background:#0284c7;" onclick="applyFixedTagToStaging()">تطبيق</button>
                 </div>
+            </div>
+
+            <!-- الإضافة السريعة للسريال تحت تثبيت الرمز مباشرة -->
+            <div class="full-width quick-add-box">
+                <label>⚡ إضافة سريعة بالسريال الكامل أو بآخر 4 أو 5 أرقام منه (مثال: 92277):</label>
+                <div class="quick-row">
+                    <input type="text" id="quickSerialInput" inputmode="numeric" placeholder="✍️ اكتب السريال أو آخر أرقام منه..." oninput="onQuickSerialInput(); saveDispatchDraft();" onkeydown="if(event.key==='Enter') addQuickSerial()">
+                    <button type="button" class="btn-quick-add" onclick="addQuickSerial()">➕</button>
+                </div>
+                <div id="simSuggestions" class="sim-suggestions"></div>
             </div>
         </div>
 
-        <!-- أزرار رفع الصور أو التصوير -->
+        <!-- أزرار رفع الصور أو التصوير (أيقونات فقط بدون نصوص) -->
         <input type="file" id="galleryFilesInput" accept="image/*" multiple style="display:none;" onchange="handleImagesSelected(event)">
         <input type="file" id="cameraShotInput" accept="image/*" capture="environment" style="display:none;" onchange="handleImagesSelected(event)">
 
         <div class="upload-actions">
-            <button type="button" class="btn-upload btn-gallery" onclick="document.getElementById('galleryFilesInput').click()">
-                📁 رفع صور الشرائح (صورة أو أكثر)
+            <button type="button" class="btn-upload-icon btn-gallery" onclick="document.getElementById('galleryFilesInput').click()" title="رفع صور من الهاتف">
+                📁
             </button>
-            <button type="button" class="btn-upload btn-camera-shot" onclick="document.getElementById('cameraShotInput').click()">
-                📷 تصوير الشرائح بالكاميرا
+            <button type="button" class="btn-upload-icon btn-camera-shot" onclick="document.getElementById('cameraShotInput').click()" title="تصوير بالكاميرا">
+                📷
             </button>
-            <button type="button" id="liveScanBtn" class="btn-upload btn-live-cam" onclick="toggleLiveScanner()">
-                🎥 مسح مباشر للباركود
+            <button type="button" id="liveScanBtn" class="btn-upload-icon btn-live-cam" onclick="toggleLiveScanner()" title="مسح مباشر للباركود">
+                🎥
             </button>
         </div>
 
@@ -288,16 +302,6 @@
 
         <!-- معاينة الصور المؤقتة بدون حفظها في قاعدة البيانات -->
         <div id="tempImagesStrip" class="temp-images-strip" title="اضغط على أي صورة لتكبيرها ومراجعتها"></div>
-
-        <!-- البحث والإدخال اليدوي السريع بالسريال أو آخر 4-5 أرقام -->
-        <div class="quick-add-box">
-            <label>⚡ إضافة سريعة بالسريال الكامل أو بآخر 4 أو 5 أرقام منه (مثال: 92277):</label>
-            <div class="quick-row">
-                <input type="text" id="quickSerialInput" inputmode="numeric" placeholder="✍️ اكتب السريال أو آخر أرقام منه للبحث الفوري في المخزون..." oninput="onQuickSerialInput(); saveDispatchDraft();" onkeydown="if(event.key==='Enter') addQuickSerial()">
-                <button type="button" class="btn-quick-add" onclick="addQuickSerial()">➕ إضافة للقائمة</button>
-            </div>
-            <div id="simSuggestions" class="sim-suggestions"></div>
-        </div>
 
         <!-- جدول المعاينة والمراجعة قبل الحفظ النهائي -->
         <div id="stagingSection">
@@ -312,9 +316,10 @@
                         <tr>
                             <th>حذف</th>
                             <th>السريال (ICCID)</th>
-                            <th>الرمز (مثل N115)</th>
+                            <th>الرمز</th>
                             <th>التصنيف</th>
-                            <th>حالة الفحص والمطابقة مع المخزون</th>
+                            <th>المدة</th>
+                            <th>حالة الفحص والمطابقة</th>
                         </tr>
                     </thead>
                     <tbody id="stagingTableBody"></tbody>
@@ -327,27 +332,27 @@
         </div>
     </div>
 
-    <!-- كارت البحث والفلتر والجدول المجمع (صرف ومرتجع) -->
+    <!-- كارت السجل -->
     <div class="card">
         <div class="card-title">
-            <span>📋 سجل الصرف والمرتجع والبحث الذكي</span>
+            <span>📋 السجل</span>
         </div>
 
         <div class="filters-bar">
             <div>
-                <label style="margin-top:0;">📅 فلتر الشهر المحاسبي (من يوم 5):</label>
+                <label style="margin-top:0;">🔄 نوع الحركة (صرف&مرتجع):</label>
+                <select id="statusFilter" onchange="saveDispatchDraft(); renderHistoryTable();">
+                    <option value="ALL">الكل (صرف ✅ + مرتجع ❌)</option>
+                    <option value="dispatched">صرف فقط (✅)</option>
+                    <option value="returned">مرتجع فقط (❌)</option>
+                </select>
+            </div>
+            <div>
+                <label style="margin-top:0;">📅 الفترة:</label>
                 <div style="display:flex; gap:6px;">
                     <input type="month" id="monthFilter" onchange="saveDispatchDraft(); renderHistoryTable();">
                     <button type="button" class="btn-sm btn-sm-blue" onclick="document.getElementById('monthFilter').value=''; saveDispatchDraft(); renderHistoryTable();">الكل</button>
                 </div>
-            </div>
-            <div>
-                <label style="margin-top:0;">🔄 فلتر نوع الحركة:</label>
-                <select id="statusFilter" onchange="saveDispatchDraft(); renderHistoryTable();">
-                    <option value="ALL">الكل (صرف ✅ + مرتجع ❌)</option>
-                    <option value="dispatched">المنصرف فقط (✅)</option>
-                    <option value="returned">المرتجع فقط (❌)</option>
-                </select>
             </div>
         </div>
 
@@ -368,9 +373,10 @@
                         <th>الرمز</th>
                         <th>اسم العميل والمحل</th>
                         <th>التصنيف</th>
+                        <th>المدة</th>
                         <th>تاريخ الصرف</th>
                         <th>تاريخ المرتجع</th>
-                        <th>تعديل / تصحيح</th>
+                        <th>تعديل</th>
                     </tr>
                 </thead>
                 <tbody id="historyTableBody"></tbody>
@@ -386,7 +392,7 @@
     <!-- نافذة تصحيح / تعديل سجل شريحة -->
     <div class="modal-overlay" id="editSimModal">
         <div class="modal-box">
-            <h3 style="color:var(--primary); margin-bottom:12px; font-size:1.05rem;">✏️ تعديل / تصحيح حالة الشريحة</h3>
+            <h3 style="color:var(--primary); margin-bottom:12px; font-size:1.05rem;">✏️ تعديل بيانات الشريحة</h3>
             <input type="hidden" id="editSimCode">
             <div style="font-family:monospace; font-weight:800; background:#f1f5f9; padding:8px; border-radius:6px; text-align:center; margin-bottom:10px;" id="editSimCodeDisplay"></div>
 
@@ -394,17 +400,20 @@
             <select id="editSimStatus">
                 <option value="dispatched">✅ منصرف للعميل</option>
                 <option value="returned">❌ مرتجع من العميل (يُخصم من الرصيد)</option>
-                <option value="">🔄 إلغاء الصرف (إرجاع للمخزون كمتاح بدون علامة)</option>
+                <option value="">🔄 إلغاء الحركة (إرجاع للمخزون كمتاح بدون علامة)</option>
             </select>
 
             <label>الرمز المكتوب (مثل N115):</label>
             <input type="text" id="editSimTag" oninput="this.value = this.value.toUpperCase()">
 
+            <label>المدة:</label>
+            <select id="editSimDuration"></select>
+
             <label>العميل المسجل:</label>
             <select id="editSimCustomerSelect"></select>
 
             <div style="display:flex; gap:8px; margin-top:14px;">
-                <button type="button" style="background:var(--primary-light); color:white; font-weight:800; border:none; cursor:pointer;" onclick="saveEditedSim()">💾 حفظ التعديل</button>
+                <button type="button" style="background:var(--primary-light); color:white; font-weight:800; border:none; cursor:pointer;" onclick="saveEditedSim()">💾 حفظ</button>
                 <button type="button" style="background:#e2e8f0; color:#334155; font-weight:800; border:none; cursor:pointer;" onclick="closeEditSimModal()">إلغاء</button>
             </div>
         </div>
@@ -414,6 +423,8 @@
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
         let simsList = [];
         let customersList = [];
+        let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
+        let durationsList = ['30', '60'];
         let selectedCustomer = null;
         let stagingList = [];
         let tempImageUrls = [];
@@ -456,10 +467,67 @@
         document.getElementById('actionDate').value = getTodayStr();
         document.getElementById('monthFilter').value = getAccountingMonth(getTodayStr(), Date.now());
 
+        // تحديد التصنيف والمدة بدقة من المخزون أو رقم السريال
+        function detectCategoryByCode(code) {
+            const c = String(code || '');
+            if (c.startsWith('8996601') || c.includes('8996601')) return 'STC';
+            if (c.startsWith('8996603') || c.includes('8996603')) return 'Mobily';
+            if (c.startsWith('8996604') || c.includes('8996604')) return 'Zain';
+            return categoriesList[0] || 'Mobily';
+        }
+
+        function resolveSimCategory(sim, codeFallback = '') {
+            if (sim && (sim.category || sim.company)) {
+                return sim.category || sim.company;
+            }
+            return detectCategoryByCode((sim && sim.code) || codeFallback);
+        }
+
+        function resolveSimDuration(sim, catFallback = '') {
+            const selectedDur = document.getElementById('durationSelect')?.value || '';
+            if (sim && sim.duration && sim.duration !== '-' && sim.duration !== 'غير محدد') {
+                return sim.duration;
+            }
+            if (selectedDur) return selectedDur;
+            const cat = catFallback || resolveSimCategory(sim);
+            return (cat === 'Redbull') ? '30' : '60';
+        }
+
+        function renderDurationDropdowns(selectedVal = '') {
+            const durSelect = document.getElementById('durationSelect');
+            if (durSelect) {
+                const current = selectedVal !== undefined ? selectedVal : durSelect.value;
+                let html = `<option value="">تلقائي (حسب المخزون)</option>`;
+                durationsList.forEach(d => {
+                    html += `<option value="${d}" ${String(d) === String(current) ? 'selected' : ''}>${d}</option>`;
+                });
+                durSelect.innerHTML = html;
+            }
+
+            const editDurSelect = document.getElementById('editSimDuration');
+            if (editDurSelect) {
+                let editHtml = '';
+                durationsList.forEach(d => {
+                    editHtml += `<option value="${d}">${d}</option>`;
+                });
+                editDurSelect.innerHTML = editHtml;
+            }
+        }
+
+        function onDurationSelectChange() {
+            const chosenDur = document.getElementById('durationSelect').value;
+            if (chosenDur) {
+                stagingList.forEach(item => { item.duration = chosenDur; });
+            }
+            saveDispatchDraft();
+            renderStagingTable();
+        }
+
         // حفظ واسترجاع المسودة التلقائي في حال إغلاق المتصفح بالخطأ
         function saveDispatchDraft() {
             const draft = {
                 operationMode: document.getElementById('operationMode').value,
+                durationSelect: document.getElementById('durationSelect').value,
                 actionDate: document.getElementById('actionDate').value,
                 selectedCustomer: selectedCustomer,
                 customerSearchText: document.getElementById('customerSearchInput').value,
@@ -482,6 +550,9 @@
 
                 if (draft.operationMode) {
                     document.getElementById('operationMode').value = draft.operationMode;
+                }
+                if (draft.durationSelect !== undefined) {
+                    renderDurationDropdowns(draft.durationSelect);
                 }
                 if (draft.actionDate) {
                     document.getElementById('actionDate').value = draft.actionDate;
@@ -541,8 +612,14 @@
         });
 
         function loadLocalData() {
+            const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            if (localConfig) {
+                categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
+                durationsList = localConfig.durationsList || ['30', '60'];
+            }
             simsList = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
             customersList = JSON.parse(localStorage.getItem('customers_records_offline') || '[]');
+            renderDurationDropdowns(document.getElementById('durationSelect')?.value || '');
         }
 
         // إعادة حساب الرصيد الممسوح والمتاح في كل الموقع مع استبعاد الشرائح المرتجعة (❌)
@@ -554,14 +631,10 @@
 
             const autoStock = {};
             simsList.forEach(item => {
-                // خصم الشرائح المرتجعة ❌ من الرصيد الممسوح والمتاح
                 if (item.status === 'returned') return;
 
-                const cat = item.category || item.company || 'Mobily';
-                let dur = item.duration;
-                if (!dur || dur === '-' || dur === 'غير محدد' || dur === '') {
-                    dur = (cat === 'Redbull') ? '30' : '60';
-                }
+                const cat = resolveSimCategory(item);
+                const dur = resolveSimDuration(item, cat);
                 const itemKey = `${cat} (${dur})`;
                 autoStock[itemKey] = (autoStock[itemKey] || 0) + 1;
             });
@@ -589,6 +662,8 @@
 
             const updatedConfig = {
                 ...existingConfig,
+                categoriesList,
+                durationsList,
                 stockInventory,
                 configUpdatedAt: Date.now()
             };
@@ -604,7 +679,6 @@
             } catch (e) {}
         }
 
-        // دمج ذكي بين البيانات المحلية والسحابية لضمان عدم ضياع أي حركة تمت أوفلاين
         window.initDispatchApp = async function() {
             loadLocalData();
             restoreDispatchDraft();
@@ -613,6 +687,14 @@
 
             try {
                 if (window.db) {
+                    const configSnap = await window.getDoc(window.doc(window.db, "settings", "app_config"));
+                    if (configSnap.exists()) {
+                        const cData = configSnap.data();
+                        categoriesList = cData.categoriesList || cData.customItems || categoriesList;
+                        durationsList = cData.durationsList || durationsList;
+                        renderDurationDropdowns(document.getElementById('durationSelect').value);
+                    }
+
                     const localMap = new Map();
                     simsList.forEach(s => { if (s.code) localMap.set(s.code, s); });
 
@@ -634,7 +716,6 @@
                         localMap.delete(cloudSim.code);
                     });
 
-                    // إضافة أي شرائح محلية لم تُرفع بعد
                     localMap.forEach(remSim => {
                         mergedSims.push(remSim);
                         pendingCloudUpdates.push(remSim);
@@ -645,7 +726,6 @@
                         localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
                     }
 
-                    // رفع أي تعديلات معلقة للسحابة تلقائياً
                     for (const upSim of pendingCloudUpdates) {
                         await window.setDoc(window.doc(window.db, "scanned_sims", upSim.code), upSim, { merge: true });
                     }
@@ -657,21 +737,9 @@
                         customersList = cloudCust;
                         localStorage.setItem('customers_records_offline', JSON.stringify(customersList));
                     }
-
-                    const badge = document.getElementById('syncStatusBadge');
-                    if (badge) {
-                        badge.textContent = '☁️ متصل ومُزامن تلقائياً';
-                        badge.style.background = '#dcfce7';
-                        badge.style.color = '#166534';
-                    }
                 }
             } catch (e) {
-                const badge = document.getElementById('syncStatusBadge');
-                if (badge) {
-                    badge.textContent = '💾 وضع أوفلاين (حفظ تلقائي)';
-                    badge.style.background = '#fef3c7';
-                    badge.style.color = '#b45309';
-                }
+                console.log("وضع الأوفلاين مفعل.");
             }
 
             await recalculateAndSyncGlobalStock();
@@ -687,7 +755,7 @@
         });
 
         window.addEventListener('storage', (e) => {
-            if (e.key === 'scanned_sims_offline' || e.key === 'customers_records_offline') {
+            if (e.key === 'scanned_sims_offline' || e.key === 'customers_records_offline' || e.key === 'app_config') {
                 loadLocalData();
                 renderStagingTable();
                 renderHistoryTable();
@@ -715,7 +783,6 @@
             renderStagingTable();
         }
 
-        // اختيار العميل من قائمة العملاء المسجلين حصرياً
         function filterCustomersList() {
             const input = document.getElementById('customerSearchInput');
             const dropdown = document.getElementById('customersDropdown');
@@ -787,7 +854,6 @@
             input.focus();
         }
 
-        // دوال الذكاء لاستخراج السريال والرمز (مثل N115) ومطابقتها مع المخزون
         function normalizeDigits(str) {
             return String(str || '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
         }
@@ -1010,9 +1076,9 @@
             saveDispatchDraft();
 
             if (totalAddedFromImages > 0) {
-                showMessage(`📸 تم استخراج (${totalAddedFromImages}) شريحة من الصور بنجاح وحفظها في المسودة! راجع الجدول بالأسفل قبل الاعتماد.`);
+                showMessage(`📸 تم استخراج (${totalAddedFromImages}) شريحة من الصور بنجاح! راجع الجدول بالأسفل قبل الاعتماد.`);
             } else {
-                showMessage(`⚠️ لم يتم التقاط أرقام واضحة من الصورة. يمكنك استخدام البحث السريع بآخر 4-5 أرقام من السريال بالأسفل.`, true);
+                showMessage(`⚠️ لم يتم التقاط أرقام واضحة من الصورة. يمكنك استخدام البحث السريع بآخر 4-5 أرقام من السريال.`, true);
             }
             renderStagingTable();
         }
@@ -1049,7 +1115,7 @@
             if (isLiveCamRunning && html5QrScanner) {
                 await html5QrScanner.stop();
                 isLiveCamRunning = false;
-                btn.innerText = '🎥 مسح مباشر للباركود';
+                btn.innerText = '🎥';
                 btn.style.background = '#2563eb';
                 return;
             }
@@ -1075,7 +1141,7 @@
                     }
                 );
                 isLiveCamRunning = true;
-                btn.innerText = '⏹️ إيقاف الكاميرا المباشرة';
+                btn.innerText = '⏹️';
                 btn.style.background = '#dc2626';
             } catch (e) {
                 showMessage('⚠️ تعذر تشغيل الكاميرا المباشرة.', true);
@@ -1099,13 +1165,15 @@
             }
 
             box.innerHTML = matches.map(s => {
+                const cat = resolveSimCategory(s);
+                const dur = resolveSimDuration(s, cat);
                 const stBadge = s.status === 'dispatched'
                     ? `<span style="color:#16a34a; font-weight:800;">✅ منصرف (${s.clientName || ''})</span>`
                     : (s.status === 'returned' ? `<span style="color:#dc2626; font-weight:800;">❌ مرتجع</span>` : `<span style="color:#0284c7; font-weight:800;">متاح بالمخزون</span>`);
                 return `
                     <div class="sim-suggestion-item" onclick="selectSuggestedSim('${s.code}')">
                         <span style="font-family:monospace; font-weight:800;">${s.code}</span>
-                        <span>${s.category || s.company || ''} (${s.duration || '60'}) — ${stBadge}</span>
+                        <span><strong style="color:#1e3a8a;">${cat}</strong> (${dur}) — ${stBadge}</span>
                     </div>
                 `;
             }).join('');
@@ -1142,10 +1210,12 @@
 
             const existingSim = simsList.find(s => s.code === cleanCode);
             const finalTag = tagCode || (existingSim && existingSim.tagCode) || document.getElementById('fixedTagInput').value.trim().toUpperCase() || '';
+            const chosenDur = document.getElementById('durationSelect').value || resolveSimDuration(existingSim);
 
             stagingList.push({
                 code: cleanCode,
-                tagCode: finalTag
+                tagCode: finalTag,
+                duration: chosenDur
             });
             return true;
         }
@@ -1188,51 +1258,58 @@
             renderStagingTable();
         }
 
-        function inspectSimForStaging(code, mode) {
+        function inspectSimForStaging(code, mode, overrideDur = '') {
             const sim = simsList.find(s => s.code === code);
+            const category = resolveSimCategory(sim, code);
+            const duration = overrideDur || resolveSimDuration(sim, category);
+
             if (!sim) {
                 return {
                     valid: false,
-                    category: '-',
+                    category: category,
+                    duration: duration,
                     html: `<span class="warn-pill">⚠️ غير مضافة مسبقاً في تاب (إضافة شريحة)!</span>`
                 };
             }
-
-            const cat = `${sim.category || sim.company || 'Mobily'} (${sim.duration || '60'})`;
 
             if (mode === 'dispatch') {
                 if (sim.status === 'dispatched') {
                     return {
                         valid: false,
-                        category: cat,
-                        html: `<span class="warn-pill">🚫 مصروفة مسبقاً للعميل: ${sim.clientName || 'غير محدد'} (${sim.tagCode || '-'}) بتاريخ ${sim.dispatchDate || '-'}</span>`
+                        category: category,
+                        duration: duration,
+                        html: `<span class="warn-pill">🚫 مصروفة مسبقاً للعميل: ${sim.clientName || 'مسجل سابقاً'} (${sim.tagCode || '-'})</span>`
                     };
                 }
                 if (sim.status === 'returned') {
                     return {
                         valid: false,
-                        category: cat,
+                        category: category,
+                        duration: duration,
                         html: `<span class="warn-pill">❌ مسجلة كمرتجع سابقاً (${sim.clientName || 'غير محدد'})</span>`
                     };
                 }
                 return {
                     valid: true,
-                    category: cat,
+                    category: category,
+                    duration: duration,
                     html: `<span class="ready-pill">✅ مضافة بالمخزون وجاهزة للصرف</span>`
                 };
             } else {
                 if (sim.status === 'returned') {
                     return {
                         valid: false,
-                        category: cat,
+                        category: category,
+                        duration: duration,
                         html: `<span class="warn-pill">⚠️ مسجلة كمرتجع (❌) بالفعل مسبقاً!</span>`
                     };
                 }
-                const prevClient = sim.clientName ? `👤 العميل: ${sim.clientName} (${sim.tagCode || 'بدون رمز'})` : `⚠️ لم تُسجل كمنصرف لعميل من قبل`;
+                const prevClient = sim.clientName ? `👤 العميل: ${sim.clientName} (${sim.tagCode || 'بدون رمز'})` : `جاهزة للمرتجع`;
                 return {
                     valid: true,
-                    category: cat,
-                    html: `<span class="ready-pill">📥 جاهزة للمرتجع — ${prevClient}</span>`
+                    category: category,
+                    duration: duration,
+                    html: `<span class="ready-pill">📥 ${prevClient}</span>`
                 };
             }
         }
@@ -1253,30 +1330,32 @@
             let warnCount = 0;
 
             tbody.innerHTML = stagingList.map((item, idx) => {
-                const check = inspectSimForStaging(item.code, mode);
+                const check = inspectSimForStaging(item.code, mode, item.duration);
                 if (check.valid) validCount++; else warnCount++;
 
                 return `
                     <tr>
                         <td><button type="button" class="btn-sm btn-sm-danger" onclick="removeStagingRow(${idx})">✕</button></td>
                         <td>
-                            <input type="text" value="${item.code}" style="font-family:monospace; font-weight:800; text-align:center; min-width:175px;" onchange="updateStagingRowCode(${idx}, this.value)">
+                            <input type="text" value="${item.code}" style="font-family:monospace; font-weight:800; text-align:center; min-width:170px;" onchange="updateStagingRowCode(${idx}, this.value)">
                         </td>
                         <td>
-                            <input type="text" value="${item.tagCode || ''}" placeholder="مثال: N115" style="font-family:monospace; font-weight:800; text-align:center; max-width:110px;" oninput="this.value=this.value.toUpperCase(); updateStagingRowTag(${idx}, this.value)">
+                            <input type="text" value="${item.tagCode || ''}" placeholder="N115" style="font-family:monospace; font-weight:800; text-align:center; max-width:95px;" oninput="this.value=this.value.toUpperCase(); updateStagingRowTag(${idx}, this.value)">
                         </td>
                         <td><span class="cat-badge">${check.category}</span></td>
+                        <td><span class="dur-badge">${check.duration}</span></td>
                         <td>${check.html}</td>
                     </tr>
                 `;
             }).join('');
 
-            counterEl.innerText = `📋 إجمالي الشرائح المستخرجة: (${stagingList.length}) — صالحة للتنفيذ: (${validCount}) | تحذيرات: (${warnCount})`;
+            counterEl.innerText = `📋 إجمالي الشرائح: (${stagingList.length}) — صالحة: (${validCount}) | تحذيرات: (${warnCount})`;
         }
 
         async function commitStagingBatch() {
             const mode = document.getElementById('operationMode').value;
             const actionDate = document.getElementById('actionDate').value || getTodayStr();
+            const selectedDur = document.getElementById('durationSelect').value;
 
             if (stagingList.length === 0) return;
 
@@ -1286,9 +1365,9 @@
                 return;
             }
 
-            const invalidItems = stagingList.filter(it => !inspectSimForStaging(it.code, mode).valid);
+            const invalidItems = stagingList.filter(it => !inspectSimForStaging(it.code, mode, it.duration).valid);
             if (invalidItems.length > 0) {
-                showMessage(`⚠️ يوجد عدد (${invalidItems.length}) شريحة بها تحذير (غير مضافة بالمخزون أو مصروفة مسبقاً). يرجى مراجعتها أو حذفها من القائمة المؤقتة أولاً.`, true);
+                showMessage(`⚠️ يوجد عدد (${invalidItems.length}) شريحة بها تحذير (غير مضافة بالمخزون أو مصروفة مسبقاً). يرجى مراجعتها أو حذفها أولاً.`, true);
                 return;
             }
 
@@ -1311,6 +1390,10 @@
                 if (simIdx === -1) return;
 
                 const sim = simsList[simIdx];
+                sim.category = resolveSimCategory(sim, stItem.code);
+                sim.company = sim.category;
+                sim.duration = selectedDur || stItem.duration || resolveSimDuration(sim, sim.category);
+
                 if (mode === 'dispatch') {
                     sim.status = 'dispatched';
                     sim.tagCode = (stItem.tagCode || '').trim().toUpperCase();
@@ -1357,9 +1440,9 @@
             btn.disabled = false;
 
             if (mode === 'dispatch') {
-                showMessage(`✅ تم صرف (${countDone}) شريحة للعميل (${lastClientName}) والتعليم عليها بـ (✅) ومزامنتها بنجاح!`);
+                showMessage(`✅ تم صرف (${countDone}) شريحة للعميل (${lastClientName}) والتعليم عليها بـ (✅) بنجاح!`);
             } else {
-                showMessage(`❌ تم تسجيل (${countDone}) شريحة كمرتجع والتعليم عليها بـ (❌) وخصمها من الرصيد الممسوح والمتاح بنجاح!`);
+                showMessage(`❌ تم تسجيل (${countDone}) شريحة كمرتجع والتعليم عليها بـ (❌) وخصمها من الرصيد بنجاح!`);
             }
 
             renderHistoryTable();
@@ -1386,19 +1469,20 @@
 
                 if (!searchLower) return true;
 
+                const cat = resolveSimCategory(s);
                 const codeMatch = s.code && s.code.toLowerCase().includes(searchLower);
                 const tagMatch = s.tagCode && s.tagCode.toLowerCase().includes(searchLower);
                 const clientMatch = s.clientName && s.clientName.toLowerCase().includes(searchLower);
                 const shopMatch = s.shopName && s.shopName.toLowerCase().includes(searchLower);
+                const catMatch = cat && cat.toLowerCase().includes(searchLower);
 
-                return codeMatch || tagMatch || clientMatch || shopMatch;
+                return codeMatch || tagMatch || clientMatch || shopMatch || catMatch;
             });
 
             const dispCount = filtered.filter(s => s.status === 'dispatched').length;
             const retCount = filtered.filter(s => s.status === 'returned').length;
             document.getElementById('statDispatchedCount').innerText = dispCount;
             document.getElementById('statReturnedCount').innerText = retCount;
-            document.getElementById('statNetCount').innerText = dispCount;
 
             const tagSummaryBox = document.getElementById('tagSummaryBox');
             if (rawSearch && filtered.length > 0) {
@@ -1437,7 +1521,7 @@
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="padding:18px; color:#64748b; font-weight:800;">لا توجد سجلات صرف أو مرتجع مطابقة للبحث.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" style="padding:18px; color:#64748b; font-weight:800;">لا توجد سجلات مطابقة.</td></tr>`;
                 return;
             }
 
@@ -1446,7 +1530,8 @@
                     ? `<span class="status-ok" title="تم الصرف">✅</span>`
                     : `<span class="status-ret" title="مرتجع">❌</span>`;
 
-                const cat = `${s.category || s.company || '-'} (${s.duration || '60'})`;
+                const cat = resolveSimCategory(s);
+                const dur = resolveSimDuration(s, cat);
                 const clientDisplay = s.clientName
                     ? `<strong>👤 ${s.clientName}</strong>${s.shopName ? ` <span style="color:#64748b; font-size:0.78rem;">(${s.shopName})</span>` : ''}`
                     : '-';
@@ -1458,10 +1543,14 @@
                         <td>${s.tagCode ? `<span class="tag-badge">${s.tagCode}</span>` : '-'}</td>
                         <td>${clientDisplay}</td>
                         <td><span class="cat-badge">${cat}</span></td>
-                        <td>${s.dispatchDate || '-'}</td>
+                        <td><span class="dur-badge">${dur}</span></td>
+                        <td>${s.dispatchDate || s.date || '-'}</td>
                         <td style="color:#dc2626; font-weight:700;">${s.returnDate || '-'}</td>
                         <td>
-                            <button type="button" class="btn-sm btn-sm-warn" onclick="openEditSimModal('${s.code}')">✏️ تعديل</button>
+                            <div class="action-btns-wrap">
+                                <button type="button" class="icon-action-btn icon-edit-btn" onclick="openEditSimModal('${s.code}')" title="تعديل">✏️</button>
+                                <button type="button" class="icon-action-btn icon-del-btn" onclick="deleteDispatchRecord('${s.code}')" title="حذف من السجل">✕</button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -1476,6 +1565,11 @@
             document.getElementById('editSimCodeDisplay').innerText = sim.code;
             document.getElementById('editSimStatus').value = sim.status || '';
             document.getElementById('editSimTag').value = sim.tagCode || '';
+
+            renderDurationDropdowns(document.getElementById('durationSelect').value);
+            const editDurSelect = document.getElementById('editSimDuration');
+            const curDur = resolveSimDuration(sim);
+            if (editDurSelect) editDurSelect.value = curDur;
 
             const custSelect = document.getElementById('editSimCustomerSelect');
             let html = `<option value="">-- اختر العميل --</option>`;
@@ -1497,6 +1591,7 @@
             const code = document.getElementById('editSimCode').value;
             const newStatus = document.getElementById('editSimStatus').value;
             const newTag = document.getElementById('editSimTag').value.trim().toUpperCase();
+            const newDur = document.getElementById('editSimDuration').value;
             const custIdx = document.getElementById('editSimCustomerSelect').value;
 
             const idx = simsList.findIndex(s => s.code === code);
@@ -1505,6 +1600,9 @@
             const sim = simsList[idx];
             sim.status = newStatus;
             sim.tagCode = newTag;
+            if (newDur) sim.duration = newDur;
+            sim.category = resolveSimCategory(sim);
+            sim.company = sim.category;
             sim.updatedAt = Date.now();
 
             if (custIdx !== '' && customersList[custIdx]) {
@@ -1543,8 +1641,38 @@
 
             closeEditSimModal();
             renderHistoryTable();
-            showMessage(`✅ تم تحديث حالة الشريحة (${code}) وتحديث الأرصدة بنجاح!`);
+            showMessage(`✅ تم تحديث بيانات الشريحة (${code}) بنجاح!`);
         }
+
+        // زر إكس (✕) لحذف حركة الصرف/المرتجع وإرجاع الشريحة لحالتها الأصلية بالمخزون
+        window.deleteDispatchRecord = async function(code) {
+            const idx = simsList.findIndex(s => s.code === code);
+            if (idx === -1) return;
+
+            if (!confirm(`هل أنت متأكد من حذف الشريحة (${code}) من سجل الصرف والمرتجع وإلغاء علامتها؟`)) return;
+
+            const sim = simsList[idx];
+            sim.status = '';
+            sim.tagCode = '';
+            sim.clientName = '';
+            sim.shopName = '';
+            sim.dispatchDate = '';
+            sim.returnDate = '';
+            sim.actionDate = '';
+            sim.updatedAt = Date.now();
+
+            simsList[idx] = sim;
+            localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
+            await recalculateAndSyncGlobalStock();
+            renderHistoryTable();
+            showMessage(`🗑️ تم حذف حركة الشريحة (${code}) من السجل وتحديث الرصيد.`);
+
+            try {
+                if (window.db) {
+                    await window.setDoc(window.doc(window.db, "scanned_sims", sim.code), sim, { merge: true });
+                }
+            } catch (e) {}
+        };
     </script>
 </body>
 </html>
