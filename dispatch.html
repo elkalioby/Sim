@@ -42,10 +42,12 @@
         .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .full-width { grid-column: 1 / -1; }
 
+        /* نوع الحركة */
         .mode-select { font-weight: 800; font-size: 0.95rem; cursor: pointer; }
         .mode-select.mode-dispatch { background: #f0fdf4; border: 2px solid var(--success); color: #166534; }
         .mode-select.mode-return { background: #fef2f2; border: 2px solid var(--danger); color: #991b1b; }
 
+        /* القائمة المنسدلة للعملاء المسجلين */
         .autocomplete-wrapper { position: relative; }
         .customers-dropdown {
             display: none; position: absolute; top: 100%; right: 0; left: 0;
@@ -782,7 +784,7 @@
         }
 
         function normalizeDigits(str) {
-            return String(str || '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+            return String(str || '').replace(/[٠-٩]/g, d => '٠١ي٣٤٥٦٧٨٩'.indexOf(d));
         }
 
         function levenshteinDistance(a, b) {
@@ -861,10 +863,6 @@
             return foundTags;
         }
 
-        // =========================================================================
-        // النظام الشبكي الذكي (Smart Grid Splitter): تقطيع الصورة إلى شبكة (مثلاً 2 عمود × 3 صفوف)
-        // واستخراج الباركود والرموز من كل شريحة معزولة على حدة بدقة 100% وبترتيب اليمين لليسار
-        // =========================================================================
         async function handleImagesSelected(event) {
             const files = Array.from(event.target.files || []);
             if (files.length === 0) return;
@@ -890,7 +888,6 @@
                     const origW = imgEl.naturalWidth || imgEl.width;
                     const origH = imgEl.naturalHeight || imgEl.height;
 
-                    // تقطيع الصورة إلى شبكة من 6 خلايا (2 عمود يمين ويسار × 3 صفوف أعلى ووسط وأسفل)
                     const cols = 2;
                     const rows = 3;
                     const cellW = origW / cols;
@@ -908,16 +905,15 @@
 
                             gridCells.push({
                                 r: r,
-                                c: c, // c=0 هو اليمين في RTL، c=1 هو اليسار
+                                c: c,
                                 canvas: subCanvas
                             });
                         }
                     }
 
-                    // ترتيب الخلايا: اليمين أولاً ثم اليسار، من الأعلى للأسفل
                     gridCells.sort((a, b) => {
                         if (a.r !== b.r) return a.r - b.r;
-                        return b.c - a.c; // c=1 (يسار) يأتي بعد c=0 (يمين) في العرض المقلوب
+                        return b.c - a.c; // من اليمين لليسار
                     });
 
                     const fileExtractedItems = [];
@@ -927,7 +923,6 @@
                         let cellCode = null;
                         let cellTag = '';
 
-                        // أ. فحص الباركود مباشرة عبر BarcodeDetector إن وجد لسرعة فائقة
                         if ('BarcodeDetector' in window) {
                             try {
                                 const bitmap = await createImageBitmap(cell.canvas);
@@ -943,7 +938,6 @@
                             } catch (e) {}
                         }
 
-                        // ب. لو لم يلتقطه الباركود، نشغل Tesseract OCR على الخلية المعزولة بدقة عالية
                         if (!cellCode) {
                             try {
                                 const { data } = await Tesseract.recognize(cell.canvas, 'eng');
@@ -988,7 +982,7 @@
             saveDispatchDraft();
 
             if (totalAddedFromImages > 0) {
-                showMessage(`📸 تم تحليل الصور بالشبكة الذكية واستخراج (${totalAddedFromImages}) شريحة من اليمين ليسار بنجاح!`);
+                showMessage(`📸 تم استخراج (${totalAddedFromImages}) شريحة وترتيبها من اليمين لليسار بنجاح!`);
             } else {
                 showMessage(`⚠️ لم يتم التعرف على الشرائح بدقة من الصورة. يمكنك استخدام الإضافة السريعة بالأسفل.`, true);
             }
