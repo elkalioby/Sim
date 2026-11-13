@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>صرف ومرتجع الشرائح - متجر سيم</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root {
             --primary: #1e3a8a;
@@ -81,7 +80,6 @@
         }
         .sim-suggestion-item:hover { background: #f0fdf4; }
 
-        /* أزرار الرفع والتصوير والباركود + زر الكشاف وتقريب العدسة مثل إضافة شريحة */
         .upload-actions { display: flex; gap: 8px; margin-top: 14px; }
         .btn-upload-icon {
             flex: 1; border: none; font-size: 1.4rem; height: 50px;
@@ -93,8 +91,13 @@
         .btn-gallery { background: #0284c7; }
         .btn-camera-shot { background: #7c3aed; }
         .btn-live-cam { background: #2563eb; font-size: 1.05rem; }
+        .btn-key-cfg {
+            flex: 0 0 46px; height: 50px; background: #f1f5f9; color: #334155;
+            border: 1.5px solid #cbd5e1; font-size: 1.15rem; border-radius: 12px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
         .btn-torch {
-            flex: 0 0 52px; height: 50px; background: #f59e0b; color: white;
+            flex: 0 0 50px; height: 50px; background: #f59e0b; color: white;
             border: none; font-weight: bold; font-size: 1.35rem; padding: 0;
             cursor: pointer; display: none; align-items: center; justify-content: center; border-radius: 12px;
         }
@@ -143,7 +146,7 @@
             cursor: not-allowed !important; opacity: 0.65;
         }
 
-        /* حقول جدول المعاينة قابلة للكتابة بوضوح تام */
+        /* حقول جدول المعاينة قابلة للكتابة اليدوية بوضوح تام */
         .serial-input-staging {
             font-family: monospace; font-weight: 800; text-align: center;
             width: 185px; min-width: 185px; padding: 7px 6px; font-size: 0.88rem;
@@ -151,15 +154,14 @@
         }
         .tag-input-staging {
             font-family: monospace, sans-serif; font-weight: 900; text-align: center;
-            width: 92px; min-width: 92px; padding: 7px 6px; font-size: 0.95rem;
-            direction: ltr; background: #fff; border: 1.5px solid #64748b; border-radius: 6px;
+            width: 95px; min-width: 95px; padding: 7px 6px; font-size: 0.95rem;
+            direction: ltr; background: #fff; border: 1.5px solid #475569; border-radius: 6px;
             color: #1e293b; text-transform: uppercase;
         }
         .tag-input-staging:focus { border-color: var(--primary-light); background: #eff6ff; }
 
         #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: 800; display: none; margin-bottom: 10px; font-size: 0.9rem; }
 
-        /* تنسيق فلاتر السجل: نوع الحركة أوسع والفترة أصغر بارتفاع متطابق */
         .filters-bar {
             display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 8px;
             margin-bottom: 12px; background: #f1f5f9; padding: 10px; border-radius: 10px; align-items: end;
@@ -252,6 +254,7 @@
         window.doc = doc;
         window.setDoc = setDoc;
         window.getDoc = getDoc;
+        window.defaultFirebaseApiKey = firebaseConfig.apiKey;
 
         if (window.initDispatchApp) { window.initDispatchApp(); }
     </script>
@@ -312,10 +315,10 @@
         <input type="file" id="cameraShotInput" accept="image/*" capture="environment" style="display:none;" onchange="handleImagesSelected(event)">
 
         <div class="upload-actions">
-            <button type="button" class="btn-upload-icon btn-gallery" onclick="document.getElementById('galleryFilesInput').click()" title="رفع صور من الهاتف">
+            <button type="button" class="btn-upload-icon btn-gallery" onclick="document.getElementById('galleryFilesInput').click()" title="رفع صور من الهاتف (تحليل Gemini)">
                 📁
             </button>
-            <button type="button" class="btn-upload-icon btn-camera-shot" onclick="document.getElementById('cameraShotInput').click()" title="تصوير بالكاميرا">
+            <button type="button" class="btn-upload-icon btn-camera-shot" onclick="document.getElementById('cameraShotInput').click()" title="تصوير بالكاميرا (تحليل Gemini)">
                 📷
             </button>
             <button type="button" id="liveScanBtn" class="btn-upload-icon btn-live-cam" onclick="toggleLiveScanner()" title="مسح مباشر للباركود">
@@ -323,6 +326,9 @@
             </button>
             <button type="button" id="torchBtn" class="btn-torch" onclick="toggleTorch()" title="تشغيل/إيقاف الكشاف">
                 🔦
+            </button>
+            <button type="button" class="btn-key-cfg" onclick="openGeminiKeyModal()" title="إعداد مفتاح Gemini AI">
+                🔑
             </button>
         </div>
 
@@ -416,6 +422,7 @@
         </div>
     </div>
 
+    <!-- نافذة تكبير الصورة مع زر إغلاق (✕) على اليمين -->
     <div class="modal-overlay" id="imgModal" onclick="closeImgModal(event)">
         <div class="modal-content-wrap">
             <button type="button" class="modal-close-btn" onclick="closeImgModal(null)">✕</button>
@@ -423,6 +430,25 @@
         </div>
     </div>
 
+    <!-- نافذة إعداد مفتاح Gemini API (تُحفظ في Firebase مرة واحدة لكل الأجهزة) -->
+    <div class="modal-overlay" id="geminiKeyModal">
+        <div class="modal-box">
+            <h3 style="color:var(--primary); margin-bottom:8px; font-size:1.05rem;">✨ إعداد مفتاح تحليل الصور (Gemini AI)</h3>
+            <p style="font-size:0.82rem; color:#475569; margin-bottom:10px; line-height:1.5;">
+                لتحليل صور الشرائح واستخراج الـ 6 سريالات والرموز المكتوبة بخط اليد بدقة 100% عبر Gemini، الصق مفتاح Gemini API المجاني هنا (يُحفظ تلقائياً في السحابة لكل أجهزتك):
+            </p>
+            <input type="text" id="geminiApiKeyInput" placeholder="AIzaSy..." style="font-family:monospace; direction:ltr; text-align:left;">
+            <div style="margin-top:6px; font-size:0.78rem;">
+                <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary-light); font-weight:800; text-decoration:none;">🔗 اضغط هنا للحصول على مفتاح مجاني من Google AI Studio</a>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:14px;">
+                <button type="button" style="background:var(--primary-light); color:white; font-weight:800; border:none; cursor:pointer;" onclick="saveGeminiApiKey()">💾 حفظ وتفعيل</button>
+                <button type="button" style="background:#e2e8f0; color:#334155; font-weight:800; border:none; cursor:pointer;" onclick="document.getElementById('geminiKeyModal').style.display='none'">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة تعديل بيانات الشريحة -->
     <div class="modal-overlay" id="editSimModal">
         <div class="modal-box">
             <h3 style="color:var(--primary); margin-bottom:12px; font-size:1.05rem;">✏️ تعديل بيانات الشريحة</h3>
@@ -452,18 +478,17 @@
         </div>
     </div>
 
-    <!-- عنصر خفي لفحص ملفات الباركود عند الحاجة -->
-    <div id="hiddenFileScanner" style="display:none;"></div>
-
     <script>
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
         let simsList = [];
         let customersList = [];
         let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
         let durationsList = ['30', '60'];
+        let geminiApiKey = localStorage.getItem('gemini_api_key') || '';
         let selectedCustomer = null;
         let stagingList = [];
         let tempImageUrls = [];
+        let pendingFilesAfterKey = null;
 
         // إعداد الماسح المباشر بنفس خصائص صفحة إضافة شريحة (barcode.html)
         const scannerConfig = {
@@ -591,6 +616,42 @@
             }
         }
 
+        function openGeminiKeyModal() {
+            document.getElementById('geminiApiKeyInput').value = geminiApiKey || '';
+            document.getElementById('geminiKeyModal').style.display = 'flex';
+        }
+
+        async function saveGeminiApiKey() {
+            const val = document.getElementById('geminiApiKeyInput').value.trim();
+            if (!val) {
+                showMessage('⚠️ يرجى لصق مفتاح Gemini API أولاً.', true);
+                return;
+            }
+            geminiApiKey = val;
+            localStorage.setItem('gemini_api_key', geminiApiKey);
+
+            const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            existingConfig.geminiApiKey = geminiApiKey;
+            localStorage.setItem('app_config', JSON.stringify(existingConfig));
+
+            try {
+                if (window.db) {
+                    await window.setDoc(window.doc(window.db, "settings", "app_config"), {
+                        geminiApiKey: geminiApiKey
+                    }, { merge: true });
+                }
+            } catch (e) {}
+
+            document.getElementById('geminiKeyModal').style.display = 'none';
+            showMessage('✅ تم حفظ مفتاح Gemini AI ومزامنته مع السحابة بنجاح!');
+
+            if (pendingFilesAfterKey && pendingFilesAfterKey.length > 0) {
+                const filesToRun = pendingFilesAfterKey;
+                pendingFilesAfterKey = null;
+                await processFilesWithGemini(filesToRun);
+            }
+        }
+
         function saveDispatchDraft() {
             const draft = {
                 operationMode: document.getElementById('operationMode').value,
@@ -675,6 +736,10 @@
             if (localConfig) {
                 categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
                 durationsList = localConfig.durationsList || ['30', '60'];
+                if (localConfig.geminiApiKey) {
+                    geminiApiKey = localConfig.geminiApiKey;
+                    localStorage.setItem('gemini_api_key', geminiApiKey);
+                }
             }
             simsList = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
             customersList = JSON.parse(localStorage.getItem('customers_records_offline') || '[]');
@@ -749,6 +814,10 @@
                         const cData = configSnap.data();
                         categoriesList = cData.categoriesList || cData.customItems || categoriesList;
                         durationsList = cData.durationsList || durationsList;
+                        if (cData.geminiApiKey) {
+                            geminiApiKey = cData.geminiApiKey;
+                            localStorage.setItem('gemini_api_key', geminiApiKey);
+                        }
                         renderDurationDropdowns();
                     }
 
@@ -933,7 +1002,6 @@
             return matrix[b.length][a.length];
         }
 
-        // مطابقة ذكية للسريال مع المخزون (حتى لو التقط آخر 8-9 أرقام من شباك الشريحة الصغير أو أخطأ في رقمين)
         function matchWithInventorySim(rawCandidate) {
             const clean = normalizeDigits(rawCandidate).replace(/[^0-9]/g, '');
             if (clean.length < 6) return null;
@@ -947,14 +1015,19 @@
             if (coreClean.length >= 7) {
                 const subMatches = simsList.filter(s => s.code && (s.code.includes(coreClean) || coreClean.includes(s.code)));
                 if (subMatches.length === 1) return subMatches[0].code;
-                // لو أكثر من تطابق نفضل الشريحة غير المصروفة بعد
                 const availMatch = subMatches.find(s => s.status !== 'dispatched' && s.status !== 'returned');
                 if (availMatch && coreClean.length >= 8) return availMatch.code;
             }
 
+            if (coreClean.length >= 8) {
+                const tail8 = coreClean.slice(-8);
+                const tailMatches = simsList.filter(s => s.code && s.code.endsWith(tail8));
+                if (tailMatches.length === 1) return tailMatches[0].code;
+            }
+
             if (coreClean.length >= 14) {
                 let bestCode = null;
-                let bestDist = 4;
+                let bestDist = 3;
                 simsList.forEach(s => {
                     if (!s.code || Math.abs(s.code.length - coreClean.length) > 2) return;
                     const dist = levenshteinDistance(coreClean, s.code);
@@ -966,218 +1039,142 @@
                 if (bestCode) return bestCode;
             }
 
-            // مطابقة بآخر 8 أو 9 أرقام من السريال مع المخزون
-            if (coreClean.length >= 8) {
-                const tail8 = coreClean.slice(-8);
-                const tailMatches = simsList.filter(s => s.code && s.code.endsWith(tail8));
-                if (tailMatches.length === 1) return tailMatches[0].code;
-            }
-
-            if (iccidIdx >= 0 && coreClean.length >= 12) {
-                return coreClean;
-            }
+            if (iccidIdx >= 0 && coreClean.length >= 12) return coreClean;
             if (coreClean.length >= 15) return coreClean;
             return null;
         }
 
-        // استخراج الرموز المكتوبة بخط اليد (مثل N78, n 74, N64, n.52)
-        function extractHandwrittenTagFromBoxText(text, fallbackPrefix = 'N') {
-            const norm = normalizeDigits(text);
-            const ignoredWords = new Set(['SIM', 'PIN', 'PUK', 'STC', 'ZAIN', 'MOBILY', 'DIAL', 'CALL', 'GSM', 'LTE', 'HTTP', 'HTTPS', 'WWW', 'COM', 'NET', 'SERVICE', 'CENTER']);
-            
-            // 1. بحث عن حرف متبوع بمسافة أو نقطة أو شرطة ثم أرقام (مثل N78 أو n.52 أو u 74)
-            const regex = /([A-Za-z]{1,2})[\s.\-_~,:;'/\\|]*([0-9IlOoSsZzBb]{1,4})/g;
-            let match;
-            while ((match = regex.exec(norm)) !== null) {
-                let letters = match[1].toUpperCase();
-                if (ignoredWords.has(letters)) continue;
+        // تحويل الصورة إلى Base64 مضغوط وواضح لإرساله إلى Gemini Vision API بسرعة عالية
+        function imageToBase64Jpeg(imgEl, maxDim = 1600) {
+            let w = imgEl.naturalWidth || imgEl.width;
+            let h = imgEl.naturalHeight || imgEl.height;
+            if (w > maxDim || h > maxDim) {
+                const ratio = Math.min(maxDim / w, maxDim / h);
+                w = Math.round(w * ratio);
+                h = Math.round(h * ratio);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imgEl, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+            return dataUrl.split(',')[1];
+        }
 
-                // تصحيح القراءات الشائعة لحرف N المكتوب بخط اليد (مثل u أو v أو m أو h أو r)
-                if (['U', 'V', 'W', 'H', 'M', 'R', 'I', 'L'].includes(letters)) {
-                    letters = fallbackPrefix;
-                }
+        // فحص الباركود بزوايا متعددة (0° و 90° و 270°) لدعم الصور المقلوبة أو الطولية
+        async function detectBarcodesMultiAngle(imgEl) {
+            if (!('BarcodeDetector' in window)) return [];
+            const found = [];
+            const seen = new Set();
+            const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'itf'] });
 
-                let digits = match[2]
-                    .replace(/[Il]/g, '1')
-                    .replace(/[Oo]/g, '0')
-                    .replace(/[Ss]/g, '5')
-                    .replace(/[Zz]/g, '2')
-                    .replace(/[Bb]/g, '8')
-                    .replace(/[^0-9]/g, '');
+            const angles = [0, 90, 270];
+            const w = imgEl.naturalWidth || imgEl.width;
+            const h = imgEl.naturalHeight || imgEl.height;
 
-                if (digits.length >= 1 && digits.length <= 4) {
-                    const candidate = `${letters}${digits}`;
-                    if (!['R901', 'L1100', 'D1100', 'D901'].includes(candidate) && digits !== '1100' && digits !== '901') {
-                        return candidate;
+            for (const angle of angles) {
+                try {
+                    const cnv = document.createElement('canvas');
+                    const ctx = cnv.getContext('2d');
+                    if (angle === 0) {
+                        cnv.width = w; cnv.height = h;
+                        ctx.drawImage(imgEl, 0, 0);
+                    } else if (angle === 90) {
+                        cnv.width = h; cnv.height = w;
+                        ctx.translate(h, 0);
+                        ctx.rotate(Math.PI / 2);
+                        ctx.drawImage(imgEl, 0, 0);
+                    } else if (angle === 270) {
+                        cnv.width = h; cnv.height = w;
+                        ctx.translate(0, w);
+                        ctx.rotate(-Math.PI / 2);
+                        ctx.drawImage(imgEl, 0, 0);
                     }
-                }
-            }
-
-            // 2. إذا قرأ المحرك الأرقام فقط في مربع خط اليد المعزول (أو قرأ حرف N كرقم 4 أو 11 مثل 474 أو 1178)
-            const numMatches = norm.match(/\d{2,4}/g) || [];
-            for (const numStr of numMatches) {
-                if (['1100', '901', '899', '8996', '6034', '3430'].includes(numStr)) continue;
-                if (numStr.length === 2) {
-                    return `${fallbackPrefix}${numStr}`;
-                }
-                if (numStr.length === 3 && (numStr.startsWith('4') || numStr.startsWith('1'))) {
-                    return `${fallbackPrefix}${numStr.slice(1)}`;
-                }
-                if (numStr.length === 4 && numStr.startsWith('11')) {
-                    return `${fallbackPrefix}${numStr.slice(2)}`;
-                }
-            }
-
-            return '';
-        }
-
-        // تجهيز كانفاس مع إطار أبيض (Quiet Zone) لتحسين قراءة الباركود الذي يلامس حواف الصورة
-        function createPaddedBarcodeCanvas(sourceCanvas, cropYStartRatio = 0, cropYEndRatio = 1, highContrast = false) {
-            const sw = sourceCanvas.width;
-            const sy = Math.floor(sourceCanvas.height * cropYStartRatio);
-            const sh = Math.floor(sourceCanvas.height * (cropYEndRatio - cropYStartRatio));
-            const pad = 24;
-            const scale = sw < 600 ? 1.8 : 1.2;
-            const dw = Math.round(sw * scale);
-            const dh = Math.round(sh * scale);
-
-            const out = document.createElement('canvas');
-            out.width = dw + pad * 2;
-            out.height = dh + pad * 2;
-            const ctx = out.getContext('2d');
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, out.width, out.height);
-            ctx.drawImage(sourceCanvas, 0, sy, sw, sh, pad, pad, dw, dh);
-
-            if (highContrast) {
-                const imgData = ctx.getImageData(0, 0, out.width, out.height);
-                const d = imgData.data;
-                for (let i = 0; i < d.length; i += 4) {
-                    const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-                    const v = lum < 145 ? 0 : 255;
-                    d[i] = d[i + 1] = d[i + 2] = v;
-                }
-                ctx.putImageData(imgData, 0, 0);
-            }
-            return out;
-        }
-
-        // تجهيز كانفاس مخصص لمنطقة الكتابة اليدوية أعلى الشريحة (يستخرج الحبر الأسود/الأزرق + الفلوماستر البرتقالي/الأحمر على الكارت الأزرق)
-        function createHandwritingZoneCanvas(cellCanvas) {
-            const cw = cellCanvas.width;
-            const ch = cellCanvas.height;
-            // الكتابة اليدوية تقع دائماً في الجزء العلوي الأيمن/الأوسط من الشريحة (تجنب الـ QR على اليسار)
-            const sx = Math.floor(cw * 0.28);
-            const sy = Math.floor(ch * 0.02);
-            const sw = Math.floor(cw * 0.68);
-            const sh = Math.floor(ch * 0.38);
-
-            const scale = 2.0;
-            const tw = Math.round(sw * scale);
-            const th = Math.round(sh * scale);
-
-            const temp = document.createElement('canvas');
-            temp.width = tw;
-            temp.height = th;
-            const tCtx = temp.getContext('2d');
-            tCtx.drawImage(cellCanvas, sx, sy, sw, sh, 0, 0, tw, th);
-
-            const imgData = tCtx.getImageData(0, 0, tw, th);
-            const d = imgData.data;
-
-            // حساب متوسط إضاءة الخلفية الزرقاء
-            let sumLum = 0;
-            const pixelCount = tw * th;
-            for (let i = 0; i < d.length; i += 4) {
-                sumLum += (d[i] + d[i + 1] + d[i + 2]) / 3;
-            }
-            const avgLum = sumLum / (pixelCount || 1);
-
-            for (let i = 0; i < d.length; i += 4) {
-                const r = d[i], g = d[i + 1], b = d[i + 2];
-                const lum = (r + g + b) / 3;
-
-                // 1. حبر داكن (أسود أو أزرق غامق مثل N78, n 74, N73, n.52)
-                const isDarkInk = (lum < avgLum * 0.68) || (r < 85 && g < 90 && b < 115);
-
-                // 2. فلوماستر برتقالي أو أحمر على الكارت الأزرق (مثل N64, N76 حيث اللون الأحمر أعلى من الأزرق)
-                const isWarmMarker = (r > b + 4) && (r > 115) && !(r > 180 && g > 180 && b > 180);
-
-                const val = (isDarkInk || isWarmMarker) ? 0 : 255;
-                d[i] = d[i + 1] = d[i + 2] = val;
-            }
-            tCtx.putImageData(imgData, 0, 0);
-
-            // نجمع النسخة المعالجة + النسخة العادية المحسنة في صورة واحدة صغيرة لتعزيز قراءة Tesseract
-            const combined = document.createElement('canvas');
-            const pad = 16;
-            combined.width = tw + pad * 2;
-            combined.height = th * 2 + pad * 3;
-            const cCtx = combined.getContext('2d');
-            cCtx.fillStyle = '#ffffff';
-            cCtx.fillRect(0, 0, combined.width, combined.height);
-            cCtx.drawImage(temp, pad, pad);
-            cCtx.drawImage(cellCanvas, sx, sy, sw, sh, pad, th + pad * 2, tw, th);
-            return combined;
-        }
-
-        // استخراج السريال من خلية الشريحة بكل الطرق الممكنة (BarcodeDetector -> Html5Qrcode -> OCR)
-        async function extractSerialFromCell(cellCanvas) {
-            const formats1D = ['code_128', 'code_39', 'ean_13', 'itf', 'codabar'];
-
-            // 1. فحص عبر BarcodeDetector (بدون qr_code نهائياً حتى لا يقرأ مربع QR بدلاً من الباركود)
-            if ('BarcodeDetector' in window) {
-                const candidates = [
-                    createPaddedBarcodeCanvas(cellCanvas, 0, 1, false),
-                    createPaddedBarcodeCanvas(cellCanvas, 0.45, 1, false),
-                    createPaddedBarcodeCanvas(cellCanvas, 0.45, 1, true)
-                ];
-                for (const cnv of candidates) {
-                    try {
-                        const bitmap = await createImageBitmap(cnv);
-                        const detector = new BarcodeDetector({ formats: formats1D });
-                        const barcodes = await detector.detect(bitmap);
-                        for (const b of barcodes) {
-                            const matched = matchWithInventorySim(b.rawValue);
-                            if (matched) return matched;
+                    const bitmap = await createImageBitmap(cnv);
+                    const barcodes = await detector.detect(bitmap);
+                    barcodes.forEach(b => {
+                        const matched = matchWithInventorySim(b.rawValue);
+                        if (matched && !seen.has(matched)) {
+                            seen.add(matched);
+                            found.push(matched);
                         }
-                    } catch (e) {}
+                    });
+                } catch (e) {}
+            }
+            return found;
+        }
+
+        // =====================================================================
+        // استدعاء Gemini Vision AI لاستخراج كل الشرائح والرموز اليدوية بدقة 100%
+        // =====================================================================
+        async function analyzeImageWithGemini(base64Jpeg, apiKeyToUse) {
+            const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+            const promptText = `Analyze this image of telecom SIM cards (such as Mobily, STC, Zain, Redbull).
+Extract ALL SIM cards visible in the image (whether arranged 2x3, 3x2, horizontal, or rotated 90 degrees vertically).
+Sort the extracted SIM cards strictly row by row from TOP to BOTTOM, and within each row from RIGHT to LEFT (من اليمين إلى اليسار).
+For each SIM card, return:
+1. "code": The full 19-digit ICCID serial number printed next to the barcode (starts with 89966, e.g. 8996603430267292232). If the long barcode is partially cut, use the 8-9 digit number inside the small SIM chip cutout combined with the 8996603430 prefix.
+2. "tagCode": The handwritten English letter + number written with a marker/pen on the blue body of the card (for example: "N120", "N78", "N74", "N64", "N76", "N73", "N52"). Convert it to uppercase without spaces (e.g. "N120"). Ignore any Arabic letter scribbles like "ع" on the QR code.
+
+Return ONLY a valid JSON array of objects like:
+[{"code": "8996603430267292232", "tagCode": "N120"}]`;
+
+            let lastErr = null;
+            for (const modelName of modelsToTry) {
+                try {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKeyToUse)}`;
+                    const resp = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [
+                                    { text: promptText },
+                                    { inline_data: { mime_type: "image/jpeg", data: base64Jpeg } }
+                                ]
+                            }],
+                            generationConfig: {
+                                temperature: 0.1,
+                                responseMimeType: "application/json"
+                            }
+                        })
+                    });
+
+                    if (!resp.ok) {
+                        const errJson = await resp.json().catch(() => ({}));
+                        const errMsg = (errJson.error && errJson.error.message) || `HTTP ${resp.status}`;
+                        lastErr = new Error(errMsg);
+                        // لو المفتاح غير مفعل أو غير صالح، نتوقف ونطلب المفتاح
+                        if (resp.status === 400 || resp.status === 403 || errMsg.includes('API_KEY') || errMsg.includes('API key') || errMsg.includes('SERVICE_DISABLED')) {
+                            lastErr.isKeyError = true;
+                            break;
+                        }
+                        continue;
+                    }
+
+                    const result = await resp.json();
+                    const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+                    const cleanedJson = rawText.replace(/```json|```/g, '').trim();
+                    const parsed = JSON.parse(cleanedJson);
+                    if (Array.isArray(parsed)) {
+                        return parsed;
+                    }
+                } catch (e) {
+                    lastErr = e;
                 }
             }
-
-            // 2. فحص احتياطي عبر Html5Qrcode على منطقة الباركود السفلية
-            try {
-                const bottomCnv = createPaddedBarcodeCanvas(cellCanvas, 0.45, 1, false);
-                const blob = await new Promise(res => bottomCnv.toBlob(res, 'image/jpeg', 0.95));
-                if (blob) {
-                    const file = new File([blob], "cell_barcode.jpg", { type: "image/jpeg" });
-                    const tempScanner = new Html5Qrcode("hiddenFileScanner", scannerConfig);
-                    const decoded = await tempScanner.scanFile(file, false);
-                    const matched = matchWithInventorySim(decoded);
-                    if (matched) return matched;
-                }
-            } catch (e) {}
-
-            // 3. فحص OCR مركز على شريط أرقام الباركود السفلي وشباك الشريحة الوسطي
-            try {
-                const bottomStrip = createPaddedBarcodeCanvas(cellCanvas, 0.35, 1, false);
-                const { data } = await Tesseract.recognize(bottomStrip, 'eng');
-                const rawText = normalizeDigits(data.text || '');
-                const cleaned = rawText.replace(/8996\s*6/g, '89966').replace(/(\d)\s+(\d)/g, '$1$2');
-                const numMatches = cleaned.match(/\d{7,22}/g) || [];
-                for (const rawNum of numMatches) {
-                    const resolved = matchWithInventorySim(rawNum);
-                    if (resolved) return resolved;
-                }
-            } catch (e) {}
-
-            return null;
+            throw lastErr || new Error("تعذر الاتصال بـ Gemini API");
         }
 
         async function handleImagesSelected(event) {
             const files = Array.from(event.target.files || []);
+            event.target.value = '';
             if (files.length === 0) return;
+            await processFilesWithGemini(files);
+        }
 
+        async function processFilesWithGemini(files) {
             const progressBox = document.getElementById('ocrProgressBox');
             progressBox.innerText = `⏳ جاري التحليل...`;
             progressBox.style.display = 'block';
@@ -1186,139 +1183,79 @@
             strip.style.display = 'flex';
 
             let totalAddedFromImages = 0;
+            const activeKey = geminiApiKey || window.defaultFirebaseApiKey || '';
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 progressBox.innerText = `⏳ جاري التحليل...`;
 
                 const objUrl = URL.createObjectURL(file);
-                tempImageUrls.push(objUrl);
-                renderTempImagesStrip();
+                if (!tempImageUrls.includes(objUrl)) {
+                    tempImageUrls.push(objUrl);
+                    renderTempImagesStrip();
+                }
 
                 try {
                     const imgEl = await loadImageElement(objUrl);
-                    const origW = imgEl.naturalWidth || imgEl.width;
-                    const origH = imgEl.naturalHeight || imgEl.height;
+                    const base64Jpeg = imageToBase64Jpeg(imgEl, 1600);
 
-                    // أولاً: مسح شامل للصورة كاملة عبر BarcodeDetector لالتقاط جميع الباركودات بإحداثياتها الدقيقة دون أي قص
-                    const fullImageBarcodes = [];
-                    if ('BarcodeDetector' in window) {
-                        try {
-                            const fullBitmap = await createImageBitmap(imgEl);
-                            const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'itf'] });
-                            const detected = await detector.detect(fullBitmap);
-                            detected.forEach(b => {
-                                const matched = matchWithInventorySim(b.rawValue);
-                                if (matched && b.boundingBox) {
-                                    fullImageBarcodes.push({
-                                        code: matched,
-                                        cx: b.boundingBox.x + b.boundingBox.width / 2,
-                                        cy: b.boundingBox.y + b.boundingBox.height / 2
-                                    });
+                    // نشغل فحص الباركود متعدد الزوايا بالتوازي مع تحليل Gemini AI
+                    const [geminiItems, multiAngleBarcodes] = await Promise.all([
+                        analyzeImageWithGemini(base64Jpeg, activeKey),
+                        detectBarcodesMultiAngle(imgEl)
+                    ]);
+
+                    const seenInFile = new Set();
+
+                    if (Array.isArray(geminiItems) && geminiItems.length > 0) {
+                        geminiItems.forEach(item => {
+                            const rawCode = String(item.code || '').trim();
+                            const resolvedCode = matchWithInventorySim(rawCode) || normalizeDigits(rawCode).replace(/[^0-9]/g, '');
+                            let cleanTag = String(item.tagCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+                            if (resolvedCode && resolvedCode.length >= 8 && !seenInFile.has(resolvedCode)) {
+                                seenInFile.add(resolvedCode);
+                                if (addCodeToStaging(resolvedCode, cleanTag)) {
+                                    totalAddedFromImages++;
                                 }
-                            });
-                        } catch (e) {}
+                            }
+                        });
                     }
 
-                    // تقسيم الشبكة (2 عمود × 3 صفوف) مع هامش تداخل (Overlap Padding) لمنع قطع الشريحة في الصف الأول يسار (N78)
-                    const rowRanges = [
-                        [0.00, 0.43], // الصف الأول (يغطي الهامش العلوي والشرائح المزاحة لأسفل مثل N78)
-                        [0.33, 0.72], // الصف الثاني
-                        [0.63, 1.00]  // الصف الثالث
-                    ];
-                    const colRanges = [
-                        [0.47, 1.00], // العمود الأيمن أولاً (cOrder = 0)
-                        [0.00, 0.53]  // العمود الأيسر ثانياً (cOrder = 1)
-                    ];
-
-                    const gridCells = [];
-                    for (let r = 0; r < 3; r++) {
-                        for (let cIdx = 0; cIdx < 2; cIdx++) {
-                            const [y0Ratio, y1Ratio] = rowRanges[r];
-                            const [x0Ratio, x1Ratio] = colRanges[cIdx];
-
-                            const sx = Math.floor(origW * x0Ratio);
-                            const sy = Math.floor(origH * y0Ratio);
-                            const sw = Math.floor(origW * (x1Ratio - x0Ratio));
-                            const sh = Math.floor(origH * (y1Ratio - y0Ratio));
-
-                            const subCanvas = document.createElement('canvas');
-                            subCanvas.width = sw;
-                            subCanvas.height = sh;
-                            const sCtx = subCanvas.getContext('2d');
-                            sCtx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, sw, sh);
-
-                            gridCells.push({
-                                r: r,
-                                cOrder: cIdx,
-                                x0: sx,
-                                x1: sx + sw,
-                                y0: sy,
-                                y1: sy + sh,
-                                canvas: subCanvas
-                            });
-                        }
-                    }
-
-                    const fileExtractedItems = [];
-                    const seenFileCodes = new Set();
-
-                    for (const cell of gridCells) {
-                        let cellCode = null;
-                        let cellTag = '';
-
-                        // أ. التحقق مما إذا كان المسح الشامل قد التقط الباركود داخل حدود هذه الخلية
-                        const inCellBarcode = fullImageBarcodes.find(fb =>
-                            !seenFileCodes.has(fb.code) &&
-                            fb.cx >= cell.x0 && fb.cx <= cell.x1 &&
-                            fb.cy >= cell.y0 && fb.cy <= cell.y1
-                        );
-                        if (inCellBarcode) {
-                            cellCode = inCellBarcode.code;
-                        }
-
-                        // ب. إذا لم يلتقطه المسح الشامل، نفحص الخلية المعزولة بـ 3 طبقات (BarcodeDetector -> Html5Qrcode -> OCR)
-                        if (!cellCode) {
-                            cellCode = await extractSerialFromCell(cell.canvas);
-                        }
-
-                        // ج. استخراج الكتابة اليدوية (الحرف والرقم مثل N78, N74, N64) من المنطقة العلوية للشريحة
-                        try {
-                            const hwCanvas = createHandwritingZoneCanvas(cell.canvas);
-                            const { data } = await Tesseract.recognize(hwCanvas, 'eng');
-                            cellTag = extractHandwrittenTagFromBoxText(data.text || '', 'N');
-                        } catch (hwErr) {}
-
-                        if (cellCode && !seenFileCodes.has(cellCode)) {
-                            seenFileCodes.add(cellCode);
-                            fileExtractedItems.push({
-                                code: cellCode,
-                                tagCode: cellTag
-                            });
-                        }
-                    }
-
-                    fileExtractedItems.forEach(it => {
-                        if (addCodeToStaging(it.code, it.tagCode)) {
-                            totalAddedFromImages++;
+                    // في حال التقطت العدسة باركود إضافي لم يظهر، نضيفه أيضاً
+                    const commonTag = (geminiItems && geminiItems[0] && geminiItems[0].tagCode)
+                        ? String(geminiItems[0].tagCode).toUpperCase().replace(/[^A-Z0-9]/g, '')
+                        : '';
+                    multiAngleBarcodes.forEach(bCode => {
+                        if (!seenInFile.has(bCode)) {
+                            seenInFile.add(bCode);
+                            if (addCodeToStaging(bCode, commonTag)) {
+                                totalAddedFromImages++;
+                            }
                         }
                     });
 
                 } catch (err) {
-                    console.warn("خطأ في تحليل الصورة:", err);
+                    console.warn("خطأ أثناء تحليل Gemini:", err);
+                    if (err && err.isKeyError) {
+                        progressBox.style.display = 'none';
+                        pendingFilesAfterKey = files.slice(i);
+                        openGeminiKeyModal();
+                        showMessage('🔑 يرجى لصق مفتاح Gemini API المجاني مرة واحدة لتفعيل تحليل Gemini للصور.', true);
+                        return;
+                    }
                 }
             }
 
             progressBox.style.display = 'none';
-            event.target.value = '';
             saveDispatchDraft();
 
             if (totalAddedFromImages > 0) {
                 playBeep(true);
-                showMessage(`📸 تم استخراج (${totalAddedFromImages}) شريحة وترتيبها من اليمين لليسار بنجاح!`);
+                showMessage(`✨ تم تحليل الصورة بواسطة Gemini واستخراج (${totalAddedFromImages}) شريحة بالرموز اليدوية بنجاح!`);
             } else {
                 playBeep(false);
-                showMessage(`⚠️ لم يتم التعرف على الشرائح بدقة. يمكنك استخدام البحث السريع بالأسفل.`, true);
+                showMessage(`⚠️ لم يتم استخراج شرائح جديدة (أو أنها مضافة بالفعل في الجدول بالأسفل).`, true);
             }
             renderStagingTable();
         }
@@ -1553,7 +1490,13 @@
         function addCodeToStaging(code, tagCode = '') {
             const cleanCode = normalizeDigits(code).replace(/[^0-9]/g, '');
             if (!cleanCode || cleanCode.length < 6) return false;
-            if (stagingList.some(item => item.code === cleanCode)) return false;
+            const existingIdx = stagingList.findIndex(item => item.code === cleanCode);
+            if (existingIdx !== -1) {
+                if (tagCode && !stagingList[existingIdx].tagCode) {
+                    stagingList[existingIdx].tagCode = tagCode;
+                }
+                return false;
+            }
 
             const existingSim = simsList.find(s => s.code === cleanCode);
             const finalTag = tagCode || (existingSim && existingSim.tagCode) || '';
@@ -1611,7 +1554,6 @@
             if (!sim) {
                 return {
                     valid: false,
-                    alreadyDispatched: false,
                     category: category,
                     duration: duration,
                     html: `<span class="warn-pill">⚠️ غير مضافة مسبقاً في تاب (إضافة شريحة)!</span>`
@@ -1622,7 +1564,6 @@
                 if (sim.status === 'dispatched') {
                     return {
                         valid: false,
-                        alreadyDispatched: true,
                         category: category,
                         duration: duration,
                         html: `<span class="warn-pill">🚫 مصروفة مسبقاً للعميل: ${sim.clientName || 'مسجل سابقاً'} (${sim.tagCode || '-'})</span>`
@@ -1631,7 +1572,6 @@
                 if (sim.status === 'returned') {
                     return {
                         valid: false,
-                        alreadyDispatched: false,
                         category: category,
                         duration: duration,
                         html: `<span class="warn-pill">❌ مسجلة كمرتجع سابقاً (${sim.clientName || 'غير محدد'})</span>`
@@ -1639,7 +1579,6 @@
                 }
                 return {
                     valid: true,
-                    alreadyDispatched: false,
                     category: category,
                     duration: duration,
                     html: `<span class="ready-pill">✅ مضافة بالمخزون وجاهزة للصرف</span>`
@@ -1648,7 +1587,6 @@
                 if (sim.status === 'returned') {
                     return {
                         valid: false,
-                        alreadyDispatched: false,
                         category: category,
                         duration: duration,
                         html: `<span class="warn-pill">⚠️ مسجلة كمرتجع (❌) بالفعل مسبقاً!</span>`
@@ -1657,7 +1595,6 @@
                 const prevClient = sim.clientName ? `👤 العميل: ${sim.clientName} (${sim.tagCode || 'بدون رمز'})` : `جاهزة للمرتجع`;
                 return {
                     valid: true,
-                    alreadyDispatched: false,
                     category: category,
                     duration: duration,
                     html: `<span class="ready-pill">📥 ${prevClient}</span>`
@@ -1692,7 +1629,7 @@
                             <input type="text" class="serial-input-staging" value="${item.code}" onchange="updateStagingRowCode(${idx}, this.value)">
                         </td>
                         <td style="min-width:105px;">
-                            <input type="text" class="tag-input-staging" value="${item.tagCode || ''}" placeholder="N78" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="updateStagingRowTag(${idx}, this)">
+                            <input type="text" class="tag-input-staging" value="${item.tagCode || ''}" placeholder="N120" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="updateStagingRowTag(${idx}, this)">
                         </td>
                         <td><span class="cat-badge">${check.category}</span></td>
                         <td><span class="dur-badge">${check.duration}</span></td>
@@ -1704,11 +1641,7 @@
             counterEl.innerText = `📋 إجمالي الشرائح: (${stagingList.length}) — صالحة: (${validCount}) | تحذيرات: (${warnCount})`;
 
             // تعطيل زر الاعتماد إذا كانت هناك أي شريحة مصروفة مسبقاً أو بها تحذير
-            if (warnCount > 0) {
-                confirmBtn.disabled = true;
-            } else {
-                confirmBtn.disabled = false;
-            }
+            confirmBtn.disabled = (warnCount > 0);
         }
 
         async function commitStagingBatch() {
@@ -1732,7 +1665,7 @@
             if (mode === 'dispatch') {
                 const missingTag = stagingList.some(it => !it.tagCode || !it.tagCode.trim());
                 if (missingTag) {
-                    if (!confirm('توجد شرائح بدون رمز (مثل N78). هل تريد المتابعة وحفظها بدون رمز؟')) return;
+                    if (!confirm('توجد شرائح بدون رمز (مثل N120). هل تريد المتابعة وحفظها بدون رمز؟')) return;
                 }
             }
 
@@ -1821,7 +1754,6 @@
             const filtered = activeSims.filter(s => {
                 if (statusVal !== 'ALL' && s.status !== statusVal) return false;
 
-                // إذا لم يكن هناك نص في خانة البحث نلتزم بفلتر الفترة، أما عند البحث بالسيريال أو الرمز نظهر النتائج فوراً
                 if (!searchLower && monthVal) {
                     const effectiveDate = s.actionDate || (s.status === 'returned' ? s.returnDate : s.dispatchDate) || s.date;
                     const effectiveTs = s.returnTimestamp || s.dispatchTimestamp || s.timestamp;
