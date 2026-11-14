@@ -35,7 +35,7 @@
         .btn-red { background: #dc2626; }
 
         #reader { width: 100%; margin-bottom: 8px; border-radius: 8px; overflow: hidden; }
-        #scanMonitor { display: none; font-size: 12px; background: #f8fafc; color: #475569; padding: 6px 10px; border-radius: 6px; border: 1px dashed #cbd5e1; margin-bottom: 8px; text-align: center; font-family: monospace; }
+        #scanMonitor { display: none; font-size: 12px; background: #f8fafc; color: #475569; padding: 6px 10px; border-radius: 6px; border: 1px dashed #cbd5e1; margin-bottom: 8px; text-align: center; font-family: monospace; font-weight: bold; }
         #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; display: none; margin-bottom: 10px; }
 
         .table-wrap { overflow-x: auto; }
@@ -185,6 +185,8 @@
             scannerConfig.formatsToSupport = [
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.CODE_93,
+                Html5QrcodeSupportedFormats.ITF,
                 Html5QrcodeSupportedFormats.EAN_13
             ];
         }
@@ -251,7 +253,7 @@
             if (code.startsWith('8996601') || code.includes('8996601')) return 'STC';
             if (code.startsWith('8996603') || code.includes('8996603')) return 'Mobily';
             if (code.startsWith('8996604') || code.includes('8996604')) return 'Zain';
-            if (!code.startsWith('89966') && (code.length === 15 || currentScanMode === 'router')) {
+            if (!code.startsWith('89966') && ((code.length >= 14 && code.length <= 16) || currentScanMode === 'router')) {
                 return ensureRouterCategoryExists();
             }
             return categoriesList[0] || 'Mobily';
@@ -294,7 +296,6 @@
             }
         }
 
-        // إعادة حساب الرصيد الفعلي مع خصم الشرائح المرتجعة (❌) والفواتير المباعة
         function recalculateUnifiedStock() {
             const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             const stockOffsets = existingConfig.stockOffsets || {};
@@ -341,7 +342,6 @@
             });
         }
 
-        // تعليم الشرائح السابقة بصمت تام في الخلفية بدون إظهار أي رسالة
         function markOldSimsSilently() {
             const toMark = simsList.filter(s => s.status === undefined);
             if (toMark.length === 0) return;
@@ -533,24 +533,22 @@
             input.value = '';
         }
 
-        function setScanMode(mode) {
+        async function setScanMode(mode) {
             if (currentScanMode === mode) return;
             currentScanMode = mode;
             document.getElementById('modeSimBtn').classList.toggle('active', mode === 'sim');
             document.getElementById('modeRouterBtn').classList.toggle('active', mode === 'router');
 
-            const monitor = document.getElementById('scanMonitor');
             if (mode === 'router') {
                 const routerCat = ensureRouterCategoryExists();
                 renderDropdowns(routerCat, document.getElementById('durationSelect').value);
-                if (isLiveRunning && monitor) {
-                    monitor.innerText = "وضع الراوترات (IMEI).. وجه المستطيل على باركود IMEI";
-                }
             } else {
                 renderDropdowns('AUTO', document.getElementById('durationSelect').value);
-                if (isLiveRunning && monitor) {
-                    monitor.innerText = "الكاميرا جاهزة.. وجه المستطيل على الباركود";
-                }
+            }
+
+            if (isLiveRunning) {
+                await toggleLiveCamera();
+                await toggleLiveCamera();
             }
         }
 
@@ -574,10 +572,13 @@
                 return;
             }
 
+            const isRouterMode = (currentScanMode === 'router');
             const qrBoxConfig = function(viewfinderWidth, viewfinderHeight) {
                 return {
                     width: Math.floor(viewfinderWidth * 0.94),
-                    height: Math.floor(viewfinderHeight * 0.35)
+                    height: isRouterMode
+                        ? Math.max(115, Math.floor(viewfinderHeight * 0.25))
+                        : Math.floor(viewfinderHeight * 0.35)
                 };
             };
 
@@ -586,7 +587,7 @@
                     await html5QrCode.start(
                         { facingMode: "environment" },
                         {
-                            fps: 20,
+                            fps: 25,
                             disableFlip: false,
                             qrbox: qrBoxConfig,
                             videoConstraints: {
@@ -602,7 +603,7 @@
                     await html5QrCode.start(
                         { facingMode: "environment" },
                         {
-                            fps: 15,
+                            fps: 20,
                             disableFlip: false,
                             qrbox: qrBoxConfig
                         },
@@ -616,8 +617,8 @@
                 torchBtn.style.display = "flex";
                 zoomWrap.style.display = "flex";
                 monitor.style.display = "block";
-                monitor.innerText = (currentScanMode === 'router')
-                    ? "وضع الراوترات (IMEI).. وجه المستطيل على باركود IMEI"
+                monitor.innerText = isRouterMode
+                    ? "وضع الراوترات (IMEI).. وجه الإطار على باركود IMEI"
                     : "الكاميرا جاهزة.. وجه المستطيل على الباركود";
 
                 document.getElementById('zoomSlider').value = "1.5";
@@ -655,6 +656,7 @@
             const withoutImeiPrefix = normalizedRaw.replace(/^imei\s*[:\-]?\s*/i, '').trim();
 
             if (!isManual && !normalizedRaw.includes('89966') && (/^(s\/?n|serial)/i.test(withoutImeiPrefix) || /[a-zA-Z]/.test(withoutImeiPrefix))) {
+                if (monitor) monitor.innerText = `تم تجاهل S/N (${withoutImeiPrefix}).. ارفع الكاميرا قليلاً على باركود IMEI`;
                 return;
             }
 
@@ -664,7 +666,10 @@
                 code = code.substring(iccidIdx);
             }
 
-            if (!isManual && currentScanMode === 'router' && !code.startsWith('89966') && code.length !== 15) {
+            if (!isManual && currentScanMode === 'router' && !code.startsWith('89966') && (code.length < 14 || code.length > 16)) {
+                if (monitor && code.length > 0) {
+                    monitor.innerText = `قراءة غير مكتملة (${code}).. وجه الكاميرا على باركود IMEI كاملاً`;
+                }
                 return;
             }
 
@@ -692,7 +697,7 @@
                 return;
             }
 
-            const isRouterCode = !code.startsWith('89966') && (code.length === 15 || currentScanMode === 'router');
+            const isRouterCode = !code.startsWith('89966') && ((code.length >= 14 && code.length <= 16) || currentScanMode === 'router');
             const selectedCatInput = document.getElementById('categorySelect').value;
             let category = (selectedCatInput && selectedCatInput !== 'AUTO') ? selectedCatInput : detectCategoryByCode(code);
 
