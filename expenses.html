@@ -326,7 +326,6 @@
             const draft = {
                 amount: document.getElementById('expAmount').value,
                 spender: document.getElementById('expSpender').value,
-                date: document.getElementById('expDate').value,
                 desc: document.getElementById('expDesc').value
             };
             localStorage.setItem('expenses_form_draft', JSON.stringify(draft));
@@ -334,7 +333,7 @@
 
         function restoreDraft() {
             const draft = JSON.parse(localStorage.getItem('expenses_form_draft') || 'null');
-            document.getElementById('expDate').value = (draft && draft.date) ? draft.date : getTodayStr();
+            document.getElementById('expDate').value = getTodayStr();
             if (draft) {
                 if (draft.amount) document.getElementById('expAmount').value = draft.amount;
                 if (draft.desc) document.getElementById('expDesc').value = draft.desc;
@@ -398,21 +397,27 @@
             }
         }
 
-        window.initExpensesApp = async function() {
+        function initPage() {
+            const monthPicker = document.getElementById('monthPicker');
+            if (monthPicker && !monthPicker.value) {
+                monthPicker.value = getActiveCycleMonthStr();
+            }
             loadLocalData();
             renderSpendersDropdown();
             restoreDraft();
             renderAll();
+        }
+
+        window.initExpensesApp = async function() {
+            initPage();
             await loadCloudData();
         };
 
-        window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('monthPicker').value = getActiveCycleMonthStr();
-            loadLocalData();
-            renderSpendersDropdown();
-            restoreDraft();
-            renderAll();
-        });
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', initPage);
+        } else {
+            initPage();
+        }
 
         function renderSpendersDropdown(selectedVal = '') {
             const selectEl = document.getElementById('expSpender');
@@ -535,6 +540,7 @@
                 localStorage.setItem('expenses_records_offline', JSON.stringify(expenses));
                 amountEl.value = '';
                 descEl.value = '';
+                dateEl.value = getTodayStr();
                 saveDraft();
                 btn.disabled = false;
                 btn.textContent = '💾 إضافة';
