@@ -79,7 +79,11 @@
         }
         .sim-suggestion-item:hover { background: #f0fdf4; }
 
-        .upload-actions { display: flex; gap: 8px; margin-top: 14px; }
+        .scan-mode-bar { display: flex; gap: 8px; margin-top: 12px; background: #f1f5f9; padding: 5px; border-radius: 10px; border: 1px solid var(--border); }
+        .btn-scan-mode { flex: 1; padding: 8px 10px; margin: 0; border: 1.5px solid transparent; border-radius: 8px; font-weight: 800; font-size: 0.82rem; cursor: pointer; background: transparent; color: #475569; transition: 0.15s; }
+        .btn-scan-mode.active { background: #ffffff; color: var(--primary); border-color: #93c5fd; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+
+        .upload-actions { display: flex; gap: 8px; margin-top: 10px; }
         .btn-upload-icon {
             flex: 1; border: none; font-size: 1.4rem; height: 50px;
             cursor: pointer; border-radius: 12px; color: white; display: flex;
@@ -301,7 +305,7 @@
             <div class="full-width quick-add-box">
                 <label>بحث بالسيريال أو آخر 4 أرقام</label>
                 <div class="quick-row">
-                    <input type="text" id="quickSerialInput" inputmode="numeric" placeholder="✍️ اكتب السريال أو آخر 4 أرقام..." oninput="onQuickSerialInput(); saveDispatchDraft();" onkeydown="if(event.key==='Enter') addQuickSerial()">
+                    <input type="text" id="quickSerialInput" inputmode="numeric" placeholder="✍️ اكتب السريال أو IMEI أو آخر 4 أرقام..." oninput="onQuickSerialInput(); saveDispatchDraft();" onkeydown="if(event.key==='Enter') addQuickSerial()">
                     <button type="button" class="btn-quick-add" onclick="addQuickSerial()">➕</button>
                 </div>
                 <div id="simSuggestions" class="sim-suggestions"></div>
@@ -310,6 +314,11 @@
 
         <input type="file" id="galleryFilesInput" accept="image/*" multiple style="display:none;" onchange="handleImagesSelected(event)">
         <input type="file" id="cameraShotInput" accept="image/*" capture="environment" style="display:none;" onchange="handleImagesSelected(event)">
+
+        <div class="scan-mode-bar">
+            <button type="button" id="modeSimBtn" class="btn-scan-mode active" onclick="setScanMode('sim')">📱 وضع الشرائح (SIM)</button>
+            <button type="button" id="modeRouterBtn" class="btn-scan-mode" onclick="setScanMode('router')">📡 وضع الراوترات (IMEI)</button>
+        </div>
 
         <div class="upload-actions">
             <button type="button" class="btn-upload-icon btn-gallery" onclick="document.getElementById('galleryFilesInput').click()" title="رفع صور من الهاتف (تحليل Gemini)">
@@ -352,7 +361,7 @@
                     <thead>
                         <tr>
                             <th>حذف</th>
-                            <th style="min-width:195px;">السريال (ICCID)</th>
+                            <th style="min-width:195px;">السريال (ICCID / IMEI)</th>
                             <th style="min-width:105px;">الرمز</th>
                             <th>التصنيف</th>
                             <th>المدة</th>
@@ -486,6 +495,7 @@
         let stagingList = [];
         let tempImageUrls = [];
         let pendingFilesAfterKey = null;
+        let currentScanMode = 'sim'; // 'sim' أو 'router'
 
         function extractCleanApiKey(rawInput) {
             const str = String(rawInput || '').trim();
@@ -501,8 +511,14 @@
             scannerConfig.formatsToSupport = [
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.CODE_39,
-                Html5QrcodeSupportedFormats.EAN_13
-            ];
+                Html5QrcodeSupportedFormats.CODE_93,
+                Html5QrcodeSupportedFormats.ITF,
+                Html5QrcodeSupportedFormats.CODABAR,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E
+            ].filter(f => f !== undefined);
         }
         const html5QrScanner = new Html5Qrcode("reader", scannerConfig);
         let isLiveCamRunning = false;
@@ -589,6 +605,10 @@
             if (c.startsWith('8996601') || c.includes('8996601')) return 'STC';
             if (c.startsWith('8996603') || c.includes('8996603')) return 'Mobily';
             if (c.startsWith('8996604') || c.includes('8996604')) return 'Zain';
+            if (c.length === 15 && !c.startsWith('89966')) {
+                const routerCat = categoriesList.find(cat => /راوتر|router|cpe|5g|h155/i.test(cat));
+                if (routerCat) return routerCat;
+            }
             return categoriesList[0] || 'Mobily';
         }
 
@@ -1008,7 +1028,8 @@
         }
 
         function matchWithInventorySim(rawCandidate) {
-            const clean = normalizeDigits(rawCandidate).replace(/[^0-9]/g, '');
+            const withoutPrefix = normalizeDigits(rawCandidate).replace(/^imei\s*[:\-]?\s*/i, '');
+            const clean = withoutPrefix.replace(/[^0-9]/g, '');
             if (clean.length < 6) return null;
 
             const exact = simsList.find(s => s.code === clean);
@@ -1090,7 +1111,14 @@
             if (!('BarcodeDetector' in window)) return [];
             const found = [];
             const seen = new Set();
-            const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'itf'] });
+            let formats = ['code_128', 'code_39', 'code_93', 'itf', 'codabar', 'ean_13', 'ean_8', 'upc_a', 'upc_e'];
+            if (typeof BarcodeDetector.getSupportedFormats === 'function') {
+                try {
+                    const supported = await BarcodeDetector.getSupportedFormats();
+                    formats = formats.filter(f => supported.includes(f));
+                } catch (e) {}
+            }
+            const detector = new BarcodeDetector({ formats });
             const origW = imgEl.naturalWidth || imgEl.width;
             const origH = imgEl.naturalHeight || imgEl.height;
 
@@ -1118,7 +1146,9 @@
                                 const bitmap = await createImageBitmap(rotCnv);
                                 const bList = await detector.detect(bitmap);
                                 for (const b of bList) {
-                                    const matched = matchWithInventorySim(b.rawValue);
+                                    const rawVal = normalizeDigits(b.rawValue || '').replace(/^imei\s*[:\-]?\s*/i, '').trim();
+                                    if (!rawVal.includes('89966') && (/^(s\/?n|serial)/i.test(rawVal) || /[a-zA-Z]/.test(rawVal))) continue;
+                                    const matched = matchWithInventorySim(rawVal);
                                     if (matched && !seen.has(matched)) {
                                         seen.add(matched);
                                         found.push(matched);
@@ -1139,7 +1169,7 @@
 
             const normalizeItem = (obj) => {
                 if (!obj || typeof obj !== 'object') return null;
-                const rawCode = obj.code || obj.serial || obj.iccid || obj.barcode || obj.number || '';
+                const rawCode = obj.code || obj.serial || obj.iccid || obj.imei || obj.barcode || obj.number || '';
                 const rawTag = obj.tagCode || obj.tag || obj.handwritten || obj.label || obj.mark || '';
                 const cleanDigits = normalizeDigits(rawCode).replace(/[^0-9]/g, '');
                 if (cleanDigits.length >= 8) {
@@ -1181,7 +1211,7 @@
 
             const fallbackItems = [];
             const iccidRegex = /89966\d{12,15}/g;
-            const tagRegex = /\b([A-Za-z]\s*\d{1,4})\b/g;
+            const tagRegex = /([A-Za-z]\s*\d{1,4})/g;
             const codes = cleaned.match(iccidRegex) || [];
             const tags = (cleaned.match(tagRegex) || []).map(t => t.toUpperCase().replace(/\s+/g, ''));
             codes.forEach((c, idx) => {
@@ -1226,12 +1256,15 @@
             const discovered = await discoverAvailableFlashModels(cleanKey);
             const modelsToTry = [...new Set([...defaultModels, ...discovered])];
 
-            const promptText = `Analyze this image of telecom SIM cards (Mobily, STC, Zain, Redbull).
-There are multiple SIM cards in the photo (for example 6 SIM cards arranged in a 2x3 or 3x2 grid, either horizontal or rotated 90 degrees vertically).
+            const promptText = `Analyze this image of telecom SIM cards (Mobily, STC, Zain, Redbull) OR 5G CPE Router packaging labels.
+If the image shows SIM cards (for example 6 SIM cards arranged in a 2x3 or 3x2 grid, either horizontal or rotated 90 degrees vertically):
 Read ALL SIM cards in the image, ordered row by row from TOP to BOTTOM, and within each row from RIGHT to LEFT.
 For every SIM card, extract:
 1. "code": The 19-digit ICCID serial number printed beside the long barcode (starts with 8996603430... or 89966...). Note: the last 8 digits are also printed inside the white SIM chip window. Read every single digit carefully.
 2. "tagCode": The handwritten English letter + digits written with a pen/marker on the blue surface of the card (such as "N120", "N78", "N74", "N64", "N76", "N73", "N52"). Format as uppercase English letter followed by digits without spaces (e.g. "N120"). Ignore any scribble on top of the QR code.
+
+If the image shows 5G Router boxes/labels instead of SIM cards:
+Extract each router's 15-digit "IMEI" number (do NOT extract S/N) as "code", and any handwritten tag/code on the label as "tagCode" (or "" if none).
 
 Return ONLY a JSON array of objects, where each object has "code" and "tagCode", like:
 [{"code": "8996603430267292232", "tagCode": "N120"}]`;
@@ -1277,7 +1310,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     }
 
                     const result = await resp.json();
-                    const rawText = result?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('\n') || '';
+                    const rawText = result?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('
+') || '';
                     const extracted = parseGeminiResponseText(rawText);
                     if (extracted.length > 0) {
                         return extracted;
@@ -1389,14 +1423,14 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
             if (totalAddedFromImages > 0) {
                 playBeep(true);
-                showMessage(`✨ تم تحليل الصورة واستخراج (${totalAddedFromImages}) شريحة بالرموز اليدوية بنجاح!`);
+                showMessage(`✨ تم تحليل الصورة واستخراج (${totalAddedFromImages}) بنجاح!`);
             } else if (totalAlreadyInStaging > 0) {
                 playBeep(true);
-                showMessage(`ℹ️ الشرائح الموجودة في الصورة (${totalAlreadyInStaging}) مضافة بالفعل في جدول المراجعة بالأسفل.`);
+                showMessage(`ℹ️ الأكواد الموجودة في الصورة (${totalAlreadyInStaging}) مضافة بالفعل في جدول المراجعة بالأسفل.`);
             } else {
                 playBeep(false);
                 const extraErr = lastErrorText ? ` (${lastErrorText})` : '';
-                showMessage(`⚠️ تعذر استخراج الشرائح من الصورة${extraErr}. تأكد من اتصال الإنترنت أو اضغط 🔑 للتحقق من مفتاح Gemini.`, true);
+                showMessage(`⚠️ تعذر استخراج الأكواد من الصورة${extraErr}. تأكد من اتصال الإنترنت أو اضغط 🔑 للتحقق من مفتاح Gemini.`, true);
             }
         }
 
@@ -1454,6 +1488,18 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             }
         }
 
+        async function setScanMode(mode) {
+            if (currentScanMode === mode) return;
+            currentScanMode = mode;
+            document.getElementById('modeSimBtn').classList.toggle('active', mode === 'sim');
+            document.getElementById('modeRouterBtn').classList.toggle('active', mode === 'router');
+
+            if (isLiveCamRunning) {
+                await toggleLiveScanner();
+                await toggleLiveScanner();
+            }
+        }
+
         async function toggleLiveScanner() {
             unlockAudio();
             const btn = document.getElementById('liveScanBtn');
@@ -1474,10 +1520,13 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 return;
             }
 
+            const isRouterMode = (currentScanMode === 'router');
             const qrBoxConfig = function(viewfinderWidth, viewfinderHeight) {
                 return {
                     width: Math.floor(viewfinderWidth * 0.94),
-                    height: Math.floor(viewfinderHeight * 0.35)
+                    height: isRouterMode
+                        ? Math.max(75, Math.floor(viewfinderHeight * 0.17))
+                        : Math.floor(viewfinderHeight * 0.35)
                 };
             };
 
@@ -1516,10 +1565,13 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 torchBtn.style.display = 'flex';
                 zoomWrap.style.display = 'flex';
                 monitor.style.display = 'block';
-                monitor.innerText = 'الكاميرا جاهزة.. وجه المستطيل على الباركود';
+                monitor.innerText = isRouterMode
+                    ? 'وضع الراوترات (IMEI).. وجه المستطيل الرفيع على باركود IMEI فقط'
+                    : 'الكاميرا جاهزة.. وجه المستطيل على الباركود';
 
-                document.getElementById('zoomSlider').value = "1.5";
-                setTimeout(() => applyZoom(1.5), 400);
+                const defaultZoom = isRouterMode ? 1.2 : 1.5;
+                document.getElementById('zoomSlider').value = String(defaultZoom);
+                setTimeout(() => applyZoom(defaultZoom), 400);
             } catch (e) {
                 showMessage('⚠️ تعذر تشغيل الكاميرا، تأكد من إعطاء الصلاحية للمتصفح.', true);
             }
@@ -1536,7 +1588,15 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 return;
             }
 
-            let code = normalizeDigits(rawStr).replace(/[^0-9]/g, '');
+            const normalizedRaw = normalizeDigits(rawStr);
+            const withoutImeiPrefix = normalizedRaw.replace(/^imei\s*[:\-]?\s*/i, '').trim();
+
+            if (!normalizedRaw.includes('89966') && (/^(s\/?n|serial)/i.test(withoutImeiPrefix) || /[a-zA-Z]/.test(withoutImeiPrefix))) {
+                if (monitor) monitor.innerText = "تم تجاهل السيريال (S/N).. وجه المستطيل على باركود IMEI";
+                return;
+            }
+
+            let code = withoutImeiPrefix.replace(/[^0-9]/g, '');
             const iccidIdx = code.indexOf('89966');
             if (iccidIdx > 0) {
                 code = code.substring(iccidIdx);
@@ -1559,7 +1619,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
             if (stagingList.some(item => item.code === matched)) {
                 playBeep(false);
-                showMessage(`⚠️ الشريحة (${matched}) موجودة بالفعل في القائمة المؤقتة!`, true);
+                showMessage(`⚠️ الكود (${matched}) موجود بالفعل في القائمة المؤقتة!`, true);
                 return;
             }
 
@@ -1574,7 +1634,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
         function onQuickSerialInput() {
             const input = document.getElementById('quickSerialInput');
             const box = document.getElementById('simSuggestions');
-            const val = normalizeDigits(input.value).replace(/[^0-9]/g, '');
+            const val = normalizeDigits(input.value).replace(/^imei\s*[:\-]?\s*/i, '').replace(/[^0-9]/g, '');
 
             if (val.length < 3) {
                 box.style.display = 'none';
@@ -1613,7 +1673,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
         function addQuickSerial() {
             const input = document.getElementById('quickSerialInput');
-            const raw = normalizeDigits(input.value).replace(/[^0-9]/g, '');
+            const raw = normalizeDigits(input.value).replace(/^imei\s*[:\-]?\s*/i, '').replace(/[^0-9]/g, '');
             if (!raw) return;
 
             const matched = matchWithInventorySim(raw) || raw;
@@ -1625,7 +1685,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
         }
 
         function addCodeToStaging(code, tagCode = '') {
-            const cleanCode = normalizeDigits(code).replace(/[^0-9]/g, '');
+            const cleanCode = normalizeDigits(code).replace(/^imei\s*[:\-]?\s*/i, '').replace(/[^0-9]/g, '');
             if (!cleanCode || cleanCode.length < 6) return false;
             const existingIdx = stagingList.findIndex(item => item.code === cleanCode);
             if (existingIdx !== -1) {
@@ -1648,7 +1708,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
         }
 
         function updateStagingRowCode(idx, newVal) {
-            const clean = normalizeDigits(newVal).replace(/[^0-9]/g, '');
+            const clean = normalizeDigits(newVal).replace(/^imei\s*[:\-]?\s*/i, '').replace(/[^0-9]/g, '');
             if (stagingList[idx]) {
                 stagingList[idx].code = matchWithInventorySim(clean) || clean;
                 saveDispatchDraft();
@@ -1775,7 +1835,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 `;
             }).join('');
 
-            counterEl.innerText = `📋 إجمالي الشرائح: (${stagingList.length}) — صالحة: (${validCount}) | تحذيرات: (${warnCount})`;
+            counterEl.innerText = `📋 إجمالي العناصر: (${stagingList.length}) — صالحة: (${validCount}) | تحذيرات: (${warnCount})`;
             confirmBtn.disabled = (warnCount > 0);
         }
 
@@ -1787,7 +1847,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
             const invalidItems = stagingList.filter(it => !inspectSimForStaging(it.code, mode).valid);
             if (invalidItems.length > 0) {
-                showMessage(`⚠️ لا يمكن الاعتماد لوجود (${invalidItems.length}) شريحة مصروفة مسبقاً أو غير مسجلة بالمخزون. يرجى حذفها من القائمة أولاً.`, true);
+                showMessage(`⚠️ لا يمكن الاعتماد لوجود (${invalidItems.length}) عنصر مصروف مسبقاً أو غير مسجل بالمخزون. يرجى حذفه من القائمة أولاً.`, true);
                 return;
             }
 
@@ -1800,7 +1860,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             if (mode === 'dispatch') {
                 const missingTag = stagingList.some(it => !it.tagCode || !it.tagCode.trim());
                 if (missingTag) {
-                    if (!confirm('توجد شرائح بدون رمز (مثل N120). هل تريد المتابعة وحفظها بدون رمز؟')) return;
+                    if (!confirm('توجد عناصر بدون رمز (مثل N120). هل تريد المتابعة وحفظها بدون رمز؟')) return;
                 }
             }
 
@@ -1869,9 +1929,9 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             btn.disabled = false;
 
             if (mode === 'dispatch') {
-                showMessage(`✅ تم صرف (${countDone}) شريحة للعميل (${lastClientName}) والتعليم عليها بـ (✅) بنجاح!`);
+                showMessage(`✅ تم صرف (${countDone}) للعميل (${lastClientName}) والتعليم عليها بـ (✅) بنجاح!`);
             } else {
-                showMessage(`❌ تم تسجيل (${countDone}) شريحة كمرتجع والتعليم عليها بـ (❌) وخصمها من الرصيد بنجاح!`);
+                showMessage(`❌ تم تسجيل (${countDone}) كمرتجع والتعليم عليها بـ (❌) وخصمها من الرصيد بنجاح!`);
             }
 
             renderHistoryTable();
@@ -1930,7 +1990,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     if (s.tagCode) clientsMap[cKey].tags.add(s.tagCode);
                 });
 
-                document.getElementById('tagSummaryTitle').innerText = `📊 نتائج البحث عن "${rawSearch}" (إجمالي: ${filtered.length} شريحة):`;
+                document.getElementById('tagSummaryTitle').innerText = `📊 نتائج البحث عن "${rawSearch}" (إجمالي: ${filtered.length}):`;
                 document.getElementById('tagSummaryChips').innerHTML = Object.entries(clientsMap).map(([cName, info]) => {
                     const tagsStr = Array.from(info.tags).join(', ');
                     const shopLabel = (info.shop && info.shop !== cName) ? `(${info.shop})` : '';
@@ -2089,14 +2149,14 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             closeEditSimModal();
             renderStagingTable();
             renderHistoryTable();
-            showMessage(`✅ تم تحديث بيانات الشريحة (${code}) بنجاح!`);
+            showMessage(`✅ تم تحديث بيانات (${code}) بنجاح!`);
         }
 
         window.deleteDispatchRecord = async function(code) {
             const idx = simsList.findIndex(s => s.code === code);
             if (idx === -1) return;
 
-            if (!confirm(`هل أنت متأكد من حذف الشريحة (${code}) من سجل الصرف والمرتجع وإلغاء علامتها؟`)) return;
+            if (!confirm(`هل أنت متأكد من حذف (${code}) من سجل الصرف والمرتجع وإلغاء علامتها؟`)) return;
 
             const sim = simsList[idx];
             sim.status = '';
@@ -2113,7 +2173,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             await recalculateAndSyncGlobalStock();
             renderStagingTable();
             renderHistoryTable();
-            showMessage(`🗑️ تم حذف حركة الشريحة (${code}) من السجل وتحديث الرصيد.`);
+            showMessage(`🗑️ تم حذف حركة (${code}) من السجل وتحديث الرصيد.`);
 
             try {
                 if (window.db) {

@@ -15,6 +15,10 @@
         .stat-badge { background: white; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; color: #1e3a8a; flex: 1 1 auto; text-align: center; }
         .stat-badge.total { background: #1e3a8a; color: white; border-color: #1e3a8a; }
 
+        .scan-mode-bar { display: flex; gap: 8px; margin-bottom: 8px; background: #f1f5f9; padding: 5px; border-radius: 10px; border: 1px solid #e2e8f0; }
+        .btn-scan-mode { flex: 1; padding: 9px 10px; margin: 0; border: 1.5px solid transparent; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; background: transparent; color: #475569; transition: 0.15s; }
+        .btn-scan-mode.active { background: #ffffff; color: #1e3a8a; border-color: #93c5fd; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+
         .cam-controls { display: flex; gap: 8px; margin-bottom: 8px; }
         .btn-live { flex: 1; background: #2563eb; color: white; border: none; font-weight: bold; font-size: 15px; padding: 13px; cursor: pointer; margin: 0; border-radius: 8px; }
         .btn-torch { flex: 0 0 52px; background: #f59e0b; color: white; border: none; font-weight: bold; font-size: 18px; padding: 0; cursor: pointer; margin: 0; display: none; align-items: center; justify-content: center; border-radius: 8px; }
@@ -83,6 +87,11 @@
     <div class="card">
         <div id="msg"></div>
 
+        <div class="scan-mode-bar">
+            <button type="button" id="modeSimBtn" class="btn-scan-mode active" onclick="setScanMode('sim')">📱 وضع الشرائح (SIM)</button>
+            <button type="button" id="modeRouterBtn" class="btn-scan-mode" onclick="setScanMode('router')">📡 وضع الراوترات (IMEI)</button>
+        </div>
+
         <div class="cam-controls">
             <button id="liveBtn" class="btn-live" onclick="toggleLiveCamera()">
                 🎥 تشغيل الكاميرا السريعة (مسح الباركود)
@@ -103,7 +112,7 @@
 
         <label>إدخال يدوي للباركود:</label>
         <div class="row-group">
-            <input type="text" id="manualCodeInput" inputmode="numeric" placeholder="✍️ اكتب أو الصق رقم الباركود هنا..." onkeydown="if(event.key==='Enter') submitManualCode()">
+            <input type="text" id="manualCodeInput" inputmode="numeric" placeholder="✍️ اكتب أو الصق رقم الباركود أو IMEI هنا..." onkeydown="if(event.key==='Enter') submitManualCode()">
             <button class="btn-action btn-green" onclick="submitManualCode()" title="مسح يدوي">➕</button>
         </div>
 
@@ -160,6 +169,7 @@
         let durationsList = ['30', '60'];
         let stockInventory = {};
         let scannedCountsByGroup = {};
+        let currentScanMode = 'sim'; // 'sim' أو 'router'
 
         function getTodayStr() {
             const d = new Date();
@@ -175,8 +185,14 @@
             scannerConfig.formatsToSupport = [
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.CODE_39,
-                Html5QrcodeSupportedFormats.EAN_13
-            ];
+                Html5QrcodeSupportedFormats.CODE_93,
+                Html5QrcodeSupportedFormats.ITF,
+                Html5QrcodeSupportedFormats.CODABAR,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E
+            ].filter(f => f !== undefined);
         }
 
         const html5QrCode = new Html5Qrcode("reader", scannerConfig);
@@ -234,6 +250,10 @@
             if (code.startsWith('8996601') || code.includes('8996601')) return 'STC';
             if (code.startsWith('8996603') || code.includes('8996603')) return 'Mobily';
             if (code.startsWith('8996604') || code.includes('8996604')) return 'Zain';
+            if (code.length === 15 && !code.startsWith('89966')) {
+                const routerCat = categoriesList.find(c => /راوتر|router|cpe|5g|h155/i.test(c));
+                if (routerCat) return routerCat;
+            }
             return categoriesList[0] || 'Mobily';
         }
 
@@ -509,6 +529,18 @@
             input.value = '';
         }
 
+        async function setScanMode(mode) {
+            if (currentScanMode === mode) return;
+            currentScanMode = mode;
+            document.getElementById('modeSimBtn').classList.toggle('active', mode === 'sim');
+            document.getElementById('modeRouterBtn').classList.toggle('active', mode === 'router');
+
+            if (isLiveRunning) {
+                await toggleLiveCamera();
+                await toggleLiveCamera();
+            }
+        }
+
         async function toggleLiveCamera() {
             unlockAudio();
             const btn = document.getElementById('liveBtn');
@@ -529,10 +561,13 @@
                 return;
             }
 
+            const isRouterMode = (currentScanMode === 'router');
             const qrBoxConfig = function(viewfinderWidth, viewfinderHeight) {
                 return {
                     width: Math.floor(viewfinderWidth * 0.94),
-                    height: Math.floor(viewfinderHeight * 0.35)
+                    height: isRouterMode
+                        ? Math.max(75, Math.floor(viewfinderHeight * 0.17))
+                        : Math.floor(viewfinderHeight * 0.35)
                 };
             };
 
@@ -571,10 +606,13 @@
                 torchBtn.style.display = "flex";
                 zoomWrap.style.display = "flex";
                 monitor.style.display = "block";
-                monitor.innerText = "الكاميرا جاهزة.. وجه المستطيل على الباركود";
+                monitor.innerText = isRouterMode
+                    ? "وضع الراوترات (IMEI).. وجه المستطيل الرفيع على باركود IMEI فقط"
+                    : "الكاميرا جاهزة.. وجه المستطيل على الباركود";
 
-                document.getElementById('zoomSlider').value = "1.5";
-                setTimeout(() => applyZoom(1.5), 400);
+                const defaultZoom = isRouterMode ? 1.2 : 1.5;
+                document.getElementById('zoomSlider').value = String(defaultZoom);
+                setTimeout(() => applyZoom(defaultZoom), 400);
             } catch (err) {
                 showMessage("⚠️ تعذر تشغيل الكاميرا، تأكد من إعطاء الصلاحية للمتصفح.", true);
             }
@@ -604,7 +642,16 @@
                 return; 
             }
 
-            let code = cleanAndExtractDigits(rawStr);
+            const normalizedRaw = rawStr.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+            const withoutImeiPrefix = normalizedRaw.replace(/^imei\s*[:\-]?\s*/i, '').trim();
+
+            // إذا لم يكن باركود شريحة (89966) وكان يحتوي على حروف مثل S/N الخاص بالراوتر، يتم تجاهله دون التأثير على الشرائح
+            if (!isManual && !normalizedRaw.includes('89966') && (/^(s\/?n|serial)/i.test(withoutImeiPrefix) || /[a-zA-Z]/.test(withoutImeiPrefix))) {
+                if (monitor) monitor.innerText = "تم تجاهل السيريال (S/N).. وجه المستطيل على باركود IMEI";
+                return;
+            }
+
+            let code = cleanAndExtractDigits(withoutImeiPrefix);
             const iccidIdx = code.indexOf('89966');
             if (iccidIdx > 0) {
                 code = code.substring(iccidIdx);
@@ -630,7 +677,7 @@
 
             if (simsList.some(s => s.code === code)) {
                 playBeep(false);
-                showMessage(`⚠️ الشريحة (${code}) مضافة مسبقاً!`, true);
+                showMessage(`⚠️ الكود (${code}) مضاف مسبقاً!`, true);
                 return;
             }
 
@@ -660,7 +707,7 @@
 
             const itemKey = `${category} (${duration})`;
             playBeep(true);
-            showMessage(`✅ تم إضافة الشريحة (${itemKey}) بنجاح!`);
+            showMessage(`✅ تم إضافة (${itemKey}) بنجاح!`);
 
             await saveConfigAndSync();
             renderTable();
@@ -676,13 +723,13 @@
             const target = simsList.find(s => s.code === code);
             if (!target) return;
 
-            if (confirm(`هل أنت متأكد من حذف الشريحة (${code}) وخصمها من المخزون؟`)) {
+            if (confirm(`هل أنت متأكد من حذف (${code}) وخصمه من المخزون؟`)) {
                 simsList = simsList.filter(s => s.code !== code);
                 localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
                 await saveConfigAndSync();
                 renderTable();
-                showMessage(`🗑️ تم حذف الشريحة (${code}) وتحديث الرصيد.`);
+                showMessage(`🗑️ تم حذف (${code}) وتحديث الرصيد.`);
 
                 try {
                     if (window.db) {
