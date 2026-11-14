@@ -165,7 +165,7 @@
     <script>
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'مجهول', role: 'employee' };
         let simsList = [];
-        let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
+        let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull', 'روتر زين'];
         let durationsList = ['30', '60'];
         let stockInventory = {};
         let scannedCountsByGroup = {};
@@ -185,14 +185,8 @@
             scannerConfig.formatsToSupport = [
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.CODE_39,
-                Html5QrcodeSupportedFormats.CODE_93,
-                Html5QrcodeSupportedFormats.ITF,
-                Html5QrcodeSupportedFormats.CODABAR,
-                Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.EAN_8,
-                Html5QrcodeSupportedFormats.UPC_A,
-                Html5QrcodeSupportedFormats.UPC_E
-            ].filter(f => f !== undefined);
+                Html5QrcodeSupportedFormats.EAN_13
+            ];
         }
 
         const html5QrCode = new Html5Qrcode("reader", scannerConfig);
@@ -246,13 +240,19 @@
                 .replace(/[^0-9]/g, '');
         }
 
+        function ensureRouterCategoryExists() {
+            const existingRouterCat = categoriesList.find(c => /^(روتر|راوتر)\s*زين$/i.test(c.trim()));
+            if (existingRouterCat) return existingRouterCat;
+            categoriesList.push('روتر زين');
+            return 'روتر زين';
+        }
+
         function detectCategoryByCode(code) {
             if (code.startsWith('8996601') || code.includes('8996601')) return 'STC';
             if (code.startsWith('8996603') || code.includes('8996603')) return 'Mobily';
             if (code.startsWith('8996604') || code.includes('8996604')) return 'Zain';
-            if (code.length === 15 && !code.startsWith('89966')) {
-                const routerCat = categoriesList.find(c => /راوتر|router|cpe|5g|h155/i.test(c));
-                if (routerCat) return routerCat;
+            if (!code.startsWith('89966') && (code.length === 15 || currentScanMode === 'router')) {
+                return ensureRouterCategoryExists();
             }
             return categoriesList[0] || 'Mobily';
         }
@@ -272,23 +272,25 @@
 
         function renderDropdowns(selectedCat = null, selectedDur = null) {
             const catSelect = document.getElementById('categorySelect');
+            const prevCat = selectedCat !== null ? selectedCat : catSelect.value;
             let catHtml = `<option value="AUTO">🔄 تحديد تلقائي حسب الباركود</option>`;
             categoriesList.forEach(c => {
                 catHtml += `<option value="${c}">${c}</option>`;
             });
             catSelect.innerHTML = catHtml;
-            if (selectedCat && [...catSelect.options].some(o => o.value === selectedCat)) {
-                catSelect.value = selectedCat;
+            if (prevCat && [...catSelect.options].some(o => o.value === prevCat)) {
+                catSelect.value = prevCat;
             }
 
             const durSelect = document.getElementById('durationSelect');
+            const prevDur = selectedDur !== null ? selectedDur : durSelect.value;
             let durHtml = `<option value="">-- اختر المدة --</option>`;
             durationsList.forEach(d => {
                 durHtml += `<option value="${d}">${d}</option>`;
             });
             durSelect.innerHTML = durHtml;
-            if (selectedDur && [...durSelect.options].some(o => o.value === selectedDur)) {
-                durSelect.value = selectedDur;
+            if (prevDur && [...durSelect.options].some(o => o.value === prevDur)) {
+                durSelect.value = prevDur;
             }
         }
 
@@ -387,7 +389,7 @@
             }
             if (confirm(`هل أنت متأكد من حذف التصنيف (${val})؟`)) {
                 categoriesList = categoriesList.filter(c => c !== val);
-                renderDropdowns(null, document.getElementById('durationSelect').value);
+                renderDropdowns('AUTO', document.getElementById('durationSelect').value);
                 renderTable();
                 showMessage(`🗑️ تم حذف التصنيف (${val}).`);
                 await saveConfigAndSync();
@@ -420,7 +422,7 @@
             }
             if (confirm(`هل أنت متأكد من حذف المدة (${val})؟`)) {
                 durationsList = durationsList.filter(d => d !== val);
-                renderDropdowns(document.getElementById('categorySelect').value, null);
+                renderDropdowns(document.getElementById('categorySelect').value, '');
                 renderTable();
                 showMessage(`🗑️ تم حذف المدة (${val}).`);
                 await saveConfigAndSync();
@@ -441,6 +443,7 @@
                 categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
                 durationsList = localConfig.durationsList || ['30', '60'];
             }
+            ensureRouterCategoryExists();
 
             const localSims = JSON.parse(localStorage.getItem('scanned_sims_offline'));
             if (localSims) {
@@ -449,7 +452,7 @@
 
             markOldSimsSilently();
             recalculateUnifiedStock();
-            renderDropdowns();
+            renderDropdowns('AUTO');
             renderTable();
 
             try {
@@ -460,7 +463,8 @@
                         const data = configSnap.data();
                         categoriesList = data.categoriesList || data.customItems || categoriesList;
                         durationsList = data.durationsList || durationsList;
-                        const merged = { ...JSON.parse(localStorage.getItem('app_config') || '{}'), ...data };
+                        ensureRouterCategoryExists();
+                        const merged = { ...JSON.parse(localStorage.getItem('app_config') || '{}'), ...data, categoriesList };
                         localStorage.setItem('app_config', JSON.stringify(merged));
                     }
 
@@ -529,15 +533,24 @@
             input.value = '';
         }
 
-        async function setScanMode(mode) {
+        function setScanMode(mode) {
             if (currentScanMode === mode) return;
             currentScanMode = mode;
             document.getElementById('modeSimBtn').classList.toggle('active', mode === 'sim');
             document.getElementById('modeRouterBtn').classList.toggle('active', mode === 'router');
 
-            if (isLiveRunning) {
-                await toggleLiveCamera();
-                await toggleLiveCamera();
+            const monitor = document.getElementById('scanMonitor');
+            if (mode === 'router') {
+                const routerCat = ensureRouterCategoryExists();
+                renderDropdowns(routerCat, document.getElementById('durationSelect').value);
+                if (isLiveRunning && monitor) {
+                    monitor.innerText = "وضع الراوترات (IMEI).. وجه المستطيل على باركود IMEI";
+                }
+            } else {
+                renderDropdowns('AUTO', document.getElementById('durationSelect').value);
+                if (isLiveRunning && monitor) {
+                    monitor.innerText = "الكاميرا جاهزة.. وجه المستطيل على الباركود";
+                }
             }
         }
 
@@ -561,13 +574,10 @@
                 return;
             }
 
-            const isRouterMode = (currentScanMode === 'router');
             const qrBoxConfig = function(viewfinderWidth, viewfinderHeight) {
                 return {
                     width: Math.floor(viewfinderWidth * 0.94),
-                    height: isRouterMode
-                        ? Math.max(75, Math.floor(viewfinderHeight * 0.17))
-                        : Math.floor(viewfinderHeight * 0.35)
+                    height: Math.floor(viewfinderHeight * 0.35)
                 };
             };
 
@@ -606,13 +616,12 @@
                 torchBtn.style.display = "flex";
                 zoomWrap.style.display = "flex";
                 monitor.style.display = "block";
-                monitor.innerText = isRouterMode
-                    ? "وضع الراوترات (IMEI).. وجه المستطيل الرفيع على باركود IMEI فقط"
+                monitor.innerText = (currentScanMode === 'router')
+                    ? "وضع الراوترات (IMEI).. وجه المستطيل على باركود IMEI"
                     : "الكاميرا جاهزة.. وجه المستطيل على الباركود";
 
-                const defaultZoom = isRouterMode ? 1.2 : 1.5;
-                document.getElementById('zoomSlider').value = String(defaultZoom);
-                setTimeout(() => applyZoom(defaultZoom), 400);
+                document.getElementById('zoomSlider').value = "1.5";
+                setTimeout(() => applyZoom(1.5), 400);
             } catch (err) {
                 showMessage("⚠️ تعذر تشغيل الكاميرا، تأكد من إعطاء الصلاحية للمتصفح.", true);
             }
@@ -645,9 +654,7 @@
             const normalizedRaw = rawStr.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
             const withoutImeiPrefix = normalizedRaw.replace(/^imei\s*[:\-]?\s*/i, '').trim();
 
-            // إذا لم يكن باركود شريحة (89966) وكان يحتوي على حروف مثل S/N الخاص بالراوتر، يتم تجاهله دون التأثير على الشرائح
             if (!isManual && !normalizedRaw.includes('89966') && (/^(s\/?n|serial)/i.test(withoutImeiPrefix) || /[a-zA-Z]/.test(withoutImeiPrefix))) {
-                if (monitor) monitor.innerText = "تم تجاهل السيريال (S/N).. وجه المستطيل على باركود IMEI";
                 return;
             }
 
@@ -655,6 +662,10 @@
             const iccidIdx = code.indexOf('89966');
             if (iccidIdx > 0) {
                 code = code.substring(iccidIdx);
+            }
+
+            if (!isManual && currentScanMode === 'router' && !code.startsWith('89966') && code.length !== 15) {
+                return;
             }
 
             if (code.length < 8) {
@@ -681,8 +692,14 @@
                 return;
             }
 
+            const isRouterCode = !code.startsWith('89966') && (code.length === 15 || currentScanMode === 'router');
             const selectedCatInput = document.getElementById('categorySelect').value;
-            const category = (selectedCatInput && selectedCatInput !== 'AUTO') ? selectedCatInput : detectCategoryByCode(code);
+            let category = (selectedCatInput && selectedCatInput !== 'AUTO') ? selectedCatInput : detectCategoryByCode(code);
+
+            if (isRouterCode && (!selectedCatInput || selectedCatInput === 'AUTO')) {
+                category = ensureRouterCategoryExists();
+                renderDropdowns(category, document.getElementById('durationSelect').value);
+            }
             
             let duration = document.getElementById('durationSelect').value;
             if (!duration) {

@@ -488,7 +488,7 @@
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
         let simsList = [];
         let customersList = [];
-        let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
+        let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull', 'روتر زين'];
         let durationsList = ['30', '60'];
         let geminiApiKey = extractCleanApiKey(localStorage.getItem('gemini_api_key') || '');
         let selectedCustomer = null;
@@ -511,14 +511,8 @@
             scannerConfig.formatsToSupport = [
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.CODE_39,
-                Html5QrcodeSupportedFormats.CODE_93,
-                Html5QrcodeSupportedFormats.ITF,
-                Html5QrcodeSupportedFormats.CODABAR,
-                Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.EAN_8,
-                Html5QrcodeSupportedFormats.UPC_A,
-                Html5QrcodeSupportedFormats.UPC_E
-            ].filter(f => f !== undefined);
+                Html5QrcodeSupportedFormats.EAN_13
+            ];
         }
         const html5QrScanner = new Html5Qrcode("reader", scannerConfig);
         let isLiveCamRunning = false;
@@ -605,9 +599,9 @@
             if (c.startsWith('8996601') || c.includes('8996601')) return 'STC';
             if (c.startsWith('8996603') || c.includes('8996603')) return 'Mobily';
             if (c.startsWith('8996604') || c.includes('8996604')) return 'Zain';
-            if (c.length === 15 && !c.startsWith('89966')) {
-                const routerCat = categoriesList.find(cat => /راوتر|router|cpe|5g|h155/i.test(cat));
-                if (routerCat) return routerCat;
+            if (!c.startsWith('89966') && (c.length === 15 || currentScanMode === 'router')) {
+                const existingRouterCat = categoriesList.find(cat => /^(روتر|راوتر)\s*زين$/i.test(cat.trim()));
+                return existingRouterCat || 'روتر زين';
             }
             return categoriesList[0] || 'Mobily';
         }
@@ -1111,7 +1105,7 @@
             if (!('BarcodeDetector' in window)) return [];
             const found = [];
             const seen = new Set();
-            let formats = ['code_128', 'code_39', 'code_93', 'itf', 'codabar', 'ean_13', 'ean_8', 'upc_a', 'upc_e'];
+            let formats = ['code_128', 'code_39', 'ean_13'];
             if (typeof BarcodeDetector.getSupportedFormats === 'function') {
                 try {
                     const supported = await BarcodeDetector.getSupportedFormats();
@@ -1211,7 +1205,7 @@
 
             const fallbackItems = [];
             const iccidRegex = /89966\d{12,15}/g;
-            const tagRegex = /([A-Za-z]\s*\d{1,4})/g;
+            const tagRegex = /\b([A-Za-z]\s*\d{1,4})\b/g;
             const codes = cleaned.match(iccidRegex) || [];
             const tags = (cleaned.match(tagRegex) || []).map(t => t.toUpperCase().replace(/\s+/g, ''));
             codes.forEach((c, idx) => {
@@ -1310,8 +1304,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     }
 
                     const result = await resp.json();
-                    const rawText = result?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('
-') || '';
+                    const rawText = result?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('\n') || '';
                     const extracted = parseGeminiResponseText(rawText);
                     if (extracted.length > 0) {
                         return extracted;
@@ -1488,15 +1481,17 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             }
         }
 
-        async function setScanMode(mode) {
+        function setScanMode(mode) {
             if (currentScanMode === mode) return;
             currentScanMode = mode;
             document.getElementById('modeSimBtn').classList.toggle('active', mode === 'sim');
             document.getElementById('modeRouterBtn').classList.toggle('active', mode === 'router');
 
-            if (isLiveCamRunning) {
-                await toggleLiveScanner();
-                await toggleLiveScanner();
+            const monitor = document.getElementById('scanMonitor');
+            if (isLiveCamRunning && monitor) {
+                monitor.innerText = (mode === 'router')
+                    ? 'وضع الراوترات (IMEI).. وجه المستطيل على باركود IMEI'
+                    : 'الكاميرا جاهزة.. وجه المستطيل على الباركود';
             }
         }
 
@@ -1520,13 +1515,10 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 return;
             }
 
-            const isRouterMode = (currentScanMode === 'router');
             const qrBoxConfig = function(viewfinderWidth, viewfinderHeight) {
                 return {
                     width: Math.floor(viewfinderWidth * 0.94),
-                    height: isRouterMode
-                        ? Math.max(75, Math.floor(viewfinderHeight * 0.17))
-                        : Math.floor(viewfinderHeight * 0.35)
+                    height: Math.floor(viewfinderHeight * 0.35)
                 };
             };
 
@@ -1565,13 +1557,12 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 torchBtn.style.display = 'flex';
                 zoomWrap.style.display = 'flex';
                 monitor.style.display = 'block';
-                monitor.innerText = isRouterMode
-                    ? 'وضع الراوترات (IMEI).. وجه المستطيل الرفيع على باركود IMEI فقط'
+                monitor.innerText = (currentScanMode === 'router')
+                    ? 'وضع الراوترات (IMEI).. وجه المستطيل على باركود IMEI'
                     : 'الكاميرا جاهزة.. وجه المستطيل على الباركود';
 
-                const defaultZoom = isRouterMode ? 1.2 : 1.5;
-                document.getElementById('zoomSlider').value = String(defaultZoom);
-                setTimeout(() => applyZoom(defaultZoom), 400);
+                document.getElementById('zoomSlider').value = "1.5";
+                setTimeout(() => applyZoom(1.5), 400);
             } catch (e) {
                 showMessage('⚠️ تعذر تشغيل الكاميرا، تأكد من إعطاء الصلاحية للمتصفح.', true);
             }
@@ -1592,7 +1583,6 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             const withoutImeiPrefix = normalizedRaw.replace(/^imei\s*[:\-]?\s*/i, '').trim();
 
             if (!normalizedRaw.includes('89966') && (/^(s\/?n|serial)/i.test(withoutImeiPrefix) || /[a-zA-Z]/.test(withoutImeiPrefix))) {
-                if (monitor) monitor.innerText = "تم تجاهل السيريال (S/N).. وجه المستطيل على باركود IMEI";
                 return;
             }
 
@@ -1600,6 +1590,10 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             const iccidIdx = code.indexOf('89966');
             if (iccidIdx > 0) {
                 code = code.substring(iccidIdx);
+            }
+
+            if (currentScanMode === 'router' && !code.startsWith('89966') && code.length !== 15) {
+                return;
             }
 
             if (code.length < 8) {
