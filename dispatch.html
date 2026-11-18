@@ -22,12 +22,16 @@
 
         .page-header { text-align: center; color: var(--primary); margin-bottom: 12px; font-size: 1.25rem; font-weight: 800; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
-        .stat-box { background: var(--card); border-radius: 12px; padding: 12px 10px; text-align: center; border: 1.5px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
+        .stat-box {
+            background: var(--card); border-radius: 10px; padding: 7px 10px; text-align: center;
+            border: 1.5px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+            display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;
+        }
         .stat-box.dispatched { background: #f0fdf4; border-color: #bbf7d0; }
         .stat-box.returned { background: #fef2f2; border-color: #fecaca; }
-        .stat-title { font-size: 0.82rem; font-weight: 800; color: #475569; margin-bottom: 4px; }
-        .stat-val { font-size: 1.35rem; font-weight: 900; }
+        .stat-title { font-size: 0.76rem; font-weight: 800; color: #475569; margin-bottom: 0; }
+        .stat-val { font-size: 0.98rem; font-weight: 900; line-height: 1.2; }
         .stat-box.dispatched .stat-val { color: var(--success); }
         .stat-box.returned .stat-val { color: var(--danger); }
 
@@ -232,11 +236,85 @@
         }
 
         .modal-box { background: #fff; padding: 18px; border-radius: 14px; width: 100%; max-width: 420px; }
+
+        .fixed-tag-box {
+            margin-top: 10px;
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        .fixed-tag-input {
+            font-family: monospace, sans-serif;
+            font-weight: 900;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            direction: ltr;
+            text-align: center;
+            height: 40px;
+            border: 1.5px solid var(--primary-light);
+            background: #fff;
+            color: var(--primary);
+        }
+        .fixed-tag-input:focus {
+            background: #eff6ff;
+            border-color: var(--primary);
+        }
+
+        .history-counter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            background: #eff6ff;
+            border: 1.5px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 9px 12px;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        .counter-pills-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+        .counter-pill-disp {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: 900;
+            font-size: 0.84rem;
+        }
+        .counter-pill-ret {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: 900;
+            font-size: 0.84rem;
+        }
+        .counter-pill-total {
+            background: #e0e7ff;
+            color: #1e3a8a;
+            border: 1px solid #a5b4fc;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: 900;
+            font-size: 0.84rem;
+        }
     </style>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
@@ -256,6 +334,9 @@
         window.doc = doc;
         window.setDoc = setDoc;
         window.getDoc = getDoc;
+        window.addDoc = addDoc;
+        window.updateDoc = updateDoc;
+        window.deleteDoc = deleteDoc;
 
         if (window.initDispatchApp) { window.initDispatchApp(); }
     </script>
@@ -263,17 +344,6 @@
 <body>
 
     <h3 class="page-header">🔄 صرف ومرتجع الشرائح للعملاء</h3>
-
-    <div class="stats-grid">
-        <div class="stat-box dispatched">
-            <div class="stat-title">✅ إجمالي المنصرف</div>
-            <div class="stat-val" id="statDispatchedCount">0</div>
-        </div>
-        <div class="stat-box returned">
-            <div class="stat-title">❌ إجمالي المرتجع</div>
-            <div class="stat-val" id="statReturnedCount">0</div>
-        </div>
-    </div>
 
     <div class="card">
         <div id="msg"></div>
@@ -350,6 +420,17 @@
 
         <div id="tempImagesStrip" class="temp-images-strip" title="اضغط على أي صورة لتكبيرها ومراجعتها"></div>
 
+        <div class="fixed-tag-box">
+            <label for="defaultTagInput" style="margin-top:0; margin-bottom:5px; color:var(--primary); display:flex; align-items:center; justify-content:space-between;">
+                <span>🏷️ الرمز (ثابت للمسح المتعدد):</span>
+                <span style="font-size:0.75rem; color:#64748b; font-weight:600;">لا يتغير إلا يدوياً</span>
+            </label>
+            <div class="quick-row">
+                <input type="text" id="defaultTagInput" class="fixed-tag-input" placeholder="اكتب الرمز هنا (مثل N120 أو W18)..." autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" oninput="onDefaultTagInput(this)">
+                <button type="button" class="btn-sm btn-sm-danger" style="height:40px; padding:0 12px; white-space:nowrap;" onclick="clearDefaultTag()" title="مسح الرمز">مسح ✕</button>
+            </div>
+        </div>
+
         <div id="stagingSection">
             <div class="staging-banner">
                 <span id="stagingCounterText">📋 الشرائح المستخرجة للمراجعة: 0</span>
@@ -378,6 +459,17 @@
         </div>
     </div>
 
+    <div class="stats-grid">
+        <div class="stat-box dispatched">
+            <span class="stat-title">✅ إجمالي المنصرف:</span>
+            <span class="stat-val" id="statDispatchedCount">0</span>
+        </div>
+        <div class="stat-box returned">
+            <span class="stat-title">❌ إجمالي المرتجع:</span>
+            <span class="stat-val" id="statReturnedCount">0</span>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-title">
             <span>📋 السجل</span>
@@ -399,6 +491,20 @@
                     <button type="button" class="btn-sm btn-sm-blue" onclick="document.getElementById('monthFilter').value=''; saveDispatchDraft(); renderHistoryTable();">الكل</button>
                 </div>
             </div>
+            <div class="filter-item" style="grid-column: 1 / -1;">
+                <label style="margin-top:0;">👤 العميل:</label>
+                <div class="filter-row-flex">
+                    <select id="historyCustomerFilter" onchange="saveDispatchDraft(); renderHistoryTable();">
+                        <option value="">-- كل العملاء --</option>
+                    </select>
+                    <button type="button" class="btn-sm btn-sm-blue" onclick="document.getElementById('historyCustomerFilter').value=''; saveDispatchDraft(); renderHistoryTable();">الكل</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="historyFilterStatsBar" class="history-counter-bar">
+            <span id="historyFilterLabel">📊 إجمالي السجل:</span>
+            <div class="counter-pills-group" id="historyFilterCounters"></div>
         </div>
 
         <input type="text" id="mainSearchInput" class="search-input" placeholder="🔍 البحث بالسيريال أو الرمز" oninput="saveDispatchDraft(); renderHistoryTable();">
@@ -497,6 +603,122 @@
         let pendingFilesAfterKey = null;
         let currentScanMode = 'sim'; // 'sim' أو 'router'
 
+        // --- نظام المزامنة التلقائية الموحد (SimAutoSync Bridge) ---
+        const SYNC_QUEUE_KEY = 'sim_offline_sync_queue';
+
+        function queueCloudOperation(entry) {
+            try {
+                if (window.parent && window.parent !== window && window.parent.SimAutoSync) {
+                    window.parent.SimAutoSync.enqueue(entry);
+                    return;
+                }
+            } catch (e) {}
+
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                const key = `${entry.op}::${entry.collectionName}::${entry.docId || ''}`;
+                if (entry.op === 'delete') {
+                    const withoutPrior = q.filter(i => !(i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId)));
+                    withoutPrior.push({ ...entry, timestamp: Date.now() });
+                    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(withoutPrior));
+                    notifyParentQueueUpdated();
+                    return;
+                }
+                const filtered = q.filter(i => !(i.op === 'delete' && i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId)));
+                const idx = filtered.findIndex(i => `${i.op}::${i.collectionName}::${i.docId || ''}` === key);
+                const item = { ...entry, timestamp: Date.now() };
+                if (idx !== -1) {
+                    if (entry.merge && filtered[idx].data && entry.data) item.data = { ...filtered[idx].data, ...entry.data };
+                    filtered[idx] = item;
+                } else {
+                    filtered.push(item);
+                }
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(filtered));
+                notifyParentQueueUpdated();
+            } catch (e) {}
+        }
+
+        function notifyParentQueueUpdated() {
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'SIM_QUEUE_UPDATED' }, '*');
+                }
+            } catch (e) {}
+        }
+
+        function getPendingIdsForCollection(collectionName) {
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                return new Set(q.filter(i => i.collectionName === collectionName && i.op !== 'delete').map(i => String(i.docId)));
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        function getPendingDeletesForCollection(collectionName) {
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                return new Set(q.filter(i => i.collectionName === collectionName && i.op === 'delete').map(i => String(i.docId)));
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        async function flushLocalQueueFallback() {
+            try {
+                if (window.parent && window.parent !== window && window.parent.SimAutoSync) {
+                    await window.parent.SimAutoSync.flush();
+                    return;
+                }
+                if (!navigator.onLine || !window.db) return;
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                if (q.length === 0) return;
+
+                const remaining = [];
+                for (const item of q) {
+                    try {
+                        if (item.op === 'add') {
+                            const docRef = await window.addDoc(window.collection(window.db, item.collectionName), item.data);
+                            if (item.localStorageKey) {
+                                const arr = JSON.parse(localStorage.getItem(item.localStorageKey) || '[]');
+                                arr.forEach(r => {
+                                    if (String(r[item.idField || 'id']) === String(item.docId)) {
+                                        r[item.idField || 'id'] = docRef.id;
+                                        if (r.id === item.docId) r.id = docRef.id;
+                                        if (r.firebaseId === item.docId) r.firebaseId = docRef.id;
+                                    }
+                                });
+                                localStorage.setItem(item.localStorageKey, JSON.stringify(arr));
+                            }
+                        } else if (item.op === 'set') {
+                            await window.setDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data, item.merge !== false ? { merge: true } : undefined);
+                        } else if (item.op === 'update') {
+                            await window.updateDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data);
+                        } else if (item.op === 'delete') {
+                            await window.deleteDoc(window.doc(window.db, item.collectionName, String(item.docId)));
+                        }
+                    } catch (err) {
+                        remaining.push(item);
+                    }
+                }
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(remaining));
+            } catch (e) {}
+        }
+
+        window.addEventListener('online', async () => {
+            await flushLocalQueueFallback();
+            if (window.initDispatchApp) await window.initDispatchApp();
+        });
+
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'SIM_CLOUD_SYNCED') {
+                loadLocalData();
+                renderStagingTable();
+                renderHistoryTable();
+            }
+        });
+        // --- نهاية نظام المزامنة التلقائية ---
+
         function extractCleanApiKey(rawInput) {
             const str = String(rawInput || '').trim();
             const match = str.match(/AIza[0-9A-Za-z\-_]{30,45}/);
@@ -511,6 +733,8 @@
             scannerConfig.formatsToSupport = [
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.CODE_93,
+                Html5QrcodeSupportedFormats.ITF,
                 Html5QrcodeSupportedFormats.EAN_13
             ];
         }
@@ -599,7 +823,7 @@
             if (c.startsWith('8996601') || c.includes('8996601')) return 'STC';
             if (c.startsWith('8996603') || c.includes('8996603')) return 'Mobily';
             if (c.startsWith('8996604') || c.includes('8996604')) return 'Zain';
-            if (!c.startsWith('89966') && (c.length === 15 || currentScanMode === 'router')) {
+            if (!c.startsWith('89966') && ((c.length >= 14 && c.length <= 16) || currentScanMode === 'router')) {
                 const existingRouterCat = categoriesList.find(cat => /^(روتر|راوتر)\s*زين$/i.test(cat.trim()));
                 return existingRouterCat || 'روتر زين';
             }
@@ -649,15 +873,26 @@
 
             const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             existingConfig.geminiApiKey = geminiApiKey;
+            existingConfig.configUpdatedAt = Date.now();
             localStorage.setItem('app_config', JSON.stringify(existingConfig));
 
+            const keyPayload = {
+                geminiApiKey: geminiApiKey,
+                configUpdatedAt: existingConfig.configUpdatedAt
+            };
+
             try {
-                if (window.db) {
-                    await window.setDoc(window.doc(window.db, "settings", "app_config"), {
-                        geminiApiKey: geminiApiKey
-                    }, { merge: true });
-                }
-            } catch (e) {}
+                if (!window.db || !navigator.onLine) throw new Error('offline');
+                await window.setDoc(window.doc(window.db, "settings", "app_config"), keyPayload, { merge: true });
+            } catch (e) {
+                queueCloudOperation({
+                    op: 'set',
+                    collectionName: 'settings',
+                    docId: 'app_config',
+                    data: keyPayload,
+                    merge: true
+                });
+            }
 
             document.getElementById('geminiKeyModal').style.display = 'none';
             showMessage('✅ تم حفظ مفتاح Gemini AI ومزامنته مع السحابة بنجاح!');
@@ -669,6 +904,85 @@
             }
         }
 
+
+        const FIXED_TAG_STORAGE_KEY = 'sim_fixed_default_tag';
+
+        function getFixedTagValue() {
+            const el = document.getElementById('defaultTagInput');
+            const val = el ? el.value : (localStorage.getItem(FIXED_TAG_STORAGE_KEY) || '');
+            return String(val || '').trim().toUpperCase();
+        }
+
+        function onDefaultTagInput(inputEl) {
+            const upper = String(inputEl.value || '').toUpperCase();
+            if (inputEl.value !== upper) {
+                const pos = inputEl.selectionStart;
+                inputEl.value = upper;
+                try { inputEl.setSelectionRange(pos, pos); } catch (e) {}
+            }
+            localStorage.setItem(FIXED_TAG_STORAGE_KEY, upper.trim());
+            saveDispatchDraft();
+        }
+
+        function clearDefaultTag() {
+            const el = document.getElementById('defaultTagInput');
+            if (el) {
+                el.value = '';
+                el.focus();
+            }
+            localStorage.removeItem(FIXED_TAG_STORAGE_KEY);
+            saveDispatchDraft();
+        }
+
+        function restoreFixedTagInput() {
+            const savedTag = localStorage.getItem(FIXED_TAG_STORAGE_KEY) || '';
+            const el = document.getElementById('defaultTagInput');
+            if (el && savedTag) {
+                el.value = savedTag.toUpperCase();
+            }
+        }
+
+        function populateHistoryCustomerFilter() {
+            const selectEl = document.getElementById('historyCustomerFilter');
+            if (!selectEl) return;
+
+            const prevVal = selectEl.value;
+            let draftCust = '';
+            try {
+                const draftRaw = localStorage.getItem('sim_dispatch_draft');
+                if (draftRaw) draftCust = JSON.parse(draftRaw).historyCustomerFilter || '';
+            } catch (e) {}
+            const targetVal = prevVal || draftCust;
+
+            const custMap = new Map();
+            (customersList || []).forEach(c => {
+                const cName = (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName.trim() : (c.shopName || '').trim();
+                if (!cName) return;
+                const label = (c.shopName && c.shopName.trim() !== cName) ? `${cName} — ${c.shopName.trim()}` : cName;
+                if (!custMap.has(cName)) custMap.set(cName, label);
+            });
+
+            (simsList || []).forEach(s => {
+                if (s.status !== 'dispatched' && s.status !== 'returned') return;
+                const cName = String(s.clientName || '').trim();
+                if (!cName) return;
+                const label = (s.shopName && s.shopName.trim() !== cName) ? `${cName} — ${s.shopName.trim()}` : cName;
+                if (!custMap.has(cName)) custMap.set(cName, label);
+            });
+
+            const sortedEntries = Array.from(custMap.entries()).sort((a, b) => a[0].localeCompare(b[0], 'ar'));
+            let html = `<option value="">-- كل العملاء (${sortedEntries.length}) --</option>`;
+            sortedEntries.forEach(([val, label]) => {
+                const escapedVal = val.replace(/"/g, '&quot;');
+                html += `<option value="${escapedVal}">${label}</option>`;
+            });
+            selectEl.innerHTML = html;
+
+            if (targetVal && custMap.has(targetVal)) {
+                selectEl.value = targetVal;
+            }
+        }
+
         function saveDispatchDraft() {
             const draft = {
                 operationMode: document.getElementById('operationMode').value,
@@ -677,8 +991,10 @@
                 customerSearchText: document.getElementById('customerSearchInput').value,
                 quickSerialInput: document.getElementById('quickSerialInput').value,
                 stagingList: stagingList,
+                defaultTagInput: getFixedTagValue(),
                 monthFilter: document.getElementById('monthFilter').value,
                 statusFilter: document.getElementById('statusFilter').value,
+                historyCustomerFilter: document.getElementById('historyCustomerFilter') ? document.getElementById('historyCustomerFilter').value : '',
                 mainSearchInput: document.getElementById('mainSearchInput').value
             };
             localStorage.setItem('sim_dispatch_draft', JSON.stringify(draft));
@@ -713,11 +1029,18 @@
                 if (Array.isArray(draft.stagingList)) {
                     stagingList = draft.stagingList;
                 }
+                if (draft.defaultTagInput && !localStorage.getItem(FIXED_TAG_STORAGE_KEY)) {
+                    localStorage.setItem(FIXED_TAG_STORAGE_KEY, draft.defaultTagInput.toUpperCase());
+                }
+                restoreFixedTagInput();
                 if (draft.monthFilter !== undefined) {
                     document.getElementById('monthFilter').value = draft.monthFilter;
                 }
                 if (draft.statusFilter) {
                     document.getElementById('statusFilter').value = draft.statusFilter;
+                }
+                if (draft.historyCustomerFilter !== undefined && document.getElementById('historyCustomerFilter')) {
+                    document.getElementById('historyCustomerFilter').value = draft.historyCustomerFilter;
                 }
                 if (draft.mainSearchInput !== undefined) {
                     document.getElementById('mainSearchInput').value = draft.mainSearchInput;
@@ -761,6 +1084,8 @@
             simsList = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
             customersList = JSON.parse(localStorage.getItem('customers_records_offline') || '[]');
             renderDurationDropdowns();
+            populateHistoryCustomerFilter();
+            restoreFixedTagInput();
         }
 
         async function recalculateAndSyncGlobalStock() {
@@ -808,14 +1133,23 @@
             };
             localStorage.setItem('app_config', JSON.stringify(updatedConfig));
 
+            const stockPayload = {
+                stockInventory,
+                configUpdatedAt: updatedConfig.configUpdatedAt
+            };
+
             try {
-                if (window.db) {
-                    await window.setDoc(window.doc(window.db, "settings", "app_config"), {
-                        stockInventory,
-                        configUpdatedAt: updatedConfig.configUpdatedAt
-                    }, { merge: true });
-                }
-            } catch (e) {}
+                if (!window.db || !navigator.onLine) throw new Error('offline');
+                await window.setDoc(window.doc(window.db, "settings", "app_config"), stockPayload, { merge: true });
+            } catch (e) {
+                queueCloudOperation({
+                    op: 'set',
+                    collectionName: 'settings',
+                    docId: 'app_config',
+                    data: stockPayload,
+                    merge: true
+                });
+            }
         }
 
         window.initDispatchApp = async function() {
@@ -825,12 +1159,20 @@
             renderHistoryTable();
 
             try {
-                if (window.db) {
+                if (window.db && navigator.onLine) {
+                    await flushLocalQueueFallback();
+
                     const configSnap = await window.getDoc(window.doc(window.db, "settings", "app_config"));
                     if (configSnap.exists()) {
                         const cData = configSnap.data();
-                        categoriesList = cData.categoriesList || cData.customItems || categoriesList;
-                        durationsList = cData.durationsList || durationsList;
+                        const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+                        const localTs = localConfig.configUpdatedAt || 0;
+                        const cloudTs = cData.configUpdatedAt || 0;
+
+                        if (cloudTs >= localTs) {
+                            categoriesList = cData.categoriesList || cData.customItems || categoriesList;
+                            durationsList = cData.durationsList || durationsList;
+                        }
                         if (cData.geminiApiKey) {
                             geminiApiKey = extractCleanApiKey(cData.geminiApiKey);
                             localStorage.setItem('gemini_api_key', geminiApiKey);
@@ -838,8 +1180,14 @@
                         renderDurationDropdowns();
                     }
 
+                    const pendingSimIds = getPendingIdsForCollection("scanned_sims");
+                    const pendingDeleteIds = getPendingDeletesForCollection("scanned_sims");
                     const localMap = new Map();
-                    simsList.forEach(s => { if (s.code) localMap.set(s.code, s); });
+                    simsList.forEach(s => {
+                        if (s.code && !pendingDeleteIds.has(String(s.code))) {
+                            localMap.set(String(s.code), s);
+                        }
+                    });
 
                     const simsSnap = await window.getDocs(window.collection(window.db, "scanned_sims"));
                     const mergedSims = [];
@@ -848,36 +1196,58 @@
                     simsSnap.forEach(d => {
                         const cloudSim = d.data();
                         if (!cloudSim.category && cloudSim.company) cloudSim.category = cloudSim.company;
-                        const locSim = localMap.get(cloudSim.code);
+                        const codeKey = String(cloudSim.code || d.id);
 
-                        if (locSim && (locSim.updatedAt || 0) > (cloudSim.updatedAt || 0)) {
+                        if (pendingDeleteIds.has(codeKey)) return;
+
+                        const locSim = localMap.get(codeKey);
+                        if (locSim && (pendingSimIds.has(codeKey) || (locSim.updatedAt || 0) > (cloudSim.updatedAt || 0))) {
                             mergedSims.push(locSim);
                             pendingCloudUpdates.push(locSim);
                         } else {
                             mergedSims.push(cloudSim);
                         }
-                        localMap.delete(cloudSim.code);
+                        localMap.delete(codeKey);
                     });
 
-                    localMap.forEach(remSim => {
-                        mergedSims.push(remSim);
-                        pendingCloudUpdates.push(remSim);
+                    localMap.forEach((remSim, codeKey) => {
+                        if (pendingSimIds.has(codeKey)) {
+                            mergedSims.push(remSim);
+                            pendingCloudUpdates.push(remSim);
+                        }
                     });
 
-                    if (mergedSims.length > 0) {
+                    if (mergedSims.length > 0 || simsSnap.empty) {
                         simsList = mergedSims;
                         localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
                     }
 
                     for (const upSim of pendingCloudUpdates) {
-                        await window.setDoc(window.doc(window.db, "scanned_sims", upSim.code), upSim, { merge: true });
+                        try {
+                            await window.setDoc(window.doc(window.db, "scanned_sims", upSim.code), upSim, { merge: true });
+                        } catch (err) {
+                            queueCloudOperation({
+                                op: 'set',
+                                collectionName: 'scanned_sims',
+                                docId: String(upSim.code),
+                                data: { ...upSim },
+                                merge: true
+                            });
+                        }
                     }
 
+                    const pendingCustIds = getPendingIdsForCollection("customers");
+                    const pendingCustDeletes = getPendingDeletesForCollection("customers");
+                    const localUnsyncedCust = customersList.filter(c => String(c.id).startsWith('local_') || pendingCustIds.has(String(c.id)));
                     const custSnap = await window.getDocs(window.collection(window.db, "customers"));
                     const cloudCust = [];
-                    custSnap.forEach(d => cloudCust.push({ id: d.id, ...d.data() }));
-                    if (cloudCust.length > 0) {
-                        customersList = cloudCust;
+                    custSnap.forEach(d => {
+                        if (!pendingCustIds.has(String(d.id)) && !pendingCustDeletes.has(String(d.id))) {
+                            cloudCust.push({ id: d.id, ...d.data() });
+                        }
+                    });
+                    if (cloudCust.length > 0 || localUnsyncedCust.length > 0) {
+                        customersList = [...localUnsyncedCust, ...cloudCust];
                         localStorage.setItem('customers_records_offline', JSON.stringify(customersList));
                     }
                 }
@@ -886,6 +1256,7 @@
             }
 
             await recalculateAndSyncGlobalStock();
+            populateHistoryCustomerFilter();
             renderStagingTable();
             renderHistoryTable();
         };
@@ -1060,7 +1431,7 @@
             }
 
             if (iccidIdx >= 0 && coreClean.length >= 12) return coreClean;
-            if (coreClean.length >= 15) return coreClean;
+            if (coreClean.length >= 14 && coreClean.length <= 16) return coreClean;
             return null;
         }
 
@@ -1105,7 +1476,7 @@
             if (!('BarcodeDetector' in window)) return [];
             const found = [];
             const seen = new Set();
-            let formats = ['code_128', 'code_39', 'ean_13'];
+            let formats = ['code_128', 'code_39', 'code_93', 'itf', 'ean_13'];
             if (typeof BarcodeDetector.getSupportedFormats === 'function') {
                 try {
                     const supported = await BarcodeDetector.getSupportedFormats();
@@ -1380,11 +1751,12 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     }
 
                     const seenInFile = new Set();
+                    const fixedTag = getFixedTagValue();
 
                     geminiItems.forEach(item => {
                         const rawCode = String(item.code || '').trim();
                         const resolvedCode = matchWithInventorySim(rawCode) || normalizeDigits(rawCode).replace(/[^0-9]/g, '');
-                        const cleanTag = String(item.tagCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        const cleanTag = fixedTag || String(item.tagCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
                         if (resolvedCode && resolvedCode.length >= 8 && !seenInFile.has(resolvedCode)) {
                             seenInFile.add(resolvedCode);
@@ -1394,7 +1766,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                         }
                     });
 
-                    const dominantTag = geminiItems.find(it => it.tagCode)?.tagCode || '';
+                    const dominantTag = fixedTag || geminiItems.find(it => it.tagCode)?.tagCode || '';
                     barcodeList.forEach(bCode => {
                         if (!seenInFile.has(bCode)) {
                             seenInFile.add(bCode);
@@ -1481,17 +1853,15 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             }
         }
 
-        function setScanMode(mode) {
+        async function setScanMode(mode) {
             if (currentScanMode === mode) return;
             currentScanMode = mode;
             document.getElementById('modeSimBtn').classList.toggle('active', mode === 'sim');
             document.getElementById('modeRouterBtn').classList.toggle('active', mode === 'router');
 
-            const monitor = document.getElementById('scanMonitor');
-            if (isLiveCamRunning && monitor) {
-                monitor.innerText = (mode === 'router')
-                    ? 'وضع الراوترات (IMEI).. وجه المستطيل على باركود IMEI'
-                    : 'الكاميرا جاهزة.. وجه المستطيل على الباركود';
+            if (isLiveCamRunning) {
+                await toggleLiveScanner();
+                await toggleLiveScanner();
             }
         }
 
@@ -1515,10 +1885,13 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 return;
             }
 
+            const isRouterMode = (currentScanMode === 'router');
             const qrBoxConfig = function(viewfinderWidth, viewfinderHeight) {
                 return {
                     width: Math.floor(viewfinderWidth * 0.94),
-                    height: Math.floor(viewfinderHeight * 0.35)
+                    height: isRouterMode
+                        ? Math.max(115, Math.floor(viewfinderHeight * 0.25))
+                        : Math.floor(viewfinderHeight * 0.35)
                 };
             };
 
@@ -1527,7 +1900,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     await html5QrScanner.start(
                         { facingMode: "environment" },
                         {
-                            fps: 20,
+                            fps: 25,
                             disableFlip: false,
                             qrbox: qrBoxConfig,
                             videoConstraints: {
@@ -1543,7 +1916,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     await html5QrScanner.start(
                         { facingMode: "environment" },
                         {
-                            fps: 15,
+                            fps: 20,
                             disableFlip: false,
                             qrbox: qrBoxConfig
                         },
@@ -1557,8 +1930,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 torchBtn.style.display = 'flex';
                 zoomWrap.style.display = 'flex';
                 monitor.style.display = 'block';
-                monitor.innerText = (currentScanMode === 'router')
-                    ? 'وضع الراوترات (IMEI).. وجه المستطيل على باركود IMEI'
+                monitor.innerText = isRouterMode
+                    ? 'وضع الراوترات (IMEI).. وجه الإطار على باركود IMEI'
                     : 'الكاميرا جاهزة.. وجه المستطيل على الباركود';
 
                 document.getElementById('zoomSlider').value = "1.5";
@@ -1583,6 +1956,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             const withoutImeiPrefix = normalizedRaw.replace(/^imei\s*[:\-]?\s*/i, '').trim();
 
             if (!normalizedRaw.includes('89966') && (/^(s\/?n|serial)/i.test(withoutImeiPrefix) || /[a-zA-Z]/.test(withoutImeiPrefix))) {
+                if (monitor) monitor.innerText = `تم تجاهل S/N (${withoutImeiPrefix}).. ارفع الكاميرا قليلاً على باركود IMEI`;
                 return;
             }
 
@@ -1592,7 +1966,10 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 code = code.substring(iccidIdx);
             }
 
-            if (currentScanMode === 'router' && !code.startsWith('89966') && code.length !== 15) {
+            if (currentScanMode === 'router' && !code.startsWith('89966') && (code.length < 14 || code.length > 16)) {
+                if (monitor && code.length > 0) {
+                    monitor.innerText = `قراءة غير مكتملة (${code}).. وجه الكاميرا على باركود IMEI كاملاً`;
+                }
                 return;
             }
 
@@ -1617,7 +1994,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 return;
             }
 
-            if (addCodeToStaging(matched, '') === 'added') {
+            if (addCodeToStaging(matched, getFixedTagValue()) === 'added') {
                 playBeep(true);
                 saveDispatchDraft();
                 renderStagingTable();
@@ -1658,7 +2035,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
         }
 
         function selectSuggestedSim(code) {
-            addCodeToStaging(code, '');
+            addCodeToStaging(code, getFixedTagValue());
             document.getElementById('quickSerialInput').value = '';
             document.getElementById('simSuggestions').style.display = 'none';
             saveDispatchDraft();
@@ -1671,7 +2048,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             if (!raw) return;
 
             const matched = matchWithInventorySim(raw) || raw;
-            addCodeToStaging(matched, '');
+            addCodeToStaging(matched, getFixedTagValue());
             input.value = '';
             document.getElementById('simSuggestions').style.display = 'none';
             saveDispatchDraft();
@@ -1681,16 +2058,18 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
         function addCodeToStaging(code, tagCode = '') {
             const cleanCode = normalizeDigits(code).replace(/^imei\s*[:\-]?\s*/i, '').replace(/[^0-9]/g, '');
             if (!cleanCode || cleanCode.length < 6) return false;
+            const fixedTag = getFixedTagValue();
             const existingIdx = stagingList.findIndex(item => item.code === cleanCode);
             if (existingIdx !== -1) {
-                if (tagCode && !stagingList[existingIdx].tagCode) {
-                    stagingList[existingIdx].tagCode = tagCode;
+                const candidateTag = fixedTag || tagCode;
+                if (candidateTag && !stagingList[existingIdx].tagCode) {
+                    stagingList[existingIdx].tagCode = candidateTag;
                 }
                 return 'exists';
             }
 
             const existingSim = simsList.find(s => s.code === cleanCode);
-            const finalTag = tagCode || (existingSim && existingSim.tagCode) || '';
+            const finalTag = fixedTag || tagCode || (existingSim && existingSim.tagCode) || '';
             const chosenDur = resolveSimDuration(existingSim);
 
             stagingList.push({
@@ -1906,14 +2285,21 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             renderTempImagesStrip();
             await recalculateAndSyncGlobalStock();
 
-            try {
-                if (window.db) {
-                    for (const sim of updatedSimsForCloud) {
-                        await window.setDoc(window.doc(window.db, "scanned_sims", sim.code), sim, { merge: true });
-                    }
+            let queuedAny = false;
+            for (const sim of updatedSimsForCloud) {
+                try {
+                    if (!window.db || !navigator.onLine) throw new Error('offline');
+                    await window.setDoc(window.doc(window.db, "scanned_sims", sim.code), sim, { merge: true });
+                } catch (e) {
+                    queuedAny = true;
+                    queueCloudOperation({
+                        op: 'set',
+                        collectionName: 'scanned_sims',
+                        docId: String(sim.code),
+                        data: { ...sim },
+                        merge: true
+                    });
                 }
-            } catch (e) {
-                console.warn("تم الحفظ محلياً وسيتم المزامنة تلقائياً عند توفر الإنترنت.");
             }
 
             const countDone = updatedSimsForCloud.length;
@@ -1922,10 +2308,11 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             onModeChange(true);
             btn.disabled = false;
 
+            const syncSuffix = queuedAny ? ' (تم الحفظ محلياً وسيُرفع تلقائياً فور عودة الإنترنت)' : '';
             if (mode === 'dispatch') {
-                showMessage(`✅ تم صرف (${countDone}) للعميل (${lastClientName}) والتعليم عليها بـ (✅) بنجاح!`);
+                showMessage(`✅ تم صرف (${countDone}) للعميل (${lastClientName}) والتعليم عليها بـ (✅) بنجاح!${syncSuffix}`);
             } else {
-                showMessage(`❌ تم تسجيل (${countDone}) كمرتجع والتعليم عليها بـ (❌) وخصمها من الرصيد بنجاح!`);
+                showMessage(`❌ تم تسجيل (${countDone}) كمرتجع والتعليم عليها بـ (❌) وخصمها من الرصيد بنجاح!${syncSuffix}`);
             }
 
             renderHistoryTable();
@@ -1935,6 +2322,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             const tbody = document.getElementById('historyTableBody');
             const monthVal = document.getElementById('monthFilter').value;
             const statusVal = document.getElementById('statusFilter').value;
+            const custSelectEl = document.getElementById('historyCustomerFilter');
+            const custVal = custSelectEl ? custSelectEl.value.trim() : '';
             const rawSearch = normalizeDigits((document.getElementById('mainSearchInput').value || '').trim());
             const searchLower = rawSearch.toLowerCase();
 
@@ -1943,7 +2332,9 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             const filtered = activeSims.filter(s => {
                 if (statusVal !== 'ALL' && s.status !== statusVal) return false;
 
-                if (!searchLower && monthVal) {
+                if (custVal && String(s.clientName || '').trim() !== custVal) return false;
+
+                if ((!searchLower || custVal) && monthVal) {
                     const effectiveDate = s.actionDate || (s.status === 'returned' ? s.returnDate : s.dispatchDate) || s.date;
                     const effectiveTs = s.returnTimestamp || s.dispatchTimestamp || s.timestamp;
                     const recMonth = getAccountingMonth(effectiveDate, effectiveTs);
@@ -1970,6 +2361,29 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             const retCount = filtered.filter(s => s.status === 'returned').length;
             document.getElementById('statDispatchedCount').innerText = dispCount;
             document.getElementById('statReturnedCount').innerText = retCount;
+
+            const filterLabelEl = document.getElementById('historyFilterLabel');
+            const filterCountersEl = document.getElementById('historyFilterCounters');
+            if (filterLabelEl && filterCountersEl) {
+                const periodText = monthVal ? `📅 ${monthVal}` : '📅 كل الفترات';
+                filterLabelEl.innerText = custVal
+                    ? `👤 العميل: ${custVal} (${periodText})`
+                    : `📊 جميع العملاء (${periodText})`;
+
+                let pillsHtml = '';
+                if (statusVal === 'dispatched') {
+                    pillsHtml = `<span class="counter-pill-disp">✅ عداد الصرف: ${dispCount}</span>`;
+                } else if (statusVal === 'returned') {
+                    pillsHtml = `<span class="counter-pill-ret">❌ عداد المرتجع: ${retCount}</span>`;
+                } else {
+                    pillsHtml = `
+                        <span class="counter-pill-disp">✅ الصرف: ${dispCount}</span>
+                        <span class="counter-pill-ret">❌ المرتجع: ${retCount}</span>
+                        <span class="counter-pill-total">الإجمالي: ${filtered.length}</span>
+                    `;
+                }
+                filterCountersEl.innerHTML = pillsHtml;
+            }
 
             const tagSummaryBox = document.getElementById('tagSummaryBox');
             if (rawSearch && filtered.length > 0) {
@@ -2097,7 +2511,6 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             sim.company = sim.category;
             sim.updatedAt = Date.now();
 
-            // إذا اختار عميل من القائمة يتم تحديثه، وإذا اختار (-- اختر العميل --) يتم تفريغ بيانات العميل فوراً
             if (custIdx !== '' && customersList[custIdx]) {
                 const c = customersList[custIdx];
                 sim.clientName = (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName : (c.shopName || 'بدون اسم');
@@ -2135,10 +2548,17 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             await recalculateAndSyncGlobalStock();
 
             try {
-                if (window.db) {
-                    await window.setDoc(window.doc(window.db, "scanned_sims", sim.code), sim, { merge: true });
-                }
-            } catch (e) {}
+                if (!window.db || !navigator.onLine) throw new Error('offline');
+                await window.setDoc(window.doc(window.db, "scanned_sims", sim.code), sim, { merge: true });
+            } catch (e) {
+                queueCloudOperation({
+                    op: 'set',
+                    collectionName: 'scanned_sims',
+                    docId: String(sim.code),
+                    data: { ...sim },
+                    merge: true
+                });
+            }
 
             closeEditSimModal();
             renderStagingTable();
@@ -2170,10 +2590,17 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             showMessage(`🗑️ تم حذف حركة (${code}) من السجل وتحديث الرصيد.`);
 
             try {
-                if (window.db) {
-                    await window.setDoc(window.doc(window.db, "scanned_sims", sim.code), sim, { merge: true });
-                }
-            } catch (e) {}
+                if (!window.db || !navigator.onLine) throw new Error('offline');
+                await window.setDoc(window.doc(window.db, "scanned_sims", sim.code), sim, { merge: true });
+            } catch (e) {
+                queueCloudOperation({
+                    op: 'set',
+                    collectionName: 'scanned_sims',
+                    docId: String(sim.code),
+                    data: { ...sim },
+                    merge: true
+                });
+            }
         };
     </script>
 </body>
