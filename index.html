@@ -24,7 +24,8 @@
         
         .logo-area { display: flex; align-items: center; gap: 10px; }
         .logo-img { width: 45px; height: 45px; object-fit: contain; border-radius: 8px; }
-        .cloud-status { font-size: 0.75rem; color: var(--success); background: #dcfce7; padding: 4px 8px; border-radius: 12px; font-weight: 600; }
+        .cloud-status { font-size: 0.75rem; color: var(--success); background: #dcfce7; padding: 5px 10px; border-radius: 12px; font-weight: 700; cursor: pointer; user-select: none; transition: all 0.2s ease; }
+        .cloud-status:active { transform: scale(0.96); }
 
         .user-panel { display: flex; align-items: center; gap: 10px; }
         .user-badge { background: #eff6ff; color: var(--primary-light); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
@@ -158,7 +159,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
@@ -175,28 +176,256 @@
         window.doc = doc;
         window.getDoc = getDoc;
         window.setDoc = setDoc;
+        window.addDoc = addDoc;
+        window.collection = collection;
+        window.updateDoc = updateDoc;
+        window.deleteDoc = deleteDoc;
+
+        const QUEUE_KEY = 'sim_offline_sync_queue';
+        let isFlushingQueue = false;
+        let lastCloudOnline = navigator.onLine;
+
+        function getQueue() {
+            try {
+                const raw = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+                return Array.isArray(raw) ? raw : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveQueue(q) {
+            localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+            updateCloudBadge(lastCloudOnline, q.length);
+        }
+
+        function notifyActiveIframeSynced() {
+            try {
+                const frame = document.getElementById('contentFrame');
+                if (frame && frame.contentWindow) {
+                    frame.contentWindow.postMessage({ type: 'SIM_CLOUD_SYNCED' }, '*');
+                }
+            } catch (e) {}
+        }
+
+        function updateCloudBadge(isOnline, pendingCount = getQueue().length, isSyncing = false) {
+            lastCloudOnline = isOnline;
+            const statusEl = document.getElementById('cloudStatusBadge');
+            if (!statusEl) return;
+
+            if (isSyncing) {
+                statusEl.textContent = `🔄 جاري المزامنة (${pendingCount})...`;
+                statusEl.style.background = '#dbeafe';
+                statusEl.style.color = '#1e3a8a';
+                return;
+            }
+
+            if (isOnline && pendingCount === 0) {
+                statusEl.textContent = '☁️ متصل بالسحابة';
+                statusEl.style.background = '#dcfce7';
+                statusEl.style.color = '#16a34a';
+            } else {
+                statusEl.textContent = pendingCount > 0
+                    ? `💾 حفظ محلي (${pendingCount} معلقة)`
+                    : '💾 حفظ محلي';
+                statusEl.style.background = '#fef3c7';
+                statusEl.style.color = '#d97706';
+            }
+        }
+
+        function replaceLocalIdInStorage(storageKey, idField, tempId, realId) {
+            if (!storageKey || !tempId || !realId) return;
+            try {
+                const arr = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                if (!Array.isArray(arr)) return;
+                let changed = false;
+                arr.forEach(item => {
+                    if (item && (String(item[idField]) === String(tempId) || String(item.id) === String(tempId) || String(item.firebaseId) === String(tempId))) {
+                        item[idField] = realId;
+                        if (item.id && String(item.id) === String(tempId)) item.id = realId;
+                        if (item.firebaseId && String(item.firebaseId) === String(tempId)) item.firebaseId = realId;
+                        changed = true;
+                    }
+                });
+                if (changed) {
+                    localStorage.setItem(storageKey, JSON.stringify(arr));
+                }
+            } catch (e) {}
+        }
+
+        function enqueueOperation(entry) {
+            const q = getQueue();
+            const docIdStr = String(entry.docId || '');
+            const key = `${entry.op}::${entry.collectionName}::${docIdStr}`;
+
+            // إذا تم تعديل سجل ما زال معلقاً كإضافة جديدة (local_)، ندمج التعديل داخل عملية الإضافة نفسها
+            if ((entry.op === 'set' || entry.op === 'update') && docIdStr.startsWith('local_')) {
+                const pendingAddIdx = q.findIndex(item => item.op === 'add' && item.collectionName === entry.collectionName && String(item.docId) === docIdStr);
+                if (pendingAddIdx !== -1) {
+                    q[pendingAddIdx].data = { ...q[pendingAddIdx].data, ...entry.data };
+                    q[pendingAddIdx].timestamp = Date.now();
+                    saveQueue(q);
+                    return;
+                }
+            }
+
+            // إذا تم حذف سجل، نحذف أي عمليات معلقة سابقة لنفس السجل
+            if (entry.op === 'delete') {
+                const withoutPrior = q.filter(item => !(item.collectionName === entry.collectionName && String(item.docId) === docIdStr));
+                if (!docIdStr.startsWith('local_')) {
+                    withoutPrior.push({ ...entry, timestamp: Date.now() });
+                }
+                saveQueue(withoutPrior);
+                return;
+            }
+
+            // إزالة أي عملية حذف سابقة لنفس السجل إن أُعيدت إضافته أو تعديله
+            const cleanedQueue = q.filter(item => !(item.op === 'delete' && item.collectionName === entry.collectionName && String(item.docId) === docIdStr));
+            const existingIdx = cleanedQueue.findIndex(item => `${item.op}::${item.collectionName}::${item.docId || ''}` === key);
+            const record = {
+                ...entry,
+                timestamp: Date.now()
+            };
+
+            if (existingIdx !== -1) {
+                if (entry.merge && cleanedQueue[existingIdx].data && entry.data) {
+                    record.data = { ...cleanedQueue[existingIdx].data, ...entry.data };
+                }
+                cleanedQueue[existingIdx] = record;
+            } else {
+                cleanedQueue.push(record);
+            }
+
+            saveQueue(cleanedQueue);
+        }
+
+        async function flushQueue() {
+            if (isFlushingQueue) return;
+            const q = getQueue();
+
+            if (!navigator.onLine) {
+                updateCloudBadge(false, q.length, false);
+                return;
+            }
+
+            if (q.length === 0) {
+                return;
+            }
+
+            isFlushingQueue = true;
+            updateCloudBadge(true, q.length, true);
+
+            const remaining = [];
+            let syncedAny = false;
+
+            for (const item of q) {
+                try {
+                    if (item.op === 'add') {
+                        const cleanPayload = { ...(item.data || {}) };
+                        if (String(cleanPayload.firebaseId || '').startsWith('local_')) delete cleanPayload.firebaseId;
+                        if (String(cleanPayload.id || '').startsWith('local_')) delete cleanPayload.id;
+                        const docRef = await addDoc(collection(db, item.collectionName), cleanPayload);
+                        replaceLocalIdInStorage(item.localStorageKey, item.idField || 'id', item.docId, docRef.id);
+                        syncedAny = true;
+                    } else if (item.op === 'set') {
+                        const cleanPayload = { ...(item.data || {}) };
+                        if (String(cleanPayload.firebaseId || '').startsWith('local_')) delete cleanPayload.firebaseId;
+                        await setDoc(doc(db, item.collectionName, String(item.docId)), cleanPayload, item.merge !== false ? { merge: true } : undefined);
+                        syncedAny = true;
+                    } else if (item.op === 'update') {
+                        await updateDoc(doc(db, item.collectionName, String(item.docId)), item.data);
+                        syncedAny = true;
+                    } else if (item.op === 'delete') {
+                        await deleteDoc(doc(db, item.collectionName, String(item.docId)));
+                        syncedAny = true;
+                    }
+                } catch (err) {
+                    remaining.push(item);
+                }
+            }
+
+            isFlushingQueue = false;
+            saveQueue(remaining);
+
+            if (remaining.length === 0) {
+                updateCloudBadge(true, 0, false);
+                if (syncedAny) notifyActiveIframeSynced();
+            } else {
+                updateCloudBadge(false, remaining.length, false);
+            }
+        }
 
         async function syncGlobalConfig() {
             try {
+                if (!navigator.onLine) throw new Error('offline');
+                await flushQueue();
+
                 const configSnap = await getDoc(doc(db, "settings", "app_config"));
                 if (configSnap.exists()) {
                     const cloudConfig = configSnap.data();
                     const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
-                    const merged = { ...localConfig, ...cloudConfig };
-                    localStorage.setItem('app_config', JSON.stringify(merged));
+                    const localTs = localConfig.configUpdatedAt || 0;
+                    const cloudTs = cloudConfig.configUpdatedAt || 0;
+
+                    if (localTs > cloudTs) {
+                        await setDoc(doc(db, "settings", "app_config"), localConfig, { merge: true });
+                    } else {
+                        const merged = { ...localConfig, ...cloudConfig };
+                        localStorage.setItem('app_config', JSON.stringify(merged));
+                        notifyActiveIframeSynced();
+                    }
                 }
-                const statusEl = document.getElementById('cloudStatusBadge');
-                if (statusEl) statusEl.textContent = '☁️ متصل بالسحابة';
+                updateCloudBadge(true, getQueue().length, false);
             } catch (e) {
-                const statusEl = document.getElementById('cloudStatusBadge');
-                if (statusEl) {
-                    statusEl.textContent = '💾 حفظ محلي';
-                    statusEl.style.background = '#fef3c7';
-                    statusEl.style.color = '#d97706';
-                }
+                updateCloudBadge(false, getQueue().length, false);
             }
         }
+
+        window.SimAutoSync = {
+            enqueue: enqueueOperation,
+            flush: flushQueue,
+            syncNow: syncGlobalConfig,
+            getQueueCount: () => getQueue().length,
+            setStatus: (online) => updateCloudBadge(online, getQueue().length, false)
+        };
+
+        window.addEventListener('online', () => {
+            syncGlobalConfig();
+        });
+
+        window.addEventListener('offline', () => {
+            updateCloudBadge(false, getQueue().length, false);
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && navigator.onLine) {
+                syncGlobalConfig();
+            }
+        });
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === QUEUE_KEY) {
+                const count = getQueue().length;
+                updateCloudBadge(navigator.onLine, count, false);
+                if (count > 0 && navigator.onLine) {
+                    flushQueue();
+                }
+            }
+        });
+
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'SIM_QUEUE_UPDATED') {
+                updateCloudBadge(navigator.onLine, getQueue().length, false);
+                if (navigator.onLine) flushQueue();
+            }
+        });
+
         syncGlobalConfig();
+        setInterval(() => {
+            if (navigator.onLine && getQueue().length > 0) {
+                flushQueue();
+            }
+        }, 15000);
     </script>
 </head>
 <body>
@@ -204,7 +433,7 @@
     <header class="navbar">
         <div class="logo-area">
             <img src="logo.jpg" class="logo-img" alt="شعار سيم" onerror="this.src='https://via.placeholder.com/45?text=SIM'">
-            <span class="cloud-status" id="cloudStatusBadge">⏳ جاري المزامنة...</span>
+            <span class="cloud-status" id="cloudStatusBadge" onclick="if(window.SimAutoSync) window.SimAutoSync.syncNow();" title="اضغط للمزامنة الفورية">⏳ جاري المزامنة...</span>
         </div>
 
         <div class="user-panel">
@@ -333,7 +562,7 @@
             if (btn) btn.classList.add('active');
             
             localStorage.setItem('sim_active_tab', page);
-            if (window.db && loggedUser) {
+            if (window.db && loggedUser && navigator.onLine) {
                 window.setDoc(window.doc(window.db, "settings", "last_state_" + loggedUser.username), {
                     activeTab: page,
                     updatedAt: Date.now()

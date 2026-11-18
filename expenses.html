@@ -19,7 +19,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--bg); color: var(--text); padding: 15px; max-width: 950px; margin: 0 auto; }
 
-        /* 1. المربعات الإحصائية العلوية */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
@@ -54,7 +53,6 @@
         }
         .stat-card.total-card .stat-value { color: #ffffff; }
 
-        /* 2. فلتر الشهر */
         .filter-bar {
             background: var(--card);
             border-radius: 12px;
@@ -86,7 +84,6 @@
         }
         .month-input:focus { border-color: var(--primary-light); background: #fff; }
 
-        /* 3. كارت إضافة مصروف */
         .card {
             background: var(--card);
             padding: 18px;
@@ -154,7 +151,6 @@
         }
         .btn-submit:hover { background-color: var(--primary); }
 
-        /* 4. جدول المصروفات */
         .table-responsive { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; text-align: right; font-size: 0.9rem; }
         th, td { padding: 11px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -187,10 +183,9 @@
         }
     </style>
 
-    <!-- ربط Firebase السحابي -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
@@ -210,6 +205,7 @@
         window.getDocs = getDocs;
         window.doc = doc;
         window.deleteDoc = deleteDoc;
+        window.updateDoc = updateDoc;
         window.setDoc = setDoc;
         window.getDoc = getDoc;
 
@@ -218,16 +214,13 @@
 </head>
 <body>
 
-    <!-- 1. إحصائيات الإجمالي ومربع لكل شخص في القائمة -->
     <div class="stats-grid" id="statsContainer"></div>
 
-    <!-- 2. فلتر مصروفات الشهر (يحسب تلقائياً لغاية يوم 5 من الشهر التالي) -->
     <div class="filter-bar">
-        <label for="monthPicker">📅 مصروفات شهر:</label>
+        <label for="monthPicker">📅 مصروفات شهر (من يوم 5):</label>
         <input type="month" id="monthPicker" class="month-input" onchange="renderAll()">
     </div>
 
-    <!-- 3. نموذج إضافة مصروف -->
     <div class="card">
         <h2>➕ إضافة مصروف جديد</h2>
         <div class="form-grid">
@@ -263,7 +256,6 @@
         </div>
     </div>
 
-    <!-- 4. جدول المصروفات -->
     <div class="card">
         <h2>📋 جدول المصروفات</h2>
         <div class="table-responsive">
@@ -288,23 +280,178 @@
         let spendersList = [];
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
 
+        const SYNC_QUEUE_KEY = 'sim_offline_sync_queue';
+
+        function queueCloudOperation(entry) {
+            try {
+                if (window.parent && window.parent !== window && window.parent.SimAutoSync) {
+                    window.parent.SimAutoSync.enqueue(entry);
+                    return;
+                }
+            } catch (e) {}
+
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                const key = `${entry.op}::${entry.collectionName}::${entry.docId || ''}`;
+                if ((entry.op === 'set' || entry.op === 'update') && String(entry.docId).startsWith('local_')) {
+                    const addIdx = q.findIndex(i => i.op === 'add' && i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId));
+                    if (addIdx !== -1) {
+                        q[addIdx].data = { ...q[addIdx].data, ...entry.data };
+                        q[addIdx].timestamp = Date.now();
+                        localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(q));
+                        notifyParentQueueUpdated();
+                        return;
+                    }
+                }
+                if (entry.op === 'delete' && String(entry.docId).startsWith('local_')) {
+                    const filtered = q.filter(i => !(i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId)));
+                    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(filtered));
+                    notifyParentQueueUpdated();
+                    return;
+                }
+                const idx = q.findIndex(i => `${i.op}::${i.collectionName}::${i.docId || ''}` === key);
+                const item = { ...entry, timestamp: Date.now() };
+                if (idx !== -1) {
+                    if (entry.merge && q[idx].data && entry.data) item.data = { ...q[idx].data, ...entry.data };
+                    q[idx] = item;
+                } else {
+                    q.push(item);
+                }
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(q));
+                notifyParentQueueUpdated();
+            } catch (e) {}
+        }
+
+        function notifyParentQueueUpdated() {
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'SIM_QUEUE_UPDATED' }, '*');
+                }
+            } catch (e) {}
+        }
+
+        function getPendingIdsForCollection(collectionName) {
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                return new Set(q.filter(i => i.collectionName === collectionName && i.op !== 'delete').map(i => String(i.docId)));
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        function getPendingDeletesForCollection(collectionName) {
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                return new Set(q.filter(i => i.collectionName === collectionName && i.op === 'delete').map(i => String(i.docId)));
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        async function flushLocalQueueFallback() {
+            try {
+                if (window.parent && window.parent !== window && window.parent.SimAutoSync) {
+                    await window.parent.SimAutoSync.flush();
+                    return;
+                }
+                if (!navigator.onLine || !window.db) return;
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                if (q.length === 0) return;
+
+                const remaining = [];
+                for (const item of q) {
+                    try {
+                        if (item.op === 'add') {
+                            const docRef = await window.addDoc(window.collection(window.db, item.collectionName), item.data);
+                            if (item.localStorageKey) {
+                                const arr = JSON.parse(localStorage.getItem(item.localStorageKey) || '[]');
+                                arr.forEach(r => {
+                                    if (String(r[item.idField || 'id']) === String(item.docId)) {
+                                        r[item.idField || 'id'] = docRef.id;
+                                        if (r.id === item.docId) r.id = docRef.id;
+                                    }
+                                });
+                                localStorage.setItem(item.localStorageKey, JSON.stringify(arr));
+                            }
+                        } else if (item.op === 'set') {
+                            await window.setDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data, item.merge !== false ? { merge: true } : undefined);
+                        } else if (item.op === 'update') {
+                            await window.updateDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data);
+                        } else if (item.op === 'delete') {
+                            await window.deleteDoc(window.doc(window.db, item.collectionName, String(item.docId)));
+                        }
+                    } catch (err) {
+                        remaining.push(item);
+                    }
+                }
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(remaining));
+            } catch (e) {}
+        }
+
+        window.addEventListener('online', async () => {
+            await flushLocalQueueFallback();
+            await loadCloudData();
+        });
+
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'SIM_CLOUD_SYNCED') {
+                loadLocalData();
+                renderSpendersDropdown(document.getElementById('expSpender').value);
+                renderAll();
+            }
+        });
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'expenses_records_offline' || e.key === 'expenses_spenders_offline' || e.key === 'app_config') {
+                loadLocalData();
+                renderSpendersDropdown(document.getElementById('expSpender').value);
+                renderAll();
+            }
+        });
+
         function getTodayStr() {
             const d = new Date();
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        // تحديد الشهر النشط تلقائياً (الأيام من 1 إلى 5 تتبع الشهر السابق تلقائياً)
-        function getActiveCycleMonthStr(dateObj = new Date()) {
-            let y = dateObj.getFullYear();
-            let m = dateObj.getMonth() + 1;
-            if (dateObj.getDate() <= 5) {
-                m -= 1;
-                if (m === 0) {
-                    m = 12;
-                    y -= 1;
+        // دالة موحدة مع المبيعات والفواتير والصرف: الشهر يبدأ يوم 5 وينتهي يوم 4 من الشهر التالي
+        function getAccountingMonth(dateStr, timestampFallback) {
+            let year = NaN, month = NaN, day = NaN;
+            if (dateStr) {
+                const clean = String(dateStr).trim();
+                const isoMatch = clean.match(/^(\d{4})[-/](\d{1,2})(?:[-/](\d{1,2}))?/);
+                const dmyMatch = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+                if (isoMatch) {
+                    year = parseInt(isoMatch[1], 10);
+                    month = parseInt(isoMatch[2], 10);
+                    day = isoMatch[3] ? parseInt(isoMatch[3], 10) : 5;
+                } else if (dmyMatch) {
+                    day = parseInt(dmyMatch[1], 10);
+                    month = parseInt(dmyMatch[2], 10);
+                    year = parseInt(dmyMatch[3], 10);
                 }
             }
-            return `${y}-${String(m).padStart(2, '0')}`;
+            if ((isNaN(year) || isNaN(month)) && timestampFallback) {
+                const d = new Date(Number(timestampFallback));
+                if (!isNaN(d.getTime())) {
+                    year = d.getFullYear();
+                    month = d.getMonth() + 1;
+                    day = d.getDate();
+                }
+            }
+            if (isNaN(year) || isNaN(month)) return '';
+            if (!isNaN(day) && day < 5) {
+                month -= 1;
+                if (month < 1) {
+                    month = 12;
+                    year -= 1;
+                }
+            }
+            return `${year}-${String(month).padStart(2, '0')}`;
+        }
+
+        function getActiveCycleMonthStr() {
+            return getAccountingMonth(getTodayStr(), Date.now());
         }
 
         function loadLocalData() {
@@ -347,21 +494,39 @@
             localStorage.setItem('expenses_spenders_offline', JSON.stringify(spendersList));
             const appConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             appConfig.spendersList = spendersList;
+            appConfig.configUpdatedAt = Date.now();
             localStorage.setItem('app_config', JSON.stringify(appConfig));
 
+            const appCfgPayload = { spendersList: spendersList, configUpdatedAt: appConfig.configUpdatedAt };
+            const expCfgPayload = { spendersList: spendersList };
+
             try {
-                if (window.db) {
-                    await window.setDoc(window.doc(window.db, "settings", "app_config"), { spendersList: spendersList }, { merge: true });
-                    await window.setDoc(window.doc(window.db, "settings", "expenses_config"), { spendersList: spendersList }, { merge: true });
-                }
+                if (!window.db || !navigator.onLine) throw new Error('offline');
+                await window.setDoc(window.doc(window.db, "settings", "app_config"), appCfgPayload, { merge: true });
+                await window.setDoc(window.doc(window.db, "settings", "expenses_config"), expCfgPayload, { merge: true });
             } catch (e) {
-                console.error("خطأ في مزامنة الأسماء:", e);
+                queueCloudOperation({
+                    op: 'set',
+                    collectionName: 'settings',
+                    docId: 'app_config',
+                    data: appCfgPayload,
+                    merge: true
+                });
+                queueCloudOperation({
+                    op: 'set',
+                    collectionName: 'settings',
+                    docId: 'expenses_config',
+                    data: expCfgPayload,
+                    merge: true
+                });
             }
         }
 
         async function loadCloudData() {
             try {
-                if (!window.db) return;
+                if (!window.db || !navigator.onLine) return;
+
+                await flushLocalQueueFallback();
 
                 const mergedSpenders = new Set(spendersList);
 
@@ -373,11 +538,19 @@
                     }
                 }
 
+                const pendingExpIds = getPendingIdsForCollection("expenses");
+                const pendingExpDeletes = getPendingDeletesForCollection("expenses");
+                const localUnsynced = expenses.filter(e =>
+                    !pendingExpDeletes.has(String(e.id)) &&
+                    (String(e.id).startsWith('local_') || pendingExpIds.has(String(e.id)))
+                );
+
                 const querySnapshot = await window.getDocs(window.collection(window.db, "expenses"));
                 const cloudExpenses = [];
                 querySnapshot.forEach((docSnap) => {
+                    if (pendingExpIds.has(String(docSnap.id)) || pendingExpDeletes.has(String(docSnap.id))) return;
                     const data = docSnap.data();
-                    cloudExpenses.push({ id: docSnap.id, ...data });
+                    cloudExpenses.push({ ...data, id: docSnap.id });
                     if (data.spender && data.spender.trim()) {
                         mergedSpenders.add(data.spender.trim());
                     }
@@ -386,8 +559,9 @@
                 spendersList = Array.from(mergedSpenders);
                 localStorage.setItem('expenses_spenders_offline', JSON.stringify(spendersList));
 
-                cloudExpenses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-                expenses = cloudExpenses;
+                const mergedExpenses = [...localUnsynced, ...cloudExpenses];
+                mergedExpenses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                expenses = mergedExpenses;
                 localStorage.setItem('expenses_records_offline', JSON.stringify(expenses));
             } catch (e) {
                 console.error("وضع الأوفلاين:", e);
@@ -459,23 +633,13 @@
             }
         }
 
-        // حساب مصروفات الشهر المختار حتى يوم 5 من الشهر التالي
         function getFilteredExpenses() {
             const monthVal = document.getElementById('monthPicker').value;
             if (!monthVal) return expenses;
 
-            const [year, month] = monthVal.split('-').map(Number);
-            const startDate = new Date(year, month - 1, 6, 0, 0, 0, 0);
-            const endDate = new Date(year, month, 5, 23, 59, 59, 999);
-
             return expenses.filter(item => {
-                if (item.cycleMonth) {
-                    return item.cycleMonth === monthVal;
-                }
-                const [y, m, d] = (item.date || '').split('-').map(Number);
-                if (!y || !m || !d) return false;
-                const itemDate = new Date(y, m - 1, d, 12, 0, 0);
-                return itemDate >= startDate && itemDate <= endDate;
+                const itemAccMonth = getAccountingMonth(item.date, item.createdAt) || item.cycleMonth;
+                return itemAccMonth === monthVal;
             });
         }
 
@@ -513,9 +677,7 @@
             btn.disabled = true;
             btn.textContent = '⏳ جاري الحفظ...';
 
-            const [y, m, d] = date.split('-').map(Number);
-            const expenseDateObj = new Date(y, m - 1, d);
-            const cycleMonth = getActiveCycleMonthStr(expenseDateObj);
+            const cycleMonth = getAccountingMonth(date, Date.now());
 
             const expenseData = {
                 amount: amount,
@@ -527,15 +689,26 @@
                 createdAt: Date.now()
             };
 
+            const tempId = 'local_' + Date.now();
             try {
-                if (window.db) {
-                    const docRef = await window.addDoc(window.collection(window.db, "expenses"), expenseData);
-                    expenses.unshift({ id: docRef.id, ...expenseData });
-                } else {
-                    expenses.unshift({ id: 'local_' + Date.now(), ...expenseData });
+                if (!window.db || !navigator.onLine) {
+                    expenses.unshift({ id: tempId, ...expenseData });
+                    throw new Error('offline');
                 }
+                const docRef = await window.addDoc(window.collection(window.db, "expenses"), expenseData);
+                expenses.unshift({ id: docRef.id, ...expenseData });
             } catch (e) {
-                expenses.unshift({ id: 'local_' + Date.now(), ...expenseData });
+                if (!expenses.some(item => String(item.id) === tempId)) {
+                    expenses.unshift({ id: tempId, ...expenseData });
+                }
+                queueCloudOperation({
+                    op: 'add',
+                    collectionName: 'expenses',
+                    docId: tempId,
+                    data: { ...expenseData },
+                    localStorageKey: 'expenses_records_offline',
+                    idField: 'id'
+                });
             } finally {
                 localStorage.setItem('expenses_records_offline', JSON.stringify(expenses));
                 amountEl.value = '';
@@ -551,16 +724,27 @@
         async function deleteExpense(id) {
             if (!confirm('هل أنت متأكد من حذف هذا المصروف؟')) return;
 
-            expenses = expenses.filter(item => item.id !== id);
+            expenses = expenses.filter(item => String(item.id) !== String(id));
             localStorage.setItem('expenses_records_offline', JSON.stringify(expenses));
             renderAll();
 
             try {
-                if (window.db && !String(id).startsWith('local_')) {
+                if (!String(id).startsWith('local_')) {
+                    if (!window.db || !navigator.onLine) throw new Error('offline');
                     await window.deleteDoc(window.doc(window.db, "expenses", String(id)));
+                } else {
+                    queueCloudOperation({
+                        op: 'delete',
+                        collectionName: 'expenses',
+                        docId: String(id)
+                    });
                 }
             } catch (e) {
-                console.error("خطأ أثناء الحذف من السحابة:", e);
+                queueCloudOperation({
+                    op: 'delete',
+                    collectionName: 'expenses',
+                    docId: String(id)
+                });
             }
         }
 
@@ -568,7 +752,6 @@
             const filtered = getFilteredExpenses();
             const totalAmount = filtered.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
-            // 1. تحديث مربعات الإحصائيات العلوية
             const statsContainer = document.getElementById('statsContainer');
             let cardsHtml = `
                 <div class="stat-card total-card">
@@ -591,7 +774,6 @@
             });
             statsContainer.innerHTML = cardsHtml;
 
-            // 2. تحديث جدول المصروفات
             const tbody = document.getElementById('expensesTableBody');
             if (filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="6" class="empty-row">لا توجد مصروفات مسجلة في هذا الشهر</td></tr>`;
