@@ -887,7 +887,7 @@
     </div>
 
     <script>
-        let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull'];
+        let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull', 'روتر زين'];
         let durationsList = ['30', '60'];
         let simsList = [];
         let invoicesList = [];
@@ -923,9 +923,11 @@
 
             try {
                 const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
-                const key = `${entry.op}::${entry.collectionName}::${entry.docId || ''}`;
-                if ((entry.op === 'set' || entry.op === 'update') && String(entry.docId).startsWith('local_')) {
-                    const addIdx = q.findIndex(i => i.op === 'add' && i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId));
+                const docIdStr = String(entry.docId || '');
+                const key = `${entry.op}::${entry.collectionName}::${docIdStr}`;
+
+                if ((entry.op === 'set' || entry.op === 'update') && docIdStr.startsWith('local_')) {
+                    const addIdx = q.findIndex(i => i.op === 'add' && i.collectionName === entry.collectionName && String(i.docId) === docIdStr);
                     if (addIdx !== -1) {
                         q[addIdx].data = { ...q[addIdx].data, ...entry.data };
                         q[addIdx].timestamp = Date.now();
@@ -934,21 +936,25 @@
                         return;
                     }
                 }
-                if (entry.op === 'delete' && String(entry.docId).startsWith('local_')) {
-                    const filtered = q.filter(i => !(i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId)));
-                    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(filtered));
+                if (entry.op === 'delete') {
+                    const withoutPrior = q.filter(i => !(i.collectionName === entry.collectionName && String(i.docId) === docIdStr));
+                    if (!docIdStr.startsWith('local_')) {
+                        withoutPrior.push({ ...entry, timestamp: Date.now() });
+                    }
+                    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(withoutPrior));
                     notifyParentQueueUpdated();
                     return;
                 }
-                const idx = q.findIndex(i => `${i.op}::${i.collectionName}::${i.docId || ''}` === key);
+                const cleaned = q.filter(i => !(i.op === 'delete' && i.collectionName === entry.collectionName && String(i.docId) === docIdStr));
+                const idx = cleaned.findIndex(i => `${i.op}::${i.collectionName}::${i.docId || ''}` === key);
                 const item = { ...entry, timestamp: Date.now() };
                 if (idx !== -1) {
-                    if (entry.merge && q[idx].data && entry.data) item.data = { ...q[idx].data, ...entry.data };
-                    q[idx] = item;
+                    if (entry.merge && cleaned[idx].data && entry.data) item.data = { ...cleaned[idx].data, ...entry.data };
+                    cleaned[idx] = item;
                 } else {
-                    q.push(item);
+                    cleaned.push(item);
                 }
-                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(q));
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(cleaned));
                 notifyParentQueueUpdated();
             } catch (e) {}
         }
@@ -964,7 +970,16 @@
         function getPendingIdsForCollection(collectionName) {
             try {
                 const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
-                return new Set(q.filter(i => i.collectionName === collectionName).map(i => String(i.docId)));
+                return new Set(q.filter(i => i.collectionName === collectionName && i.op !== 'delete').map(i => String(i.docId)));
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        function getPendingDeletesForCollection(collectionName) {
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                return new Set(q.filter(i => i.collectionName === collectionName && i.op === 'delete').map(i => String(i.docId)));
             } catch (e) {
                 return new Set();
             }
@@ -984,11 +999,14 @@
                 for (const item of q) {
                     try {
                         if (item.op === 'add') {
-                            const docRef = await window.addDoc(window.collection(window.db, item.collectionName), item.data);
+                            const cleanPayload = { ...(item.data || {}) };
+                            if (String(cleanPayload.firebaseId || '').startsWith('local_')) delete cleanPayload.firebaseId;
+                            if (String(cleanPayload.id || '').startsWith('local_')) delete cleanPayload.id;
+                            const docRef = await window.addDoc(window.collection(window.db, item.collectionName), cleanPayload);
                             if (item.localStorageKey) {
                                 const arr = JSON.parse(localStorage.getItem(item.localStorageKey) || '[]');
                                 arr.forEach(r => {
-                                    if (String(r[item.idField || 'id']) === String(item.docId)) {
+                                    if (String(r[item.idField || 'id']) === String(item.docId) || String(r.id) === String(item.docId) || String(r.firebaseId) === String(item.docId)) {
                                         r[item.idField || 'id'] = docRef.id;
                                         if (r.id === item.docId) r.id = docRef.id;
                                         if (r.firebaseId === item.docId) r.firebaseId = docRef.id;
@@ -997,7 +1015,9 @@
                                 localStorage.setItem(item.localStorageKey, JSON.stringify(arr));
                             }
                         } else if (item.op === 'set') {
-                            await window.setDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data, item.merge !== false ? { merge: true } : undefined);
+                            const cleanPayload = { ...(item.data || {}) };
+                            if (String(cleanPayload.firebaseId || '').startsWith('local_')) delete cleanPayload.firebaseId;
+                            await window.setDoc(window.doc(window.db, item.collectionName, String(item.docId)), cleanPayload, item.merge !== false ? { merge: true } : undefined);
                         } else if (item.op === 'update') {
                             await window.updateDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data);
                         } else if (item.op === 'delete') {
@@ -1019,6 +1039,8 @@
         window.addEventListener('message', (e) => {
             if (e.data && e.data.type === 'SIM_CLOUD_SYNCED') {
                 loadLocalState();
+                populateFilterDropdown();
+                populateBatchItemSelect();
                 renderBatchesTable();
                 renderDebtsTable();
                 renderDashboard();
@@ -1131,7 +1153,6 @@
             dateInput.value = activeState.month || '';
             dateLabel.textContent = activeState.month ? formatMonthDisplay(activeState.month) : '📅 حدد التاريخ';
 
-            // تحديث الجدول فوراً عند التبديل بين المبيعات والتكلفة والأرباح
             renderDashboard();
         };
 
@@ -1214,12 +1235,14 @@
                 const debt = getInvoiceDebt(inv);
                 if (debt <= 0) return;
 
-                const cleanPhone = String(inv.phone || '').replace(/\D/g, '');
+                const invCustId = String(inv.customerId || inv.clientId || '').trim();
+                const cleanPhone = String(inv.phone || '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g, '');
                 const validPhone = cleanPhone.length >= 8 ? cleanPhone : '';
                 const coreClient = normalizeCoreIdentity(inv.clientName);
                 const coreShop = normalizeCoreIdentity(inv.shopName);
 
                 let matchedGroup = groups.find(g => {
+                    if (invCustId && g.clientIds.has(invCustId)) return true;
                     if (validPhone && g.phones.has(validPhone)) return true;
                     if (coreShop && g.coreNames.has(coreShop)) return true;
                     if (coreClient && g.coreNames.has(coreClient)) return true;
@@ -1236,6 +1259,7 @@
                         latestDate: inv.date || '',
                         latestTimestamp: inv.timestamp || 0,
                         invoices: [],
+                        clientIds: new Set(),
                         phones: new Set(),
                         coreNames: new Set()
                     };
@@ -1245,6 +1269,7 @@
                 matchedGroup.totalDebt = +(matchedGroup.totalDebt + debt).toFixed(2);
                 matchedGroup.invoices.push(inv);
 
+                if (invCustId) matchedGroup.clientIds.add(invCustId);
                 if (validPhone) matchedGroup.phones.add(validPhone);
                 if (coreShop) matchedGroup.coreNames.add(coreShop);
                 if (coreClient) matchedGroup.coreNames.add(coreClient);
@@ -1339,6 +1364,7 @@
             let remainingPaymentToApply = addPay;
             const updatedInvoicesForCloud = [];
             const today = getTodayStr();
+            const nowTs = Date.now();
 
             for (const inv of sortedInvoices) {
                 if (remainingPaymentToApply <= 0) break;
@@ -1348,6 +1374,7 @@
                 const deductNow = +(Math.min(invDebt, remainingPaymentToApply)).toFixed(2);
                 inv.paid = +( (parseFloat(inv.paid) || 0) + deductNow ).toFixed(2);
                 inv.remaining = +( invDebt - deductNow ).toFixed(2);
+                inv.updatedAt = nowTs;
                 remainingPaymentToApply = +( remainingPaymentToApply - deductNow ).toFixed(2);
 
                 if (!Array.isArray(inv.paymentsHistory)) inv.paymentsHistory = [];
@@ -1375,7 +1402,8 @@
                     paid: inv.paid,
                     remaining: inv.remaining,
                     paymentsHistory: inv.paymentsHistory,
-                    notes: inv.notes
+                    notes: inv.notes,
+                    updatedAt: nowTs
                 };
 
                 try {
@@ -1404,6 +1432,7 @@
 
         function populateBatchItemSelect() {
             const select = document.getElementById('batchItemSelect');
+            if (!select) return;
             const currentVal = select.value;
             let html = '';
             categoriesList.forEach(c => {
@@ -1654,11 +1683,11 @@
             if (!dur && parenMatch) {
                 dur = parenMatch[1];
             } else if (!dur) {
-                const numMatch = s.match(/(?:^|\s|_)(30|60|90|180|365)(?:$|\s)/);
+                const numMatch = s.match(/(?:^|\s|_)(\d+)(?:$|\s)/);
                 if (numMatch) dur = numMatch[1];
             }
 
-            const cleanName = s.replace(/\(\d+\)/g, '').replace(/(?:^|\s|_)(30|60|90|180|365)(?:$|\s)/g, '').trim();
+            const cleanName = s.replace(/\(\d+\)/g, '').replace(/(?:^|\s|_)(\d+)(?:$|\s)/g, '').trim();
             const lower = cleanName.toLowerCase();
 
             let company = cleanName || 'Mobily';
@@ -1675,7 +1704,7 @@
                 company = matchedCustom;
             } else if (lower.includes('روتر') || lower.includes('راوتر') || lower.includes('router')) {
                 const routerCat = categoriesList.find(c => c.includes('روتر') || c.includes('راوتر'));
-                company = routerCat || cleanName;
+                company = routerCat || cleanName || 'روتر زين';
             } else if (lower.includes('mobily') || lower.includes('موبايلي')) {
                 company = 'Mobily';
             } else if (lower.includes('stc') || lower.includes('اس تي سي') || lower.includes('إس تي سي') || lower.includes('سوا')) {
@@ -1759,18 +1788,38 @@
             const select = document.getElementById('itemFilter');
             if (!select) return;
             const currentVal = select.value || '';
-            let optionsHtml = `
-                <option value="">اختر الشركة والمدة</option>
-                <option value="ALL">الكل</option>
-            `;
+
+            const keysMap = new Map();
             categoriesList.forEach(c => {
                 durationsList.forEach(d => {
                     const invKey = `${c} (${d})`;
                     if (!deletedStockItems.includes(invKey)) {
-                        const key = `${c}_${d}`;
-                        optionsHtml += `<option value="${key}">${invKey}</option>`;
+                        keysMap.set(`${c}_${d}`, invKey);
                     }
                 });
+            });
+
+            // تضمين أي صنف له فواتير أو دفعات فعلية حتى لا يختفي من الفلتر
+            invoicesList.forEach(inv => {
+                extractInvoiceItems(inv).forEach(it => {
+                    const k = `${it.company}_${it.duration}`;
+                    if (!keysMap.has(k)) {
+                        keysMap.set(k, `${it.company} (${it.duration})`);
+                    }
+                });
+            });
+            costBatches.forEach(b => {
+                if (b.key && !keysMap.has(b.key)) {
+                    keysMap.set(b.key, b.label || b.key.replace('_', ' (') + ')');
+                }
+            });
+
+            let optionsHtml = `
+                <option value="">اختر الشركة والمدة</option>
+                <option value="ALL">الكل</option>
+            `;
+            keysMap.forEach((label, key) => {
+                optionsHtml += `<option value="${key}">${label}</option>`;
             });
 
             select.innerHTML = optionsHtml;
@@ -1822,10 +1871,12 @@
 
             const batchQueuesMap = {};
             const fallbackCostMap = {};
+            const discoveredKeysMeta = new Map();
 
-            categoriesList.forEach(c => {
-                durationsList.forEach(d => {
-                    const key = `${c}_${d}`;
+            const ensureKeyInitialized = (company, duration) => {
+                const key = `${company}_${duration}`;
+                if (!discoveredKeysMeta.has(key)) {
+                    discoveredKeysMeta.set(key, { company, duration, key, invKey: `${company} (${duration})` });
                     allScannedMap[key] = 0;
                     allSoldMap[key] = 0;
                     filteredScannedMap[key] = 0;
@@ -1836,6 +1887,13 @@
                     filteredBatchesQtyMap[key] = 0;
                     batchQueuesMap[key] = [];
                     fallbackCostMap[key] = parseFloat(itemCosts[key]) || 0;
+                }
+                return key;
+            };
+
+            categoriesList.forEach(c => {
+                durationsList.forEach(d => {
+                    ensureKeyInitialized(c, d);
                 });
             });
 
@@ -1846,18 +1904,22 @@
             });
 
             sortedBatches.forEach(b => {
-                if (!batchQueuesMap[b.key]) batchQueuesMap[b.key] = [];
+                const parts = String(b.key || '').split('_');
+                const bComp = parts[0] || 'Mobily';
+                const bDur = parts[1] || '60';
+                const key = ensureKeyInitialized(bComp, bDur);
+
                 const q = parseFloat(b.qty) || 0;
                 const u = parseFloat(b.unitCost) || 0;
                 const bTotal = b.totalCost !== undefined ? parseFloat(b.totalCost) : (q * u);
                 if (q > 0) {
-                    batchQueuesMap[b.key].push({ remainingQty: q, unitCost: u });
-                    fallbackCostMap[b.key] = u;
+                    batchQueuesMap[key].push({ remainingQty: q, unitCost: u });
+                    fallbackCostMap[key] = u;
                 }
                 const bMonth = getAccountingMonth(b.date, b.timestamp);
                 if (!selectedMonth || bMonth === selectedMonth) {
-                    filteredBatchesCostMap[b.key] = (filteredBatchesCostMap[b.key] || 0) + bTotal;
-                    filteredBatchesQtyMap[b.key] = (filteredBatchesQtyMap[b.key] || 0) + q;
+                    filteredBatchesCostMap[key] = (filteredBatchesCostMap[key] || 0) + bTotal;
+                    filteredBatchesQtyMap[key] = (filteredBatchesQtyMap[key] || 0) + q;
                 }
             });
 
@@ -1866,7 +1928,7 @@
                 if (isSimReturned(sim)) return;
 
                 const { company, duration } = parseCompanyAndDuration(sim.category || sim.company || '', sim.duration);
-                const key = `${company}_${duration}`;
+                const key = ensureKeyInitialized(company, duration);
                 allScannedMap[key] = (allScannedMap[key] || 0) + 1;
 
                 const simMonth = getAccountingMonth(sim.date, sim.timestamp);
@@ -1895,7 +1957,7 @@
                 }
 
                 items.forEach(it => {
-                    const key = `${it.company}_${it.duration}`;
+                    const key = ensureKeyInitialized(it.company, it.duration);
                     const isNeg = invIsReturn || it.qty < 0;
                     const absQty = Math.abs(it.qty);
                     const signedQty = invIsReturn ? -absQty : it.qty;
@@ -1915,15 +1977,11 @@
                 });
             });
 
-            let activeKeys = [];
-            categoriesList.forEach(c => {
-                durationsList.forEach(d => {
-                    const invKey = `${c} (${d})`;
-                    const key = `${c}_${d}`;
-                    if (!deletedStockItems.includes(invKey)) {
-                        activeKeys.push({ company: c, duration: d, key: key, invKey: invKey });
-                    }
-                });
+            let activeKeys = Array.from(discoveredKeysMeta.values()).filter(item => {
+                const hasActivity = (filteredSoldMap[item.key] || 0) !== 0 ||
+                                    (filteredRevenueMap[item.key] || 0) !== 0 ||
+                                    (filteredBatchesCostMap[item.key] || 0) !== 0;
+                return hasActivity || !deletedStockItems.includes(item.invKey);
             });
 
             if (isSpecificItem) {
@@ -1940,6 +1998,7 @@
                 totalBatchesPurchaseSum += (filteredBatchesCostMap[item.key] || 0);
             });
 
+            totalSalesSum = +totalSalesSum.toFixed(2);
             const appliedExtraCost = (!isSpecificItem) ? (parseFloat(extraGeneralCost) || 0) : 0;
             const displayedTotalCost = +( (totalBatchesPurchaseSum > 0 ? totalBatchesPurchaseSum : totalSoldCostSum) + appliedExtraCost ).toFixed(2);
             const totalProfitSum = +(totalSalesSum - (totalSoldCostSum + appliedExtraCost)).toFixed(2);
@@ -2038,7 +2097,7 @@
                     const bCost = activeMetricsForTable.filteredBatchesCostMap[item.key] || 0;
                     const sold = activeMetricsForTable.filteredSoldMap[item.key] || 0;
                     const sCost = activeMetricsForTable.filteredSoldCostMap[item.key] || 0;
-                    return bQty > 0 || bCost > 0 || sold > 0 || sCost > 0;
+                    return bQty > 0 || bCost > 0 || sold !== 0 || sCost !== 0;
                 });
 
                 if (costItems.length === 0 && activeMetricsForTable.appliedExtraCost <= 0) {
@@ -2117,7 +2176,7 @@
                     </tr>
                 `;
 
-                const soldItemsOnly = activeMetricsForTable.activeKeys.filter(item => (activeMetricsForTable.filteredSoldMap[item.key] || 0) > 0);
+                const soldItemsOnly = activeMetricsForTable.activeKeys.filter(item => (activeMetricsForTable.filteredSoldMap[item.key] || 0) !== 0);
 
                 if (soldItemsOnly.length === 0) {
                     summaryBody.innerHTML = `<tr><td colspan="6" style="padding:16px; color:#64748b; font-weight:bold; text-align:center;">لا توجد مبيعات أو أرباح مسجلة في هذه الفترة.</td></tr>`;
@@ -2179,7 +2238,7 @@
                 `;
 
                 const activeItems = activeMetricsForTable.activeKeys.filter(item => {
-                    return (activeMetricsForTable.filteredSoldMap[item.key] || 0) > 0 ||
+                    return (activeMetricsForTable.filteredSoldMap[item.key] || 0) !== 0 ||
                            (activeMetricsForTable.filteredBatchesCostMap[item.key] || 0) > 0;
                 });
 
@@ -2188,6 +2247,7 @@
                     return;
                 }
 
+                let sumAvail = 0, sumScan = 0, sumSold = 0, sumRev = 0, sumCost = 0, sumProf = 0;
                 let rowsHtml = activeItems.map(item => {
                     const availableStock = getAvailableStock(item);
                     const scanned = activeMetricsForTable.filteredScannedMap[item.key] || 0;
@@ -2195,6 +2255,13 @@
                     const rev = +(activeMetricsForTable.filteredRevenueMap[item.key] || 0).toFixed(2);
                     const cost = +(activeMetricsForTable.filteredSoldCostMap[item.key] || 0).toFixed(2);
                     const itemProfit = +(rev - cost).toFixed(2);
+
+                    sumAvail += availableStock;
+                    sumScan += scanned;
+                    sumSold += sold;
+                    sumRev += rev;
+                    sumCost += cost;
+                    sumProf += itemProfit;
 
                     return `
                         <tr>
@@ -2209,6 +2276,18 @@
                         </tr>
                     `;
                 }).join('');
+
+                rowsHtml += `
+                    <tr class="summary-total-row">
+                        <td colspan="2">الإجمالي</td>
+                        <td>${sumAvail}</td>
+                        <td>${sumScan}</td>
+                        <td style="color:#2563eb;">${sumSold}</td>
+                        <td style="color:#15803d;">${(+sumRev.toFixed(2)).toLocaleString('en-US')}</td>
+                        <td style="color:#b45309;">${(+sumCost.toFixed(2)).toLocaleString('en-US')}</td>
+                        <td style="color:${sumProf >= 0 ? '#1d4ed8' : '#dc2626'};">${(+sumProf.toFixed(2)).toLocaleString('en-US')}</td>
+                    </tr>
+                `;
 
                 summaryBody.innerHTML = rowsHtml;
                 return;
@@ -2230,7 +2309,7 @@
 
             const soldItemsOnly = activeMetricsForTable.activeKeys.filter(item => {
                 const sold = activeMetricsForTable.filteredSoldMap[item.key] || 0;
-                return sold > 0;
+                return sold !== 0;
             });
 
             if (soldItemsOnly.length === 0) {
@@ -2238,13 +2317,20 @@
                 return;
             }
 
-            summaryBody.innerHTML = soldItemsOnly.map(item => {
+            let sumAvail = 0, sumScan = 0, sumSold = 0, sumRev = 0, sumProf = 0;
+            let rowsHtml = soldItemsOnly.map(item => {
                 const availableStock = getAvailableStock(item);
                 const scanned = activeMetricsForTable.filteredScannedMap[item.key] || 0;
                 const sold = activeMetricsForTable.filteredSoldMap[item.key] || 0;
                 const rev = +(activeMetricsForTable.filteredRevenueMap[item.key] || 0).toFixed(2);
                 const cost = +(activeMetricsForTable.filteredSoldCostMap[item.key] || 0).toFixed(2);
                 const itemProfit = +(rev - cost).toFixed(2);
+
+                sumAvail += availableStock;
+                sumScan += scanned;
+                sumSold += sold;
+                sumRev += rev;
+                sumProf += itemProfit;
 
                 return `
                     <tr>
@@ -2258,6 +2344,19 @@
                     </tr>
                 `;
             }).join('');
+
+            rowsHtml += `
+                <tr class="summary-total-row">
+                    <td colspan="2">الإجمالي</td>
+                    <td>${sumAvail}</td>
+                    <td>${sumScan}</td>
+                    <td style="color:#2563eb;">${sumSold}</td>
+                    <td style="color:#15803d;">${(+sumRev.toFixed(2)).toLocaleString('en-US')}</td>
+                    <td style="color:${sumProf >= 0 ? '#1d4ed8' : '#dc2626'};">${(+sumProf.toFixed(2)).toLocaleString('en-US')}</td>
+                </tr>
+            `;
+
+            summaryBody.innerHTML = rowsHtml;
         };
 
         function loadLocalState() {
@@ -2271,6 +2370,9 @@
                 costBatches = Array.isArray(localConfig.costBatches) ? localConfig.costBatches : [];
                 extraGeneralCost = localConfig.extraGeneralCost || 0;
             }
+            if (!categoriesList.some(c => /^(روتر|راوتر)\s*زين$/i.test(c.trim()))) {
+                categoriesList.push('روتر زين');
+            }
 
             const localSims = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
             if (Array.isArray(localSims)) simsList = localSims;
@@ -2281,6 +2383,43 @@
                 '[]'
             );
             if (Array.isArray(localInvoices)) invoicesList = localInvoices;
+        }
+
+        function updateLocalUnifiedStockInventory() {
+            const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            const autoStock = {};
+
+            simsList.forEach(item => {
+                if (isSimReturned(item)) return;
+                const { company, duration } = parseCompanyAndDuration(item.category || item.company || 'Mobily', item.duration);
+                const itemKey = `${company} (${duration})`;
+                autoStock[itemKey] = (autoStock[itemKey] || 0) + 1;
+            });
+
+            invoicesList.forEach(r => {
+                const sign = isReturnInvoice(r) ? -1 : 1;
+                if (r.cartItems && Array.isArray(r.cartItems)) {
+                    r.cartItems.forEach(ci => {
+                        if (!ci.item || !ci.item.includes('(')) return;
+                        if (autoStock[ci.item] === undefined) autoStock[ci.item] = 0;
+                        autoStock[ci.item] -= sign * (parseFloat(ci.qty) || 0);
+                    });
+                }
+            });
+
+            const stockInventory = {};
+            const allKeys = new Set([...Object.keys(autoStock), ...Object.keys(stockOffsets || {})]);
+            allKeys.forEach(key => {
+                if (!key.includes('(')) return;
+                const base = autoStock[key] || 0;
+                const offset = (stockOffsets && stockOffsets[key] !== undefined) ? parseFloat(stockOffsets[key]) : 0;
+                const finalQty = base + offset;
+                stockInventory[key] = finalQty >= 0 ? finalQty : 0;
+            });
+
+            (deletedStockItems || []).forEach(delItem => delete stockInventory[delItem]);
+            existingConfig.stockInventory = stockInventory;
+            localStorage.setItem('app_config', JSON.stringify(existingConfig));
         }
 
         window.initSalesDashboard = async function() {
@@ -2304,6 +2443,9 @@
 
                         if (cloudTs >= localTs) {
                             categoriesList = cData.categoriesList || cData.customItems || categoriesList;
+                            if (!categoriesList.some(c => /^(روتر|راوتر)\s*زين$/i.test(c.trim()))) {
+                                categoriesList.push('روتر زين');
+                            }
                             durationsList = cData.durationsList || durationsList;
                             stockOffsets = cData.stockOffsets || stockOffsets;
                             deletedStockItems = cData.deletedStockItems || deletedStockItems;
@@ -2327,35 +2469,71 @@
                     }
 
                     const pendingSimIds = getPendingIdsForCollection("scanned_sims");
-                    const localPendingSims = simsList.filter(s => pendingSimIds.has(String(s.code)) || pendingSimIds.has(String(s.id || '')));
+                    const pendingSimDeletes = getPendingDeletesForCollection("scanned_sims");
+                    const localSimMap = new Map();
+                    simsList.forEach(s => {
+                        const cKey = String(s.code || s.id || '');
+                        if (cKey && !pendingSimDeletes.has(cKey)) {
+                            localSimMap.set(cKey, s);
+                        }
+                    });
+
                     const simsSnap = await window.getDocs(window.collection(window.db, "scanned_sims"));
-                    const mergedSims = [...localPendingSims];
+                    const mergedSims = [];
                     simsSnap.forEach(d => {
                         const sData = d.data();
-                        if (!pendingSimIds.has(String(d.id)) && !pendingSimIds.has(String(sData.code))) {
-                            mergedSims.push({ id: d.id, ...sData });
+                        const codeKey = String(sData.code || d.id);
+                        if (pendingSimDeletes.has(codeKey)) return;
+                        const locSim = localSimMap.get(codeKey);
+                        if (locSim && (pendingSimIds.has(codeKey) || pendingSimIds.has(String(d.id)) || (locSim.updatedAt || 0) > (sData.updatedAt || 0))) {
+                            mergedSims.push(locSim);
+                        } else {
+                            mergedSims.push({ ...sData, code: codeKey, id: d.id });
+                        }
+                        localSimMap.delete(codeKey);
+                    });
+                    localSimMap.forEach((remSim, codeKey) => {
+                        if (pendingSimIds.has(codeKey) || pendingSimIds.has(String(remSim.id || ''))) {
+                            mergedSims.push(remSim);
                         }
                     });
                     simsList = mergedSims;
                     localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
                     const pendingSalesIds = getPendingIdsForCollection("sales_records");
-                    const uniqueRecordsMap = new Map();
+                    const pendingSalesDeletes = getPendingDeletesForCollection("sales_records");
+                    const localSalesMap = new Map();
                     invoicesList.forEach(inv => {
                         const invId = String(inv.firebaseId || inv.id || '');
-                        if (invId.startsWith('local_') || pendingSalesIds.has(invId)) {
-                            uniqueRecordsMap.set(invId, inv);
+                        if (invId && !pendingSalesDeletes.has(invId)) {
+                            localSalesMap.set(invId, inv);
                         }
                     });
 
                     const recordsSnap = await window.getDocs(window.collection(window.db, "sales_records"));
+                    const mergedInvoices = [];
                     recordsSnap.forEach(docSnap => {
-                        if (!pendingSalesIds.has(String(docSnap.id))) {
-                            uniqueRecordsMap.set(docSnap.id, { id: docSnap.id, firebaseId: docSnap.id, ...docSnap.data() });
+                        const docId = String(docSnap.id);
+                        if (pendingSalesDeletes.has(docId)) return;
+                        const cloudInv = { ...docSnap.data(), id: docId, firebaseId: docId };
+                        const locInv = localSalesMap.get(docId);
+                        if (locInv && (pendingSalesIds.has(docId) || (locInv.updatedAt || 0) > (cloudInv.updatedAt || 0))) {
+                            mergedInvoices.push(locInv);
+                        } else {
+                            mergedInvoices.push(cloudInv);
+                        }
+                        localSalesMap.delete(docId);
+                    });
+
+                    localSalesMap.forEach((remInv, invId) => {
+                        if (String(invId).startsWith('local_') || pendingSalesIds.has(String(invId))) {
+                            mergedInvoices.push(remInv);
                         }
                     });
-                    invoicesList = Array.from(uniqueRecordsMap.values());
+
+                    invoicesList = mergedInvoices;
                     localStorage.setItem('sales_records_offline', JSON.stringify(invoicesList));
+                    updateLocalUnifiedStockInventory();
                 }
             } catch (e) {
                 console.log("وضع الأوفلاين مفعل:", e);

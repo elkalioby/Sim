@@ -182,6 +182,15 @@
         window.deleteDoc = deleteDoc;
 
         const QUEUE_KEY = 'sim_offline_sync_queue';
+        const SHARED_STORAGE_KEYS = new Set([
+            'app_config',
+            'scanned_sims_offline',
+            'sales_records_offline',
+            'customers_records_offline',
+            'markets_list_offline',
+            'expenses_records_offline',
+            'expenses_spenders_offline'
+        ]);
         let isFlushingQueue = false;
         let lastCloudOnline = navigator.onLine;
 
@@ -265,6 +274,7 @@
                     q[pendingAddIdx].data = { ...q[pendingAddIdx].data, ...entry.data };
                     q[pendingAddIdx].timestamp = Date.now();
                     saveQueue(q);
+                    if (navigator.onLine) setTimeout(() => flushQueue(), 100);
                     return;
                 }
             }
@@ -276,6 +286,7 @@
                     withoutPrior.push({ ...entry, timestamp: Date.now() });
                 }
                 saveQueue(withoutPrior);
+                if (navigator.onLine) setTimeout(() => flushQueue(), 100);
                 return;
             }
 
@@ -297,6 +308,9 @@
             }
 
             saveQueue(cleanedQueue);
+            if (navigator.onLine) {
+                setTimeout(() => flushQueue(), 100);
+            }
         }
 
         async function flushQueue() {
@@ -309,6 +323,7 @@
             }
 
             if (q.length === 0) {
+                updateCloudBadge(true, 0, false);
                 return;
             }
 
@@ -386,7 +401,8 @@
             flush: flushQueue,
             syncNow: syncGlobalConfig,
             getQueueCount: () => getQueue().length,
-            setStatus: (online) => updateCloudBadge(online, getQueue().length, false)
+            setStatus: (online) => updateCloudBadge(online, getQueue().length, false),
+            notifyAll: notifyActiveIframeSynced
         };
 
         window.addEventListener('online', () => {
@@ -410,6 +426,8 @@
                 if (count > 0 && navigator.onLine) {
                     flushQueue();
                 }
+            } else if (e.key && SHARED_STORAGE_KEYS.has(e.key)) {
+                notifyActiveIframeSynced();
             }
         });
 
@@ -417,6 +435,8 @@
             if (e.data && e.data.type === 'SIM_QUEUE_UPDATED') {
                 updateCloudBadge(navigator.onLine, getQueue().length, false);
                 if (navigator.onLine) flushQueue();
+            } else if (e.data && e.data.type === 'SIM_DATA_CHANGED') {
+                notifyActiveIframeSynced();
             }
         });
 

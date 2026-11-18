@@ -421,7 +421,7 @@
             const selectEl = document.getElementById('marketSelect');
             if (!selectEl) return;
 
-            const currentVal = selectedVal || selectEl.value || '';
+            const currentVal = selectedVal !== null ? selectedVal : (selectEl.value || '');
             const sorted = [...marketsList].sort((a, b) => a.localeCompare(b, 'ar'));
             let html = `<option value="">-- اختر السوق أو المنطقة --</option>`;
             sorted.forEach(m => {
@@ -532,34 +532,12 @@
         }
 
         async function getTargetSalesCollections() {
-            const cols = new Set(["sales_records", "scanned_sims", "sales", "invoices", "invoices_records"]);
-            try {
-                let scriptsText = "";
-                if (window.parent && window.parent !== window && window.parent.document) {
-                    scriptsText = Array.from(window.parent.document.scripts).map(s => s.textContent || "").join("\n");
-                }
-                if (!scriptsText) {
-                    const res = await fetch("index.html");
-                    if (res.ok) scriptsText = await res.text();
-                }
-                const regex = /collection\s*\(\s*[^,]+,\s*['"]([^'"]+)['"]\s*\)/g;
-                let match;
-                while ((match = regex.exec(scriptsText)) !== null) {
-                    const colName = match[1].trim();
-                    const ignore = ["customers", "settings", "employees", "users", "expenses", "inventory", "stock", "sim_cards", "items", "products"];
-                    if (colName && !ignore.includes(colName)) {
-                        cols.add(colName);
-                    }
-                }
-            } catch (e) {
-                console.warn("تعذر فحص مجموعات الصفحة الرئيسية:", e);
-            }
-            return Array.from(cols);
+            return ["sales_records", "scanned_sims"];
         }
 
         function computeSaleUpdatesForCustomer(sale, cust, oldCust = null) {
             if (!sale || typeof sale !== 'object') return null;
-            if (sale.shopImage !== undefined && sale.total === undefined && sale.items === undefined && sale.amount === undefined && sale.price === undefined && sale.remaining === undefined && sale.code === undefined) {
+            if (sale.shopImage !== undefined && sale.total === undefined && sale.items === undefined && sale.cartItems === undefined && sale.amount === undefined && sale.price === undefined && sale.remaining === undefined && sale.code === undefined) {
                 return null;
             }
 
@@ -577,7 +555,7 @@
 
             let matched = false;
 
-            if (cust.id && (sale.customerId === cust.id || sale.clientId === cust.id)) {
+            if (cust.id && (String(sale.customerId || '') === String(cust.id) || String(sale.clientId || '') === String(cust.id))) {
                 matched = true;
             }
 
@@ -600,10 +578,17 @@
                     if ((cClient === sClient && cShop && cShop !== sShop) || (cShop === sShop && cClient && cClient !== sClient)) {
                         matched = true;
                     }
+                } else if (sClient && cClient && sClient === cClient && (!sShop || !cShop || sShop === cShop)) {
+                    matched = true;
                 }
             }
 
             if (!matched) return null;
+
+            // إذا كان السجل شريحة غير مصروفة لأي عميل، لا نربطه بعميل بالخطأ
+            if (sale.code !== undefined && !sClient && !sShop && !sale.clientId) {
+                return null;
+            }
 
             let targetClientName = cClient || cShop || 'بدون اسم';
             let targetShopName = cShop || cClient || '';
@@ -649,15 +634,19 @@
             if (cust.phone && sale.clientPhone !== undefined && sale.clientPhone !== cust.phone) {
                 updates.clientPhone = cust.phone;
             }
+            if (cust.id && !String(cust.id).startsWith('local_') && sale.clientId !== undefined && sale.clientId !== cust.id) {
+                updates.clientId = cust.id;
+            }
 
             return Object.keys(updates).length > 0 ? updates : null;
         }
 
-        async function syncCustomerChangesEverywhere(targetCustomers, oldCust = null) {
+        async function syncCustomerChangesEverywhere(targetCustomers, oldCust = null, syncCloudToo = true) {
             const custArray = Array.isArray(targetCustomers) ? targetCustomers : [targetCustomers];
             if (custArray.length === 0) return;
 
             let customersUpdatedLocally = false;
+            const nowTs = Date.now();
 
             try {
                 for (let i = 0; i < localStorage.length; i++) {
@@ -676,14 +665,11 @@
                             custArray.forEach(c => {
                                 const upd = computeSaleUpdatesForCustomer(record, c, oldCust);
                                 if (upd) {
+                                    upd.updatedAt = nowTs;
                                     Object.assign(record, upd);
-                                    if (key === 'scanned_sims_offline') {
-                                        record.updatedAt = Date.now();
-                                        upd.updatedAt = record.updatedAt;
-                                    }
                                     changed = true;
                                     const recId = record.firebaseId || record.code || record.id;
-                                    if (key === 'sales_records_offline' && recId) {
+                                    if (syncCloudToo && key === 'sales_records_offline' && recId) {
                                         queueCloudOperation({
                                             op: 'set',
                                             collectionName: 'sales_records',
@@ -691,7 +677,7 @@
                                             data: { ...upd },
                                             merge: true
                                         });
-                                    } else if (key === 'scanned_sims_offline' && recId) {
+                                    } else if (syncCloudToo && key === 'scanned_sims_offline' && recId) {
                                         queueCloudOperation({
                                             op: 'set',
                                             collectionName: 'scanned_sims',
@@ -715,7 +701,7 @@
 
             syncParentWindowMemoryAndUI(custArray, oldCust);
 
-            if (window.db && navigator.onLine) {
+            if (syncCloudToo && window.db && navigator.onLine) {
                 const collectionsToSync = await getTargetSalesCollections();
                 for (const colName of collectionsToSync) {
                     try {
@@ -729,17 +715,14 @@
                             custArray.forEach(c => {
                                 const upd = computeSaleUpdatesForCustomer(sData, c, oldCust);
                                 if (upd) {
-                                    combinedUpdates = { ...(combinedUpdates || {}), ...upd };
-                                    if (colName === 'scanned_sims') {
-                                        combinedUpdates.updatedAt = Date.now();
-                                    }
+                                    combinedUpdates = { ...(combinedUpdates || {}), ...upd, updatedAt: nowTs };
                                     if (upd.clientName && upd.shopName && upd.clientName === upd.shopName) {
                                         if (c.clientName !== upd.clientName || c.shopName !== upd.shopName) {
                                             c.clientName = upd.clientName;
                                             c.shopName = upd.shopName;
                                             customersUpdatedLocally = true;
                                             if (c.id && !String(c.id).startsWith('local_')) {
-                                                const custUpd = { clientName: c.clientName, shopName: c.shopName };
+                                                const custUpd = { clientName: c.clientName, shopName: c.shopName, updatedAt: nowTs };
                                                 window.updateDoc(window.doc(window.db, "customers", String(c.id)), custUpd).catch(() => {
                                                     queueCloudOperation({
                                                         op: 'update',
@@ -877,19 +860,36 @@
 
                 const pendingCustIds = getPendingIdsForCollection("customers");
                 const pendingCustDeletes = getPendingDeletesForCollection("customers");
-                const localUnsynced = customers.filter(c =>
-                    !pendingCustDeletes.has(String(c.id)) &&
-                    (String(c.id).startsWith('local_') || pendingCustIds.has(String(c.id)))
-                );
+                const localMap = new Map();
+                customers.forEach(c => {
+                    if (c.id && !pendingCustDeletes.has(String(c.id))) {
+                        localMap.set(String(c.id), c);
+                    }
+                });
 
                 const querySnapshot = await window.getDocs(window.collection(window.db, "customers"));
-                const cloudList = [];
+                const mergedCustomers = [];
                 querySnapshot.forEach((docSnap) => {
-                    if (pendingCustIds.has(String(docSnap.id)) || pendingCustDeletes.has(String(docSnap.id))) return;
-                    const data = docSnap.data();
-                    cloudList.push({ ...data, id: docSnap.id });
+                    const docId = String(docSnap.id);
+                    if (pendingCustDeletes.has(docId)) return;
+
+                    const data = { ...docSnap.data(), id: docId };
                     if (data.marketName && data.marketName.trim()) {
                         mergedMarkets.add(data.marketName.trim());
+                    }
+
+                    const locCust = localMap.get(docId);
+                    if (locCust && (pendingCustIds.has(docId) || (locCust.updatedAt || 0) > (data.updatedAt || 0))) {
+                        mergedCustomers.push(locCust);
+                    } else {
+                        mergedCustomers.push(data);
+                    }
+                    localMap.delete(docId);
+                });
+
+                localMap.forEach((remCust, idKey) => {
+                    if (String(idKey).startsWith('local_') || pendingCustIds.has(String(idKey))) {
+                        mergedCustomers.push(remCust);
                     }
                 });
 
@@ -899,12 +899,11 @@
                 appConfig.marketList = marketsList;
                 localStorage.setItem('app_config', JSON.stringify(appConfig));
 
-                const mergedCustomers = [...localUnsynced, ...cloudList];
                 mergedCustomers.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 customers = mergedCustomers;
                 localStorage.setItem('customers_records_offline', JSON.stringify(customers));
 
-                await syncCustomerChangesEverywhere(customers);
+                await syncCustomerChangesEverywhere(customers, null, false);
             } catch (error) {
                 console.error("خطأ أثناء جلب البيانات من السحابة:", error);
             } finally {
@@ -994,7 +993,7 @@
                         await window.updateDoc(docRef, customerData);
                     }
 
-                    await syncCustomerChangesEverywhere(savedRecord, oldCustomerSnapshot);
+                    await syncCustomerChangesEverywhere(savedRecord, oldCustomerSnapshot, true);
                 } else {
                     customerData.createdAt = Date.now();
                     if (!window.db || !navigator.onLine) {
@@ -1008,7 +1007,7 @@
                     savedRecord = { ...customerData, id: docRef.id };
                     customers.unshift(savedRecord);
                     localStorage.setItem('customers_records_offline', JSON.stringify(customers));
-                    await syncCustomerChangesEverywhere(savedRecord, null);
+                    await syncCustomerChangesEverywhere(savedRecord, null, true);
                 }
 
                 resetForm();
@@ -1026,7 +1025,7 @@
                     });
                     const currentRec = customers.find(c => String(c.id) === String(editId));
                     if (currentRec) {
-                        await syncCustomerChangesEverywhere(currentRec, oldCustomerSnapshot);
+                        await syncCustomerChangesEverywhere(currentRec, oldCustomerSnapshot, true);
                     }
                 } else {
                     let existingLocal = customers.find(c => c.createdAt === customerData.createdAt && String(c.id).startsWith('local_'));
@@ -1044,7 +1043,7 @@
                         localStorageKey: 'customers_records_offline',
                         idField: 'id'
                     });
-                    await syncCustomerChangesEverywhere(existingLocal, null);
+                    await syncCustomerChangesEverywhere(existingLocal, null, true);
                 }
                 resetForm();
                 renderCustomers();

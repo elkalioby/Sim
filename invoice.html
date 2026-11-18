@@ -299,6 +299,7 @@
         let configUpdatedAt = 0;
         let marketList = [];
         let savedCustomersList = [];
+        let selectedCustomerId = '';
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'مجهول', role: 'employee' };
 
         let tempImageBase64 = '';
@@ -312,6 +313,16 @@
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
+        }
+
+        function normalizePhone(p) {
+            if (!p) return '';
+            const arabicNums = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+            let str = String(p);
+            for (let i = 0; i < 10; i++) {
+                str = str.replace(new RegExp(arabicNums[i], 'g'), i);
+            }
+            return str.replace(/\D/g, '');
         }
 
         document.getElementById('invoiceDate').value = getTodayLocalStr();
@@ -330,9 +341,11 @@
 
             try {
                 const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
-                const key = `${entry.op}::${entry.collectionName}::${entry.docId || ''}`;
-                if ((entry.op === 'set' || entry.op === 'update') && String(entry.docId).startsWith('local_')) {
-                    const addIdx = q.findIndex(i => i.op === 'add' && i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId));
+                const docIdStr = String(entry.docId || '');
+                const key = `${entry.op}::${entry.collectionName}::${docIdStr}`;
+
+                if ((entry.op === 'set' || entry.op === 'update') && docIdStr.startsWith('local_')) {
+                    const addIdx = q.findIndex(i => i.op === 'add' && i.collectionName === entry.collectionName && String(i.docId) === docIdStr);
                     if (addIdx !== -1) {
                         q[addIdx].data = { ...q[addIdx].data, ...entry.data };
                         q[addIdx].timestamp = Date.now();
@@ -341,21 +354,25 @@
                         return;
                     }
                 }
-                if (entry.op === 'delete' && String(entry.docId).startsWith('local_')) {
-                    const filtered = q.filter(i => !(i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId)));
-                    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(filtered));
+                if (entry.op === 'delete') {
+                    const withoutPrior = q.filter(i => !(i.collectionName === entry.collectionName && String(i.docId) === docIdStr));
+                    if (!docIdStr.startsWith('local_')) {
+                        withoutPrior.push({ ...entry, timestamp: Date.now() });
+                    }
+                    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(withoutPrior));
                     notifyParentQueueUpdated();
                     return;
                 }
-                const idx = q.findIndex(i => `${i.op}::${i.collectionName}::${i.docId || ''}` === key);
+                const cleaned = q.filter(i => !(i.op === 'delete' && i.collectionName === entry.collectionName && String(i.docId) === docIdStr));
+                const idx = cleaned.findIndex(i => `${i.op}::${i.collectionName}::${i.docId || ''}` === key);
                 const item = { ...entry, timestamp: Date.now() };
                 if (idx !== -1) {
-                    if (entry.merge && q[idx].data && entry.data) item.data = { ...q[idx].data, ...entry.data };
-                    q[idx] = item;
+                    if (entry.merge && cleaned[idx].data && entry.data) item.data = { ...cleaned[idx].data, ...entry.data };
+                    cleaned[idx] = item;
                 } else {
-                    q.push(item);
+                    cleaned.push(item);
                 }
-                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(q));
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(cleaned));
                 notifyParentQueueUpdated();
             } catch (e) {}
         }
@@ -371,7 +388,16 @@
         function getPendingIdsForCollection(collectionName) {
             try {
                 const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
-                return new Set(q.filter(i => i.collectionName === collectionName).map(i => String(i.docId)));
+                return new Set(q.filter(i => i.collectionName === collectionName && i.op !== 'delete').map(i => String(i.docId)));
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        function getPendingDeletesForCollection(collectionName) {
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                return new Set(q.filter(i => i.collectionName === collectionName && i.op === 'delete').map(i => String(i.docId)));
             } catch (e) {
                 return new Set();
             }
@@ -391,11 +417,14 @@
                 for (const item of q) {
                     try {
                         if (item.op === 'add') {
-                            const docRef = await window.addDoc(window.collection(window.db, item.collectionName), item.data);
+                            const cleanPayload = { ...(item.data || {}) };
+                            if (String(cleanPayload.firebaseId || '').startsWith('local_')) delete cleanPayload.firebaseId;
+                            if (String(cleanPayload.id || '').startsWith('local_')) delete cleanPayload.id;
+                            const docRef = await window.addDoc(window.collection(window.db, item.collectionName), cleanPayload);
                             if (item.localStorageKey) {
                                 const arr = JSON.parse(localStorage.getItem(item.localStorageKey) || '[]');
                                 arr.forEach(r => {
-                                    if (String(r[item.idField || 'id']) === String(item.docId)) {
+                                    if (String(r[item.idField || 'id']) === String(item.docId) || String(r.id) === String(item.docId) || String(r.firebaseId) === String(item.docId)) {
                                         r[item.idField || 'id'] = docRef.id;
                                         if (r.id === item.docId) r.id = docRef.id;
                                         if (r.firebaseId === item.docId) r.firebaseId = docRef.id;
@@ -404,7 +433,9 @@
                                 localStorage.setItem(item.localStorageKey, JSON.stringify(arr));
                             }
                         } else if (item.op === 'set') {
-                            await window.setDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data, item.merge !== false ? { merge: true } : undefined);
+                            const cleanPayload = { ...(item.data || {}) };
+                            if (String(cleanPayload.firebaseId || '').startsWith('local_')) delete cleanPayload.firebaseId;
+                            await window.setDoc(window.doc(window.db, item.collectionName, String(item.docId)), cleanPayload, item.merge !== false ? { merge: true } : undefined);
                         } else if (item.op === 'update') {
                             await window.updateDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data);
                         } else if (item.op === 'delete') {
@@ -425,14 +456,37 @@
 
         window.addEventListener('message', async (e) => {
             if (e.data && e.data.type === 'SIM_CLOUD_SYNCED') {
+                loadLocalConfig();
+                loadSavedCustomers();
                 const updatedLocal = JSON.parse(localStorage.getItem('sales_records_offline') || '[]');
                 if (Array.isArray(updatedLocal)) {
                     records = updatedLocal;
-                    renderRecords();
                 }
+                syncLocalMarkets();
+                await calculateStockFromSims();
+                updateMarketSelect();
+                updateItemSelects();
+                renderModalStockList();
+                renderRecords();
             }
         });
         // --- نهاية نظام المزامنة التلقائية ---
+
+        function isSimReturned(item) {
+            if (!item) return false;
+            if (item.returned === true || item.isReturned === true) return true;
+            const st = String(item.status || '').trim().toLowerCase();
+            return ['returned', 'return', 'مرتجع', 'مرتجعه', 'مرتجعة', 'refunded', 'canceled', 'cancelled'].includes(st);
+        }
+
+        function isReturnInvoice(inv) {
+            if (!inv) return false;
+            if (inv.isReturn === true || inv.returned === true) return true;
+            const type = String(inv.type || inv.invoiceType || '').trim().toLowerCase();
+            const st = String(inv.status || '').trim().toLowerCase();
+            return ['return', 'returned', 'مرتجع', 'مرتجعه', 'مرتجعة', 'refund'].includes(type) ||
+                   ['return', 'returned', 'مرتجع', 'مرتجعه', 'مرتجعة', 'refunded'].includes(st);
+        }
 
         // دالة حساب الشهر المحاسبي الموحدة: الشهر يبدأ من يوم 5 ويمتد حتى يوم 4 من الشهر التالي
         function getAccountingMonth(dateStr, timestampFallback) {
@@ -480,6 +534,7 @@
         function saveInvoiceDraft() {
             const draft = {
                 editRecordId: document.getElementById('editRecordId').value,
+                selectedCustomerId: selectedCustomerId,
                 clientName: document.getElementById('clientName').value,
                 shopName: document.getElementById('shopName').value,
                 marketName: document.getElementById('marketName').value,
@@ -512,6 +567,7 @@
                     document.getElementById('cancelEditBtn').style.display = 'block';
                 }
 
+                if (draft.selectedCustomerId) selectedCustomerId = draft.selectedCustomerId;
                 if (draft.clientName !== undefined) document.getElementById('clientName').value = draft.clientName;
                 if (draft.shopName !== undefined) document.getElementById('shopName').value = draft.shopName;
                 if (draft.phone !== undefined) document.getElementById('phone').value = draft.phone;
@@ -650,19 +706,37 @@
                     }
 
                     const pendingCustomerIds = getPendingIdsForCollection("customers");
+                    const pendingCustomerDeletes = getPendingDeletesForCollection("customers");
                     const custSnap = await window.getDocs(window.collection(window.db, "customers"));
                     if (!custSnap.empty) {
-                        const localUnsyncedCust = savedCustomersList.filter(c => String(c.id).startsWith('local_') || pendingCustomerIds.has(String(c.id)));
-                        const cloudCust = [];
+                        const localMap = new Map();
+                        savedCustomersList.forEach(c => {
+                            if (c.id && !pendingCustomerDeletes.has(String(c.id))) {
+                                localMap.set(String(c.id), c);
+                            }
+                        });
+                        const mergedCust = [];
                         custSnap.forEach(d => {
-                            if (pendingCustomerIds.has(String(d.id))) return;
-                            const cData = d.data();
-                            cloudCust.push({ id: d.id, ...cData });
+                            const dId = String(d.id);
+                            if (pendingCustomerDeletes.has(dId)) return;
+                            const cData = { ...d.data(), id: dId };
                             if (cData.marketName && cData.marketName.trim()) {
                                 mergedMarkets.add(cData.marketName.trim());
                             }
+                            const locC = localMap.get(dId);
+                            if (locC && (pendingCustomerIds.has(dId) || (locC.updatedAt || 0) > (cData.updatedAt || 0))) {
+                                mergedCust.push(locC);
+                            } else {
+                                mergedCust.push(cData);
+                            }
+                            localMap.delete(dId);
                         });
-                        savedCustomersList = [...localUnsyncedCust, ...cloudCust];
+                        localMap.forEach((remC, idKey) => {
+                            if (String(idKey).startsWith('local_') || pendingCustomerIds.has(String(idKey))) {
+                                mergedCust.push(remC);
+                            }
+                        });
+                        savedCustomersList = mergedCust;
                         localStorage.setItem('customers_records_offline', JSON.stringify(savedCustomersList));
                     }
 
@@ -684,15 +758,30 @@
             if (window.db && navigator.onLine) {
                 try {
                     const pendingSimIds = getPendingIdsForCollection("scanned_sims");
-                    const localPendingSims = sims.filter(s => pendingSimIds.has(String(s.code)));
+                    const pendingSimDeletes = getPendingDeletesForCollection("scanned_sims");
+                    const localMap = new Map();
+                    sims.forEach(s => {
+                        if (s.code && !pendingSimDeletes.has(String(s.code))) {
+                            localMap.set(String(s.code), s);
+                        }
+                    });
                     const simsSnap = await window.getDocs(window.collection(window.db, "scanned_sims"));
                     if (!simsSnap.empty) {
-                        const mergedSims = [...localPendingSims];
+                        const mergedSims = [];
                         simsSnap.forEach(d => {
                             const sData = d.data();
-                            if (!pendingSimIds.has(String(sData.code))) {
-                                mergedSims.push(sData);
+                            const codeKey = String(sData.code || d.id);
+                            if (pendingSimDeletes.has(codeKey)) return;
+                            const locSim = localMap.get(codeKey);
+                            if (locSim && (pendingSimIds.has(codeKey) || (locSim.updatedAt || 0) > (sData.updatedAt || 0))) {
+                                mergedSims.push(locSim);
+                            } else {
+                                mergedSims.push({ ...sData, code: codeKey, id: d.id });
                             }
+                            localMap.delete(codeKey);
+                        });
+                        localMap.forEach((remSim, codeKey) => {
+                            if (pendingSimIds.has(codeKey)) mergedSims.push(remSim);
                         });
                         sims = mergedSims;
                         localStorage.setItem('scanned_sims_offline', JSON.stringify(sims));
@@ -702,7 +791,7 @@
 
             autoStockInventory = {};
             sims.forEach(item => {
-                if (item.status === 'returned') return;
+                if (isSimReturned(item)) return;
 
                 const cat = item.category || item.company || 'Mobily';
                 let dur = item.duration;
@@ -714,13 +803,14 @@
             });
 
             records.forEach(r => {
+                const sign = isReturnInvoice(r) ? -1 : 1;
                 if (r.cartItems && Array.isArray(r.cartItems)) {
                     r.cartItems.forEach(ci => {
                         if (!ci.item || !ci.item.includes('(')) return;
                         if (autoStockInventory[ci.item] === undefined) {
                             autoStockInventory[ci.item] = 0;
                         }
-                        autoStockInventory[ci.item] -= ci.qty;
+                        autoStockInventory[ci.item] -= sign * (parseFloat(ci.qty) || 0);
                     });
                 }
             });
@@ -756,13 +846,54 @@
             const cleanClient = (clientName || '').trim();
             const cleanShop = (shopName || '').trim();
             const cleanPhone = (phone || '').trim();
+            const normPhone = normalizePhone(cleanPhone);
 
-            const exists = savedCustomersList.some(c =>
-                (cleanPhone && c.phone === cleanPhone) ||
-                (cleanClient && c.clientName === cleanClient && cleanShop && c.shopName === cleanShop)
-            );
+            const existingIdx = savedCustomersList.findIndex(c => {
+                if (selectedCustomerId && String(c.id) === String(selectedCustomerId)) return true;
+                const cNormPhone = normalizePhone(c.phone || '');
+                if (normPhone.length >= 8 && cNormPhone === normPhone) return true;
+                if (cleanClient && c.clientName === cleanClient && (!cleanShop || !c.shopName || c.shopName === cleanShop)) return true;
+                if (cleanShop && c.shopName === cleanShop && (!cleanClient || !c.clientName || c.clientName === cleanClient)) return true;
+                return false;
+            });
 
-            if (exists) return;
+            if (existingIdx !== -1) {
+                const existingCust = savedCustomersList[existingIdx];
+                let changed = false;
+                if (cleanClient && existingCust.clientName !== cleanClient) { existingCust.clientName = cleanClient; changed = true; }
+                if (cleanShop && existingCust.shopName !== cleanShop) { existingCust.shopName = cleanShop; changed = true; }
+                if (marketName && existingCust.marketName !== marketName) { existingCust.marketName = marketName; changed = true; }
+                if (cleanPhone && existingCust.phone !== cleanPhone) { existingCust.phone = cleanPhone; changed = true; }
+                if (shopImage && !existingCust.shopImage) { existingCust.shopImage = shopImage; changed = true; }
+
+                if (changed) {
+                    existingCust.updatedAt = Date.now();
+                    savedCustomersList[existingIdx] = existingCust;
+                    localStorage.setItem('customers_records_offline', JSON.stringify(savedCustomersList));
+                    if (existingCust.id && !String(existingCust.id).startsWith('local_')) {
+                        const updPayload = {
+                            clientName: existingCust.clientName,
+                            shopName: existingCust.shopName,
+                            marketName: existingCust.marketName,
+                            phone: existingCust.phone,
+                            shopImage: existingCust.shopImage || '',
+                            updatedAt: existingCust.updatedAt
+                        };
+                        try {
+                            if (!window.db || !navigator.onLine) throw new Error('offline');
+                            await window.updateDoc(window.doc(window.db, "customers", String(existingCust.id)), updPayload);
+                        } catch (e) {
+                            queueCloudOperation({
+                                op: 'update',
+                                collectionName: 'customers',
+                                docId: String(existingCust.id),
+                                data: updPayload
+                            });
+                        }
+                    }
+                }
+                return existingCust.id || '';
+            }
 
             const newCust = {
                 clientName: cleanClient || cleanShop || 'بدون اسم',
@@ -777,12 +908,14 @@
             };
 
             const tempId = 'local_' + Date.now();
+            let finalId = tempId;
             try {
                 if (!window.db || !navigator.onLine) throw new Error('offline');
                 const docRef = await window.addDoc(window.collection(window.db, "customers"), newCust);
-                savedCustomersList.unshift({ id: docRef.id, ...newCust });
+                finalId = docRef.id;
+                savedCustomersList.unshift({ ...newCust, id: finalId });
             } catch (e) {
-                savedCustomersList.unshift({ id: tempId, ...newCust });
+                savedCustomersList.unshift({ ...newCust, id: tempId });
                 queueCloudOperation({
                     op: 'add',
                     collectionName: 'customers',
@@ -794,6 +927,7 @@
             }
 
             localStorage.setItem('customers_records_offline', JSON.stringify(savedCustomersList));
+            return finalId;
         }
 
         function filterCustomersDropdown() {
@@ -840,20 +974,21 @@
             const c = savedCustomersList.find((item, idx) => String(item.id || idx) === String(idOrIdx));
             if (!c) return;
 
+            selectedCustomerId = c.id || '';
             const displayClient = (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName : (c.shopName || '');
             document.getElementById('clientName').value = displayClient;
-            if (c.shopName) document.getElementById('shopName').value = c.shopName;
-            if (c.phone) document.getElementById('phone').value = c.phone;
+            document.getElementById('shopName').value = c.shopName || displayClient || '';
+            document.getElementById('phone').value = c.phone || '';
 
             if (c.marketName) {
                 if (!marketList.includes(c.marketName)) {
                     marketList.push(c.marketName);
                 }
                 updateMarketSelect(c.marketName);
+            } else {
+                updateMarketSelect('');
             }
-            if (c.shopImage) {
-                tempImageBase64 = c.shopImage;
-            }
+            tempImageBase64 = c.shopImage || '';
 
             document.getElementById('customersDropdown').style.display = 'none';
             saveInvoiceDraft();
@@ -910,9 +1045,9 @@
             }
         }
 
-        function updateMarketSelect(selectedVal = '') {
+        function updateMarketSelect(selectedVal = null) {
             const select = document.getElementById('marketName');
-            const currentVal = selectedVal || select.value || '';
+            const currentVal = selectedVal !== null ? selectedVal : (select.value || '');
             const sortedMarkets = [...marketList].sort((a, b) => a.localeCompare(b, 'ar'));
 
             select.innerHTML = `<option value="">-- اختر العنوان / السوق --</option>` + 
@@ -1007,13 +1142,28 @@
                 return;
             }
 
-            const currentAvailable = stockInventory[item] || 0;
-            if (qty > currentAvailable) {
-                alert(`⚠️ الكمية المطلوبة (${qty}) أكبر من المخزون المتاح (${currentAvailable}) لهذا الصنف!`);
+            const alreadyInCartQty = currentCart
+                .filter(c => c.item === item)
+                .reduce((sum, c) => sum + (parseFloat(c.qty) || 0), 0);
+
+            let previouslyReservedQty = 0;
+            const editId = document.getElementById('editRecordId').value;
+            if (editId) {
+                const oldRec = records.find(r => String(r.firebaseId || r.id) === String(editId));
+                if (oldRec && !isReturnInvoice(oldRec) && Array.isArray(oldRec.cartItems)) {
+                    previouslyReservedQty = oldRec.cartItems
+                        .filter(ci => ci.item === item)
+                        .reduce((sum, ci) => sum + (parseFloat(ci.qty) || 0), 0);
+                }
+            }
+
+            const effectiveAvailable = Math.max(0, (stockInventory[item] || 0) + previouslyReservedQty - alreadyInCartQty);
+            if (qty > effectiveAvailable) {
+                alert(`⚠️ الكمية المطلوبة (${qty}) أكبر من المخزون المتاح حالياً (${effectiveAvailable}) لهذا الصنف!`);
                 return;
             }
 
-            currentCart.push({ item, qty, price, total: qty * price });
+            currentCart.push({ item, qty, price, total: +(qty * price).toFixed(2) });
             document.getElementById('currentQty').value = '';
             document.getElementById('currentPrice').value = '';
             renderCart(true);
@@ -1050,7 +1200,7 @@
                 </tr>`;
             }).join('');
 
-            document.getElementById('total').value = grandTotal;
+            document.getElementById('total').value = +grandTotal.toFixed(2);
             calcRemaining();
             if (shouldSaveDraft) saveInvoiceDraft();
         }
@@ -1058,7 +1208,7 @@
         function calcRemaining() {
             const total = parseFloat(document.getElementById('total').value) || 0;
             const paid = parseFloat(document.getElementById('paid').value) || 0;
-            const remaining = total - paid;
+            const remaining = +(total - paid).toFixed(2);
             document.getElementById('remaining').value = remaining >= 0 ? remaining : 0;
             toggleReminderVisibility();
         }
@@ -1074,21 +1224,41 @@
                 await flushLocalQueueFallback();
 
                 const pendingSalesIds = getPendingIdsForCollection("sales_records");
-                const localUnsynced = records.filter(r =>
-                    r.firebaseId && (String(r.firebaseId).startsWith('local_') || pendingSalesIds.has(String(r.firebaseId)))
-                );
+                const pendingSalesDeletes = getPendingDeletesForCollection("sales_records");
+                const localMap = new Map();
+                records.forEach(r => {
+                    const rId = String(r.firebaseId || r.id || '');
+                    if (rId && !pendingSalesDeletes.has(rId)) {
+                        localMap.set(rId, r);
+                    }
+                });
 
                 const querySnapshot = await window.getDocs(window.collection(window.db, "sales_records"));
-                const cloudRecords = [];
+                const mergedRecords = [];
                 querySnapshot.forEach((docSnap) => {
-                    if (pendingSalesIds.has(String(docSnap.id))) return;
-                    const data = docSnap.data();
-                    cloudRecords.push({ ...data, firebaseId: docSnap.id });
+                    const docId = String(docSnap.id);
+                    if (pendingSalesDeletes.has(docId)) return;
+                    const data = { ...docSnap.data(), id: docId, firebaseId: docId };
                     if (data.marketName && data.marketName.trim() && !marketList.includes(data.marketName.trim())) {
                         marketList.push(data.marketName.trim());
                     }
+
+                    const locRec = localMap.get(docId);
+                    if (locRec && (pendingSalesIds.has(docId) || (locRec.updatedAt || 0) > (data.updatedAt || 0))) {
+                        mergedRecords.push(locRec);
+                    } else {
+                        mergedRecords.push(data);
+                    }
+                    localMap.delete(docId);
                 });
-                records = [...cloudRecords, ...localUnsynced];
+
+                localMap.forEach((remRec, rId) => {
+                    if (String(rId).startsWith('local_') || pendingSalesIds.has(String(rId))) {
+                        mergedRecords.push(remRec);
+                    }
+                });
+
+                records = mergedRecords;
                 localStorage.setItem('sales_records_offline', JSON.stringify(records));
                 updateMarketSelect();
                 await calculateStockFromSims();
@@ -1116,9 +1286,10 @@
             const paidNow = parseFloat(document.getElementById('paid').value) || 0;
             const totalVal = parseFloat(document.getElementById('total').value) || 0;
             const selectedInvoiceDate = document.getElementById('invoiceDate').value || getTodayLocalStr();
+            const nowTs = Date.now();
 
             let paymentsHistory = [];
-            let originalTimestamp = Date.now();
+            let originalTimestamp = nowTs;
 
             if (editId) {
                 const oldRec = records.find(r => r.firebaseId === editId);
@@ -1138,13 +1309,21 @@
                 });
             }
 
-            const clientNameVal = document.getElementById('clientName').value;
-            const shopNameVal = document.getElementById('shopName').value;
-            const phoneVal = document.getElementById('phone').value;
+            const clientNameVal = document.getElementById('clientName').value.trim();
+            const shopNameVal = document.getElementById('shopName').value.trim();
+            const phoneVal = document.getElementById('phone').value.trim();
+
+            let linkedCustId = selectedCustomerId || '';
+            try {
+                linkedCustId = await ensureCustomerInDirectory(clientNameVal, shopNameVal, marketVal, phoneVal, tempImageBase64);
+            } catch (custErr) {}
 
             const recordData = {
                 date: selectedInvoiceDate,
                 timestamp: originalTimestamp,
+                updatedAt: nowTs,
+                customerId: linkedCustId,
+                clientId: linkedCustId,
                 clientName: clientNameVal,
                 shopName: shopNameVal,
                 marketName: marketVal,
@@ -1163,32 +1342,29 @@
             };
 
             try {
-                await ensureCustomerInDirectory(clientNameVal, shopNameVal, marketVal, phoneVal, tempImageBase64);
-
                 if (editId) {
-                    records = records.map(r => r.firebaseId === editId ? { ...recordData, firebaseId: editId } : r);
+                    records = records.map(r => r.firebaseId === editId ? { ...recordData, id: editId, firebaseId: editId } : r);
                     localStorage.setItem('sales_records_offline', JSON.stringify(records));
 
                     if (!window.db || !navigator.onLine) throw new Error('offline');
 
                     if (editId.startsWith('local_')) {
                         const docRef = await window.addDoc(window.collection(window.db, "sales_records"), recordData);
-                        records = records.map(r => r.firebaseId === editId ? { ...recordData, firebaseId: docRef.id } : r);
+                        records = records.map(r => r.firebaseId === editId ? { ...recordData, id: docRef.id, firebaseId: docRef.id } : r);
                         localStorage.setItem('sales_records_offline', JSON.stringify(records));
                     } else {
                         await window.setDoc(window.doc(window.db, "sales_records", editId), recordData, { merge: true });
                     }
                     alert('تم تعديل الفاتورة وتحديث المخزون بنجاح!');
                 } else {
-                    const tempId = 'local_' + Date.now();
+                    const tempId = 'local_' + nowTs;
                     if (!window.db || !navigator.onLine) {
-                        recordData.firebaseId = tempId;
-                        records.push(recordData);
+                        records.push({ ...recordData, id: tempId, firebaseId: tempId });
                         localStorage.setItem('sales_records_offline', JSON.stringify(records));
                         throw new Error('offline');
                     }
                     const docRef = await window.addDoc(window.collection(window.db, "sales_records"), recordData);
-                    records.push({ ...recordData, firebaseId: docRef.id });
+                    records.push({ ...recordData, id: docRef.id, firebaseId: docRef.id });
                     localStorage.setItem('sales_records_offline', JSON.stringify(records));
                     alert('تم حفظ الفاتورة بنجاح!');
                 }
@@ -1201,7 +1377,7 @@
             } catch (err) {
                 let targetId = editId;
                 if (editId) {
-                    records = records.map(r => r.firebaseId === editId ? { ...recordData, firebaseId: editId } : r);
+                    records = records.map(r => r.firebaseId === editId ? { ...recordData, id: editId, firebaseId: editId } : r);
                     queueCloudOperation({
                         op: editId.startsWith('local_') ? 'add' : 'set',
                         collectionName: 'sales_records',
@@ -1213,10 +1389,9 @@
                     });
                 } else {
                     const existingLocal = records.find(r => r.timestamp === recordData.timestamp && String(r.firebaseId).startsWith('local_'));
-                    targetId = existingLocal ? existingLocal.firebaseId : ('local_' + Date.now());
+                    targetId = existingLocal ? existingLocal.firebaseId : ('local_' + nowTs);
                     if (!existingLocal) {
-                        recordData.firebaseId = targetId;
-                        records.push(recordData);
+                        records.push({ ...recordData, id: targetId, firebaseId: targetId });
                     }
                     queueCloudOperation({
                         op: 'add',
@@ -1241,6 +1416,7 @@
             localStorage.removeItem('sim_invoice_draft');
             document.getElementById('saleForm').reset();
             document.getElementById('editRecordId').value = '';
+            selectedCustomerId = '';
             document.getElementById('formTitle').innerText = '+ تسجيل فاتورة / حركة بيع جديدة';
             document.getElementById('submitBtn').innerText = 'حفظ الفاتورة ومزامنتها';
             document.getElementById('cancelEditBtn').style.display = 'none';
@@ -1258,6 +1434,7 @@
             if (!r) return;
 
             document.getElementById('editRecordId').value = r.firebaseId;
+            selectedCustomerId = r.customerId || r.clientId || '';
             document.getElementById('clientName').value = r.clientName || '';
             document.getElementById('shopName').value = r.shopName || '';
             if (r.marketName && !marketList.includes(r.marketName)) {
@@ -1292,8 +1469,10 @@
             const addPay = parseFloat(addPayStr);
             if (isNaN(addPay) || addPay <= 0 || addPay > r.remaining) return;
 
-            r.paid = (r.paid || 0) + addPay;
-            r.remaining = (r.remaining || 0) - addPay;
+            const nowTs = Date.now();
+            r.paid = +((parseFloat(r.paid) || 0) + addPay).toFixed(2);
+            r.remaining = +((parseFloat(r.remaining) || 0) - addPay).toFixed(2);
+            r.updatedAt = nowTs;
             
             if (!r.paymentsHistory) r.paymentsHistory = [];
             r.paymentsHistory.push({
@@ -1311,7 +1490,8 @@
                 paid: r.paid,
                 remaining: r.remaining,
                 paymentsHistory: r.paymentsHistory,
-                notes: r.notes
+                notes: r.notes,
+                updatedAt: nowTs
             };
 
             try {

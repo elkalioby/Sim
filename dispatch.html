@@ -235,7 +235,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 1010;
         }
 
-        .modal-box { background: #fff; padding: 18px; border-radius: 14px; width: 100%; max-width: 420px; }
+        .modal-box { background: #fff; padding: 18px; border-radius: 14px; width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; }
     
         .fixed-tag-box {
             margin-top: 10px;
@@ -508,7 +508,7 @@
             <div class="counter-pills-group" id="historyFilterCounters"></div>
         </div>
 
-        <input type="text" id="mainSearchInput" class="search-input" placeholder="🔍 البحث بالسيريال أو الرمز" oninput="saveDispatchDraft(); renderHistoryTable();">
+        <input type="text" id="mainSearchInput" class="search-input" placeholder="🔍 البحث بالسيريال أو الرمز أو العميل" oninput="saveDispatchDraft(); renderHistoryTable();">
 
         <div id="tagSummaryBox">
             <div class="tag-summary-title" id="tagSummaryTitle"></div>
@@ -578,8 +578,19 @@
             <label>الرمز المكتوب (مثل N115):</label>
             <input type="text" id="editSimTag" oninput="this.value = this.value.toUpperCase()">
 
-            <label>المدة:</label>
-            <select id="editSimDuration"></select>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <div>
+                    <label>التصنيف:</label>
+                    <select id="editSimCategory"></select>
+                </div>
+                <div>
+                    <label>المدة:</label>
+                    <select id="editSimDuration"></select>
+                </div>
+            </div>
+
+            <label>التاريخ (تاريخ الصرف أو المرتجع):</label>
+            <input type="date" id="editSimDate" style="direction:ltr; text-align:center;">
 
             <label>العميل المسجل:</label>
             <select id="editSimCustomerSelect"></select>
@@ -726,6 +737,22 @@
             return match ? match[0] : str;
         }
 
+        function isSimReturned(item) {
+            if (!item) return false;
+            if (item.returned === true || item.isReturned === true) return true;
+            const st = String(item.status || '').trim().toLowerCase();
+            return ['returned', 'return', 'مرتجع', 'مرتجعه', 'مرتجعة', 'refunded', 'canceled', 'cancelled'].includes(st);
+        }
+
+        function isReturnInvoice(inv) {
+            if (!inv) return false;
+            if (inv.isReturn === true || inv.returned === true) return true;
+            const type = String(inv.type || inv.invoiceType || '').trim().toLowerCase();
+            const st = String(inv.status || '').trim().toLowerCase();
+            return ['return', 'returned', 'مرتجع', 'مرتجعه', 'مرتجعة', 'refund'].includes(type) ||
+                   ['return', 'returned', 'مرتجع', 'مرتجعه', 'مرتجعة', 'refunded'].includes(st);
+        }
+
         const scannerConfig = {
             experimentalFeatures: { useBarCodeDetectorIfSupported: true },
             verbose: false
@@ -789,15 +816,21 @@
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
+        // دالة حساب الشهر المحاسبي الموحدة: الشهر يبدأ يوم 5 وينتهي يوم 4 من الشهر التالي
         function getAccountingMonth(dateStr, timestampFallback) {
             let year = NaN, month = NaN, day = NaN;
             if (dateStr) {
                 const clean = String(dateStr).trim();
                 const isoMatch = clean.match(/^(\d{4})[-/](\d{1,2})(?:[-/](\d{1,2}))?/);
+                const dmyMatch = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
                 if (isoMatch) {
                     year = parseInt(isoMatch[1], 10);
                     month = parseInt(isoMatch[2], 10);
                     day = isoMatch[3] ? parseInt(isoMatch[3], 10) : 5;
+                } else if (dmyMatch) {
+                    day = parseInt(dmyMatch[1], 10);
+                    month = parseInt(dmyMatch[2], 10);
+                    year = parseInt(dmyMatch[3], 10);
                 }
             }
             if ((isNaN(year) || isNaN(month)) && timestampFallback) {
@@ -855,6 +888,14 @@
                 });
                 editDurSelect.innerHTML = editHtml;
             }
+            const editCatSelect = document.getElementById('editSimCategory');
+            if (editCatSelect) {
+                let catHtml = '';
+                categoriesList.forEach(c => {
+                    catHtml += `<option value="${c}">${c}</option>`;
+                });
+                editCatSelect.innerHTML = catHtml;
+            }
         }
 
         function openGeminiKeyModal() {
@@ -904,7 +945,6 @@
                 await processFilesWithGemini(filesToRun);
             }
         }
-
 
         const FIXED_TAG_STORAGE_KEY = 'sim_fixed_default_tag';
 
@@ -964,7 +1004,7 @@
             });
 
             (simsList || []).forEach(s => {
-                if (s.status !== 'dispatched' && s.status !== 'returned') return;
+                if (s.status !== 'dispatched' && !isSimReturned(s)) return;
                 const cName = String(s.clientName || '').trim();
                 if (!cName) return;
                 const label = (s.shopName && s.shopName.trim() !== cName) ? `${cName} — ${s.shopName.trim()}` : cName;
@@ -1111,6 +1151,9 @@
                     localStorage.setItem('gemini_api_key', geminiApiKey);
                 }
             }
+            if (!categoriesList.some(c => /^(روتر|راوتر)\s*زين$/i.test(c.trim()))) {
+                categoriesList.push('روتر زين');
+            }
             simsList = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
             customersList = JSON.parse(localStorage.getItem('customers_records_offline') || '[]');
             renderDurationDropdowns();
@@ -1126,7 +1169,7 @@
 
             const autoStock = {};
             simsList.forEach(item => {
-                if (item.status === 'returned') return;
+                if (isSimReturned(item)) return;
                 const cat = resolveSimCategory(item);
                 const dur = resolveSimDuration(item, cat);
                 const itemKey = `${cat} (${dur})`;
@@ -1134,10 +1177,12 @@
             });
 
             salesRecords.forEach(r => {
+                const sign = isReturnInvoice(r) ? -1 : 1;
                 if (r.cartItems && Array.isArray(r.cartItems)) {
                     r.cartItems.forEach(ci => {
+                        if (!ci.item || !ci.item.includes('(')) return;
                         if (autoStock[ci.item] === undefined) autoStock[ci.item] = 0;
-                        autoStock[ci.item] -= (parseFloat(ci.qty) || 0);
+                        autoStock[ci.item] -= sign * (parseFloat(ci.qty) || 0);
                     });
                 }
             });
@@ -1203,6 +1248,9 @@
                             categoriesList = cData.categoriesList || cData.customItems || categoriesList;
                             durationsList = cData.durationsList || durationsList;
                         }
+                        if (!categoriesList.some(c => /^(روتر|راوتر)\s*زين$/i.test(c.trim()))) {
+                            categoriesList.push('روتر زين');
+                        }
                         if (cData.geminiApiKey) {
                             geminiApiKey = extractCleanApiKey(cData.geminiApiKey);
                             localStorage.setItem('gemini_api_key', geminiApiKey);
@@ -1225,6 +1273,7 @@
 
                     simsSnap.forEach(d => {
                         const cloudSim = d.data();
+                        if (!cloudSim.code) cloudSim.code = d.id;
                         if (!cloudSim.category && cloudSim.company) cloudSim.category = cloudSim.company;
                         const codeKey = String(cloudSim.code || d.id);
 
@@ -1268,7 +1317,10 @@
 
                     const pendingCustIds = getPendingIdsForCollection("customers");
                     const pendingCustDeletes = getPendingDeletesForCollection("customers");
-                    const localUnsyncedCust = customersList.filter(c => String(c.id).startsWith('local_') || pendingCustIds.has(String(c.id)));
+                    const localUnsyncedCust = customersList.filter(c =>
+                        !pendingCustDeletes.has(String(c.id)) &&
+                        (String(c.id).startsWith('local_') || pendingCustIds.has(String(c.id)))
+                    );
                     const custSnap = await window.getDocs(window.collection(window.db, "customers"));
                     const cloudCust = [];
                     custSnap.forEach(d => {
@@ -1299,7 +1351,7 @@
         });
 
         window.addEventListener('storage', (e) => {
-            if (e.key === 'scanned_sims_offline' || e.key === 'customers_records_offline' || e.key === 'app_config') {
+            if (e.key === 'scanned_sims_offline' || e.key === 'customers_records_offline' || e.key === 'app_config' || e.key === 'sales_records_offline') {
                 loadLocalData();
                 renderStagingTable();
                 renderHistoryTable();
@@ -1436,7 +1488,7 @@
             if (coreClean.length >= 7) {
                 const subMatches = simsList.filter(s => s.code && (s.code.includes(coreClean) || coreClean.includes(s.code)));
                 if (subMatches.length === 1) return subMatches[0].code;
-                const availMatch = subMatches.find(s => s.status !== 'dispatched' && s.status !== 'returned');
+                const availMatch = subMatches.find(s => s.status !== 'dispatched' && !isSimReturned(s));
                 if (availMatch && coreClean.length >= 8) return availMatch.code;
             }
 
@@ -2053,7 +2105,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 const dur = resolveSimDuration(s, cat);
                 const stBadge = s.status === 'dispatched'
                     ? `<span style="color:#16a34a; font-weight:800;">✅ منصرف (${s.clientName || ''})</span>`
-                    : (s.status === 'returned' ? `<span style="color:#dc2626; font-weight:800;">❌ مرتجع</span>` : `<span style="color:#0284c7; font-weight:800;">متاح بالمخزون</span>`);
+                    : (isSimReturned(s) ? `<span style="color:#dc2626; font-weight:800;">❌ مرتجع</span>` : `<span style="color:#0284c7; font-weight:800;">متاح بالمخزون</span>`);
                 return `
                     <div class="sim-suggestion-item" onclick="selectSuggestedSim('${s.code}')">
                         <span style="font-family:monospace; font-weight:800;">${s.code}</span>
@@ -2169,7 +2221,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                         html: `<span class="warn-pill">🚫 مصروفة مسبقاً للعميل: ${sim.clientName || 'مسجل سابقاً'} (${sim.tagCode || '-'})</span>`
                     };
                 }
-                if (sim.status === 'returned') {
+                if (isSimReturned(sim)) {
                     return {
                         valid: false,
                         category: category,
@@ -2184,7 +2236,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     html: `<span class="ready-pill">✅ مضافة بالمخزون وجاهزة للصرف</span>`
                 };
             } else {
-                if (sim.status === 'returned') {
+                if (isSimReturned(sim)) {
                     return {
                         valid: false,
                         category: category,
@@ -2285,14 +2337,18 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
                 if (mode === 'dispatch') {
                     sim.status = 'dispatched';
+                    sim.returned = false;
+                    sim.isReturned = false;
                     sim.tagCode = (stItem.tagCode || '').trim().toUpperCase();
                     sim.clientName = selectedCustomer.clientName;
                     sim.shopName = selectedCustomer.shopName || '';
                     sim.clientPhone = selectedCustomer.phone || '';
                     sim.clientId = selectedCustomer.id || '';
                     sim.dispatchDate = actionDate;
+                    sim.returnDate = '';
                     sim.actionDate = actionDate;
                     sim.dispatchTimestamp = now;
+                    sim.returnTimestamp = 0;
                     sim.updatedAt = now;
                     sim.dispatchedBy = currentUser.username || 'admin';
                 } else {
@@ -2345,6 +2401,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 showMessage(`❌ تم تسجيل (${countDone}) كمرتجع والتعليم عليها بـ (❌) وخصمها من الرصيد بنجاح!${syncSuffix}`);
             }
 
+            populateHistoryCustomerFilter();
             renderHistoryTable();
         }
 
@@ -2359,7 +2416,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             const rawSearch = normalizeDigits((document.getElementById('mainSearchInput').value || '').trim());
             const searchLower = rawSearch.toLowerCase();
 
-            const activeSims = simsList.filter(s => s.status === 'dispatched' || s.status === 'returned');
+            const activeSims = simsList.filter(s => s.status === 'dispatched' || isSimReturned(s));
 
             const baseFiltered = activeSims.filter(s => {
                 if (itemTypeVal === 'sim' && isRouterRecord(s)) return false;
@@ -2368,8 +2425,9 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 if (custVal && String(s.clientName || '').trim() !== custVal) return false;
 
                 if ((!searchLower || custVal) && monthVal) {
-                    const effectiveDate = s.actionDate || (s.status === 'returned' ? s.returnDate : s.dispatchDate) || s.date;
-                    const effectiveTs = s.returnTimestamp || s.dispatchTimestamp || s.timestamp;
+                    const isRet = isSimReturned(s);
+                    const effectiveDate = (isRet ? s.returnDate : s.dispatchDate) || s.actionDate || s.date;
+                    const effectiveTs = (isRet ? s.returnTimestamp : s.dispatchTimestamp) || s.timestamp;
                     const recMonth = getAccountingMonth(effectiveDate, effectiveTs);
                     if (recMonth !== monthVal) return false;
                 }
@@ -2391,12 +2449,13 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             });
 
             const filtered = baseFiltered.filter(s => {
-                if (statusVal !== 'ALL' && s.status !== statusVal) return false;
-                return true;
+                if (statusVal === 'ALL') return true;
+                if (statusVal === 'returned') return isSimReturned(s);
+                return s.status === statusVal && !isSimReturned(s);
             });
 
-            const dispCount = baseFiltered.filter(s => s.status === 'dispatched').length;
-            const retCount = baseFiltered.filter(s => s.status === 'returned').length;
+            const dispCount = baseFiltered.filter(s => s.status === 'dispatched' && !isSimReturned(s)).length;
+            const retCount = baseFiltered.filter(s => isSimReturned(s)).length;
 
             const statDispEl = document.getElementById('statDispatchedCount');
             const statRetEl = document.getElementById('statReturnedCount');
@@ -2426,8 +2485,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     if (!clientsMap[cKey]) {
                         clientsMap[cKey] = { shop: s.shopName || '', dispatched: 0, returned: 0, tags: new Set() };
                     }
-                    if (s.status === 'dispatched') clientsMap[cKey].dispatched++;
-                    if (s.status === 'returned') clientsMap[cKey].returned++;
+                    if (isSimReturned(s)) clientsMap[cKey].returned++;
+                    else if (s.status === 'dispatched') clientsMap[cKey].dispatched++;
                     if (s.tagCode) clientsMap[cKey].tags.add(s.tagCode);
                 });
 
@@ -2450,8 +2509,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             }
 
             filtered.sort((a, b) => {
-                const tB = b.returnTimestamp || b.dispatchTimestamp || b.timestamp || 0;
-                const tA = a.returnTimestamp || a.dispatchTimestamp || a.timestamp || 0;
+                const tB = (isSimReturned(b) ? b.returnTimestamp : b.dispatchTimestamp) || b.updatedAt || b.timestamp || 0;
+                const tA = (isSimReturned(a) ? a.returnTimestamp : a.dispatchTimestamp) || a.updatedAt || a.timestamp || 0;
                 return tB - tA;
             });
 
@@ -2461,7 +2520,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             }
 
             tbody.innerHTML = filtered.map(s => {
-                const statusIcon = s.status === 'dispatched'
+                const isRet = isSimReturned(s);
+                const statusIcon = !isRet
                     ? `<span class="status-ok" title="تم الصرف">✅</span>`
                     : `<span class="status-ret" title="مرتجع">❌</span>`;
 
@@ -2499,13 +2559,30 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
             document.getElementById('editSimCode').value = sim.code;
             document.getElementById('editSimCodeDisplay').innerText = sim.code;
-            document.getElementById('editSimStatus').value = sim.status || '';
+            const isRet = isSimReturned(sim);
+            document.getElementById('editSimStatus').value = isRet ? 'returned' : (sim.status || '');
             document.getElementById('editSimTag').value = sim.tagCode || '';
 
+            const curCat = resolveSimCategory(sim);
+            if (curCat && !categoriesList.includes(curCat)) {
+                categoriesList.push(curCat);
+            }
+            const curDur = resolveSimDuration(sim, curCat);
+            if (curDur && !durationsList.includes(String(curDur))) {
+                durationsList.push(String(curDur));
+            }
             renderDurationDropdowns();
+
+            const editCatSelect = document.getElementById('editSimCategory');
+            if (editCatSelect) editCatSelect.value = curCat;
+
             const editDurSelect = document.getElementById('editSimDuration');
-            const curDur = resolveSimDuration(sim);
             if (editDurSelect) editDurSelect.value = curDur;
+
+            const editDateEl = document.getElementById('editSimDate');
+            if (editDateEl) {
+                editDateEl.value = (isRet ? sim.returnDate : sim.dispatchDate) || sim.actionDate || sim.date || getTodayStr();
+            }
 
             const custSelect = document.getElementById('editSimCustomerSelect');
             const hasNoClient = !sim.clientName || sim.clientName.trim() === '';
@@ -2513,7 +2590,9 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
             customersList.forEach((c, idx) => {
                 const cName = (c.clientName && c.clientName !== 'بدون اسم') ? c.clientName : (c.shopName || 'بدون اسم');
-                const selected = (!hasNoClient && sim.clientName === cName) ? 'selected' : '';
+                const matchedById = sim.clientId && c.id && String(sim.clientId) === String(c.id);
+                const matchedByName = !hasNoClient && sim.clientName === cName && (!sim.shopName || !c.shopName || sim.shopName === c.shopName);
+                const selected = (matchedById || matchedByName) ? 'selected' : '';
                 const shopSuffix = (c.shopName && c.shopName !== cName) ? ` — ${c.shopName}` : '';
                 html += `<option value="${idx}" ${selected}>${cName}${shopSuffix}</option>`;
             });
@@ -2530,19 +2609,22 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             const code = document.getElementById('editSimCode').value;
             const newStatus = document.getElementById('editSimStatus').value;
             const newTag = document.getElementById('editSimTag').value.trim().toUpperCase();
+            const newCat = document.getElementById('editSimCategory').value;
             const newDur = document.getElementById('editSimDuration').value;
+            const newDate = document.getElementById('editSimDate').value || getTodayStr();
             const custIdx = document.getElementById('editSimCustomerSelect').value;
 
             const idx = simsList.findIndex(s => s.code === code);
             if (idx === -1) return;
 
+            const now = Date.now();
             const sim = simsList[idx];
             sim.status = newStatus;
             sim.tagCode = newTag;
-            if (newDur) sim.duration = newDur;
-            sim.category = resolveSimCategory(sim);
+            sim.category = newCat || resolveSimCategory(sim);
             sim.company = sim.category;
-            sim.updatedAt = Date.now();
+            if (newDur) sim.duration = newDur;
+            sim.updatedAt = now;
 
             if (custIdx !== '' && customersList[custIdx]) {
                 const c = customersList[custIdx];
@@ -2557,15 +2639,23 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 sim.clientId = '';
             }
 
-            if (newStatus === 'returned' && !sim.returnDate) {
-                sim.returnDate = getTodayStr();
-                sim.actionDate = getTodayStr();
-                sim.returnTimestamp = Date.now();
+            if (newStatus === 'returned') {
+                sim.returned = true;
+                sim.isReturned = true;
+                sim.returnDate = newDate;
+                sim.actionDate = newDate;
+                if (!sim.returnTimestamp) sim.returnTimestamp = now;
             } else if (newStatus === 'dispatched') {
+                sim.returned = false;
+                sim.isReturned = false;
                 sim.returnDate = '';
-                if (!sim.dispatchDate) sim.dispatchDate = getTodayStr();
-                sim.actionDate = sim.dispatchDate;
+                sim.returnTimestamp = 0;
+                sim.dispatchDate = newDate;
+                sim.actionDate = newDate;
+                if (!sim.dispatchTimestamp) sim.dispatchTimestamp = now;
             } else if (newStatus === '') {
+                sim.returned = false;
+                sim.isReturned = false;
                 sim.tagCode = '';
                 sim.clientName = '';
                 sim.shopName = '';
@@ -2574,6 +2664,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 sim.dispatchDate = '';
                 sim.returnDate = '';
                 sim.actionDate = '';
+                sim.dispatchTimestamp = 0;
+                sim.returnTimestamp = 0;
             }
 
             simsList[idx] = sim;
@@ -2594,6 +2686,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             }
 
             closeEditSimModal();
+            populateHistoryCustomerFilter();
             renderStagingTable();
             renderHistoryTable();
             showMessage(`✅ تم تحديث بيانات (${code}) بنجاح!`);
@@ -2607,17 +2700,24 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
             const sim = simsList[idx];
             sim.status = '';
+            sim.returned = false;
+            sim.isReturned = false;
             sim.tagCode = '';
             sim.clientName = '';
             sim.shopName = '';
+            sim.clientPhone = '';
+            sim.clientId = '';
             sim.dispatchDate = '';
             sim.returnDate = '';
             sim.actionDate = '';
+            sim.dispatchTimestamp = 0;
+            sim.returnTimestamp = 0;
             sim.updatedAt = Date.now();
 
             simsList[idx] = sim;
             localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
             await recalculateAndSyncGlobalStock();
+            populateHistoryCustomerFilter();
             renderStagingTable();
             renderHistoryTable();
             showMessage(`🗑️ تم حذف حركة (${code}) من السجل وتحديث الرصيد.`);
