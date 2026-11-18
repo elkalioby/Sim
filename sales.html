@@ -802,12 +802,7 @@
                 </div>
             </div>
 
-            <!-- إضافة مصروفات -->
-            <div class="expense-row">
-                <label>💸 اضافة مصروفات:</label>
-                <input type="number" id="extraGeneralCostInput" step="any" placeholder="0">
-                <button type="button" onclick="saveExtraGeneralCost()">حفظ</button>
-            </div>
+
         </div>
 
         <!-- تاب مديونيات العملاء تحت إضافة تكلفة مباشرة -->
@@ -895,7 +890,6 @@
         let deletedStockItems = [];
         let itemCosts = {};
         let costBatches = [];
-        let extraGeneralCost = 0;
         let groupedCustomerDebts = [];
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'admin', role: 'admin' };
 
@@ -1199,7 +1193,6 @@
             } else {
                 populateBatchItemSelect();
                 renderBatchesTable();
-                document.getElementById('extraGeneralCostInput').value = extraGeneralCost || '';
                 panel.style.display = 'block';
             }
         }
@@ -1437,6 +1430,7 @@
             let html = '';
             categoriesList.forEach(c => {
                 durationsList.forEach(d => {
+                    if (String(d).trim() === '0') return;
                     const invKey = `${c} (${d})`;
                     if (!deletedStockItems.includes(invKey)) {
                         const key = `${c}_${d}`;
@@ -1496,14 +1490,12 @@
             const appConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             appConfig.costBatches = costBatches;
             appConfig.itemCosts = itemCosts;
-            appConfig.extraGeneralCost = extraGeneralCost;
             appConfig.configUpdatedAt = Date.now();
             localStorage.setItem('app_config', JSON.stringify(appConfig));
 
             const costPayload = {
                 costBatches: costBatches,
                 itemCosts: itemCosts,
-                extraGeneralCost: extraGeneralCost,
                 configUpdatedAt: appConfig.configUpdatedAt
             };
 
@@ -1619,14 +1611,6 @@
             renderDashboard();
         };
 
-        window.saveExtraGeneralCost = async function() {
-            const extraVal = parseFloat(document.getElementById('extraGeneralCostInput').value);
-            extraGeneralCost = (!isNaN(extraVal) && extraVal >= 0) ? extraVal : 0;
-            await syncCostsToCloud();
-            renderDashboard();
-            alert('✅ تم الحفظ بنجاح.');
-        };
-
         function renderBatchesTable() {
             const tbody = document.getElementById('batchesTableBody');
 
@@ -1677,7 +1661,7 @@
 
         function parseCompanyAndDuration(rawStr, explicitDur) {
             const s = String(rawStr || '').trim();
-            let dur = explicitDur ? String(explicitDur).trim() : '';
+            let dur = (explicitDur !== undefined && explicitDur !== null && String(explicitDur).trim() !== '') ? String(explicitDur).trim() : '';
 
             const parenMatch = s.match(/\((\d+)\)/);
             if (!dur && parenMatch) {
@@ -1792,6 +1776,7 @@
             const keysMap = new Map();
             categoriesList.forEach(c => {
                 durationsList.forEach(d => {
+                    if (String(d).trim() === '0') return;
                     const invKey = `${c} (${d})`;
                     if (!deletedStockItems.includes(invKey)) {
                         keysMap.set(`${c}_${d}`, invKey);
@@ -1893,6 +1878,7 @@
 
             categoriesList.forEach(c => {
                 durationsList.forEach(d => {
+                    if (String(d).trim() === '0') return;
                     ensureKeyInitialized(c, d);
                 });
             });
@@ -1907,6 +1893,7 @@
                 const parts = String(b.key || '').split('_');
                 const bComp = parts[0] || 'Mobily';
                 const bDur = parts[1] || '60';
+                if (String(bDur).trim() === '0') return;
                 const key = ensureKeyInitialized(bComp, bDur);
 
                 const q = parseFloat(b.qty) || 0;
@@ -1923,11 +1910,10 @@
                 }
             });
 
-            // حساب الممسوح مع استبعاد وخصم جميع الشرائح المرتجعة
+            // شرائح بدل التالف بمدة (0) مستبعدة من المخزون القابل للبيع، والشرائح المرتجعة لا تخصم من المخزون الأساسي
             simsList.forEach(sim => {
-                if (isSimReturned(sim)) return;
-
                 const { company, duration } = parseCompanyAndDuration(sim.category || sim.company || '', sim.duration);
+                if (String(duration).trim() === '0') return;
                 const key = ensureKeyInitialized(company, duration);
                 allScannedMap[key] = (allScannedMap[key] || 0) + 1;
 
@@ -1999,9 +1985,8 @@
             });
 
             totalSalesSum = +totalSalesSum.toFixed(2);
-            const appliedExtraCost = (!isSpecificItem) ? (parseFloat(extraGeneralCost) || 0) : 0;
-            const displayedTotalCost = +( (totalBatchesPurchaseSum > 0 ? totalBatchesPurchaseSum : totalSoldCostSum) + appliedExtraCost ).toFixed(2);
-            const totalProfitSum = +(totalSalesSum - (totalSoldCostSum + appliedExtraCost)).toFixed(2);
+            const displayedTotalCost = +(totalBatchesPurchaseSum > 0 ? totalBatchesPurchaseSum : totalSoldCostSum).toFixed(2);
+            const totalProfitSum = +(totalSalesSum - totalSoldCostSum).toFixed(2);
 
             return {
                 activeKeys,
@@ -2013,7 +1998,6 @@
                 filteredSoldCostMap,
                 filteredBatchesCostMap,
                 filteredBatchesQtyMap,
-                appliedExtraCost,
                 totalSalesSum,
                 displayedTotalCost,
                 totalProfitSum,
@@ -2100,7 +2084,7 @@
                     return bQty > 0 || bCost > 0 || sold !== 0 || sCost !== 0;
                 });
 
-                if (costItems.length === 0 && activeMetricsForTable.appliedExtraCost <= 0) {
+                if (costItems.length === 0) {
                     summaryBody.innerHTML = `<tr><td colspan="7" style="padding:16px; color:#64748b; font-weight:bold; text-align:center;">لا توجد تكاليف أو دفعات مسجلة في هذه الفترة.</td></tr>`;
                     return;
                 }
@@ -2134,19 +2118,6 @@
                         </tr>
                     `;
                 }).join('');
-
-                if (activeMetricsForTable.appliedExtraCost > 0) {
-                    const extra = activeMetricsForTable.appliedExtraCost;
-                    totalBatchCostSum += extra;
-                    totalSoldCostSum += extra;
-                    rowsHtml += `
-                        <tr style="background:#fffbeb;">
-                            <td colspan="5" style="font-weight:800; color:#b45309; text-align:right; padding-right:8px;">💸 مصروفات إضافية عامة</td>
-                            <td style="font-weight:800; color:#b45309;">${extra.toLocaleString('en-US')}</td>
-                            <td style="font-weight:800; color:#b45309;">${extra.toLocaleString('en-US')}</td>
-                        </tr>
-                    `;
-                }
 
                 rowsHtml += `
                     <tr class="summary-total-row">
@@ -2368,7 +2339,6 @@
                 deletedStockItems = localConfig.deletedStockItems || [];
                 itemCosts = localConfig.itemCosts || {};
                 costBatches = Array.isArray(localConfig.costBatches) ? localConfig.costBatches : [];
-                extraGeneralCost = localConfig.extraGeneralCost || 0;
             }
             if (!categoriesList.some(c => /^(روتر|راوتر)\s*زين$/i.test(c.trim()))) {
                 categoriesList.push('روتر زين');
@@ -2390,8 +2360,8 @@
             const autoStock = {};
 
             simsList.forEach(item => {
-                if (isSimReturned(item)) return;
                 const { company, duration } = parseCompanyAndDuration(item.category || item.company || 'Mobily', item.duration);
+                if (String(duration).trim() === '0') return;
                 const itemKey = `${company} (${duration})`;
                 autoStock[itemKey] = (autoStock[itemKey] || 0) + 1;
             });
@@ -2400,7 +2370,7 @@
                 const sign = isReturnInvoice(r) ? -1 : 1;
                 if (r.cartItems && Array.isArray(r.cartItems)) {
                     r.cartItems.forEach(ci => {
-                        if (!ci.item || !ci.item.includes('(')) return;
+                        if (!ci.item || !ci.item.includes('(') || ci.item.endsWith('(0)')) return;
                         if (autoStock[ci.item] === undefined) autoStock[ci.item] = 0;
                         autoStock[ci.item] -= sign * (parseFloat(ci.qty) || 0);
                     });
@@ -2410,7 +2380,7 @@
             const stockInventory = {};
             const allKeys = new Set([...Object.keys(autoStock), ...Object.keys(stockOffsets || {})]);
             allKeys.forEach(key => {
-                if (!key.includes('(')) return;
+                if (!key.includes('(') || key.endsWith('(0)')) return;
                 const base = autoStock[key] || 0;
                 const offset = (stockOffsets && stockOffsets[key] !== undefined) ? parseFloat(stockOffsets[key]) : 0;
                 const finalQty = base + offset;
@@ -2451,7 +2421,6 @@
                             deletedStockItems = cData.deletedStockItems || deletedStockItems;
                             itemCosts = cData.itemCosts || itemCosts;
                             if (Array.isArray(cData.costBatches)) costBatches = cData.costBatches;
-                            extraGeneralCost = cData.extraGeneralCost !== undefined ? cData.extraGeneralCost : extraGeneralCost;
 
                             const mergedConfig = {
                                 ...localConfig,
@@ -2461,7 +2430,6 @@
                                 deletedStockItems,
                                 itemCosts,
                                 costBatches,
-                                extraGeneralCost,
                                 configUpdatedAt: cloudTs
                             };
                             localStorage.setItem('app_config', JSON.stringify(mergedConfig));
