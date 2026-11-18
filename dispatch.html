@@ -346,6 +346,17 @@
 
     <h3 class="page-header">🔄 صرف ومرتجع الشرائح للعملاء</h3>
 
+    <div class="stats-grid">
+        <div class="stat-box dispatched">
+            <span class="stat-title">✅ إجمالي الصرف:</span>
+            <span class="stat-val" id="statDispatchedCount">0</span>
+        </div>
+        <div class="stat-box returned">
+            <span class="stat-title">❌ إجمالي المرتجع:</span>
+            <span class="stat-val" id="statReturnedCount">0</span>
+        </div>
+    </div>
+
     <div class="card">
         <div id="msg"></div>
 
@@ -607,7 +618,7 @@
         let simsList = [];
         let customersList = [];
         let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull', 'روتر زين'];
-        let durationsList = ['30', '60'];
+        let durationsList = ['0', '30', '60'];
         let geminiApiKey = extractCleanApiKey(localStorage.getItem('gemini_api_key') || '');
         let selectedCustomer = null;
         let stagingList = [];
@@ -631,7 +642,9 @@
                 const key = `${entry.op}::${entry.collectionName}::${entry.docId || ''}`;
                 if (entry.op === 'delete') {
                     const withoutPrior = q.filter(i => !(i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId)));
-                    withoutPrior.push({ ...entry, timestamp: Date.now() });
+                    if (!String(entry.docId).startsWith('local_')) {
+                        withoutPrior.push({ ...entry, timestamp: Date.now() });
+                    }
                     localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(withoutPrior));
                     notifyParentQueueUpdated();
                     return;
@@ -872,19 +885,23 @@
         }
 
         function resolveSimDuration(sim, catFallback = '') {
-            if (sim && sim.duration && sim.duration !== '-' && sim.duration !== 'غير محدد') {
-                return sim.duration;
+            if (sim && sim.duration !== undefined && sim.duration !== null && sim.duration !== '-' && sim.duration !== 'غير محدد' && String(sim.duration).trim() !== '') {
+                return String(sim.duration).trim();
             }
             const cat = catFallback || resolveSimCategory(sim);
             return (cat === 'Redbull') ? '30' : '60';
         }
 
         function renderDurationDropdowns() {
+            ['0', '30', '60'].forEach(d => {
+                if (!durationsList.map(String).includes(d)) durationsList.unshift(d);
+            });
             const editDurSelect = document.getElementById('editSimDuration');
             if (editDurSelect) {
                 let editHtml = '';
                 durationsList.forEach(d => {
-                    editHtml += `<option value="${d}">${d}</option>`;
+                    const label = String(d) === '0' ? '0 (بدل تالف)' : d;
+                    editHtml += `<option value="${d}">${label}</option>`;
                 });
                 editDurSelect.innerHTML = editHtml;
             }
@@ -1169,9 +1186,9 @@
 
             const autoStock = {};
             simsList.forEach(item => {
-                if (isSimReturned(item)) return;
                 const cat = resolveSimCategory(item);
                 const dur = resolveSimDuration(item, cat);
+                if (String(dur).trim() === '0') return;
                 const itemKey = `${cat} (${dur})`;
                 autoStock[itemKey] = (autoStock[itemKey] || 0) + 1;
             });
@@ -1180,7 +1197,7 @@
                 const sign = isReturnInvoice(r) ? -1 : 1;
                 if (r.cartItems && Array.isArray(r.cartItems)) {
                     r.cartItems.forEach(ci => {
-                        if (!ci.item || !ci.item.includes('(')) return;
+                        if (!ci.item || !ci.item.includes('(') || ci.item.endsWith('(0)')) return;
                         if (autoStock[ci.item] === undefined) autoStock[ci.item] = 0;
                         autoStock[ci.item] -= sign * (parseFloat(ci.qty) || 0);
                     });
@@ -1190,7 +1207,7 @@
             const stockInventory = {};
             const allKeys = new Set([...Object.keys(autoStock), ...Object.keys(stockOffsets)]);
             allKeys.forEach(key => {
-                if (!key.includes('(')) return;
+                if (!key.includes('(') || key.endsWith('(0)')) return;
                 const base = autoStock[key] || 0;
                 const offset = stockOffsets[key] !== undefined ? parseFloat(stockOffsets[key]) : 0;
                 const finalQty = base + offset;
