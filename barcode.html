@@ -51,7 +51,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, deleteDoc, setDoc, getDoc, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
@@ -72,6 +72,8 @@
         window.deleteDoc = deleteDoc;
         window.setDoc = setDoc;
         window.getDoc = getDoc;
+        window.addDoc = addDoc;
+        window.updateDoc = updateDoc;
 
         if (window.initBarcodeApp) { window.initBarcodeApp(); }
     </script>
@@ -171,6 +173,111 @@
         let scannedCountsByGroup = {};
         let currentScanMode = 'sim'; // 'sim' أو 'router'
 
+        // --- نظام المزامنة التلقائية الموحد (SimAutoSync Bridge) ---
+        const SYNC_QUEUE_KEY = 'sim_offline_sync_queue';
+
+        function queueCloudOperation(entry) {
+            try {
+                if (window.parent && window.parent !== window && window.parent.SimAutoSync) {
+                    window.parent.SimAutoSync.enqueue(entry);
+                    return;
+                }
+            } catch (e) {}
+
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                const key = `${entry.op}::${entry.collectionName}::${entry.docId || ''}`;
+                if (entry.op === 'delete') {
+                    const withoutPrior = q.filter(i => !(i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId)));
+                    withoutPrior.push({ ...entry, timestamp: Date.now() });
+                    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(withoutPrior));
+                    notifyParentQueueUpdated();
+                    return;
+                }
+                const filtered = q.filter(i => !(i.op === 'delete' && i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId)));
+                const idx = filtered.findIndex(i => `${i.op}::${i.collectionName}::${i.docId || ''}` === key);
+                const item = { ...entry, timestamp: Date.now() };
+                if (idx !== -1) {
+                    if (entry.merge && filtered[idx].data && entry.data) item.data = { ...filtered[idx].data, ...entry.data };
+                    filtered[idx] = item;
+                } else {
+                    filtered.push(item);
+                }
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(filtered));
+                notifyParentQueueUpdated();
+            } catch (e) {}
+        }
+
+        function notifyParentQueueUpdated() {
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'SIM_QUEUE_UPDATED' }, '*');
+                }
+            } catch (e) {}
+        }
+
+        function getPendingIdsForCollection(collectionName) {
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                return new Set(q.filter(i => i.collectionName === collectionName && i.op !== 'delete').map(i => String(i.docId)));
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        function getPendingDeletesForCollection(collectionName) {
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                return new Set(q.filter(i => i.collectionName === collectionName && i.op === 'delete').map(i => String(i.docId)));
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        async function flushLocalQueueFallback() {
+            try {
+                if (window.parent && window.parent !== window && window.parent.SimAutoSync) {
+                    await window.parent.SimAutoSync.flush();
+                    return;
+                }
+                if (!navigator.onLine || !window.db) return;
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                if (q.length === 0) return;
+
+                const remaining = [];
+                for (const item of q) {
+                    try {
+                        if (item.op === 'add') {
+                            await window.addDoc(window.collection(window.db, item.collectionName), item.data);
+                        } else if (item.op === 'set') {
+                            await window.setDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data, item.merge !== false ? { merge: true } : undefined);
+                        } else if (item.op === 'update') {
+                            await window.updateDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data);
+                        } else if (item.op === 'delete') {
+                            await window.deleteDoc(window.doc(window.db, item.collectionName, String(item.docId)));
+                        }
+                    } catch (err) {
+                        remaining.push(item);
+                    }
+                }
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(remaining));
+            } catch (e) {}
+        }
+
+        window.addEventListener('online', async () => {
+            await flushLocalQueueFallback();
+            if (window.initBarcodeApp) await window.initBarcodeApp();
+        });
+
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'SIM_CLOUD_SYNCED') {
+                simsList = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
+                recalculateUnifiedStock();
+                renderTable();
+            }
+        });
+        // --- نهاية نظام المزامنة التلقائية ---
+
         function getTodayStr() {
             const d = new Date();
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -234,6 +341,23 @@
                     if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
                 }
             } catch (e) {}
+        }
+
+        // التحقق الشامل من كون الشريحة مرتجعة بجميع الصيغ العربية والإنجليزية
+        function isSimReturned(item) {
+            if (!item) return false;
+            if (item.returned === true || item.isReturned === true) return true;
+            const st = String(item.status || '').trim().toLowerCase();
+            return ['returned', 'return', 'مرتجع', 'مرتجعه', 'مرتجعة', 'refunded', 'canceled', 'cancelled'].includes(st);
+        }
+
+        function isReturnInvoice(inv) {
+            if (!inv) return false;
+            if (inv.isReturn === true || inv.returned === true) return true;
+            const type = String(inv.type || inv.invoiceType || '').trim().toLowerCase();
+            const st = String(inv.status || '').trim().toLowerCase();
+            return ['return', 'returned', 'مرتجع', 'مرتجعه', 'مرتجعة', 'refund'].includes(type) ||
+                   ['return', 'returned', 'مرتجع', 'مرتجعه', 'مرتجعة', 'refunded'].includes(st);
         }
 
         function cleanAndExtractDigits(str) {
@@ -312,7 +436,8 @@
                     dur = (cat === 'Redbull') ? '30' : '60';
                     item.duration = dur;
                 }
-                if (item.status === 'returned') return;
+                // استبعاد وخصم الشرائح المرتجعة من الممسوح والمخزون
+                if (isSimReturned(item)) return;
 
                 const itemKey = `${cat} (${dur})`;
                 scannedCountsByGroup[itemKey] = (scannedCountsByGroup[itemKey] || 0) + 1;
@@ -320,10 +445,11 @@
             });
 
             salesRecords.forEach(r => {
+                const sign = isReturnInvoice(r) ? -1 : 1;
                 if (r.cartItems && Array.isArray(r.cartItems)) {
                     r.cartItems.forEach(ci => {
                         if (autoStock[ci.item] === undefined) autoStock[ci.item] = 0;
-                        autoStock[ci.item] -= (parseFloat(ci.qty) || 0);
+                        autoStock[ci.item] -= sign * (parseFloat(ci.qty) || 0);
                     });
                 }
             });
@@ -356,11 +482,27 @@
 
             localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-            if (window.db) {
-                Promise.all(
-                    toMark.map(s => window.setDoc(window.doc(window.db, "scanned_sims", s.code), s, { merge: true }).catch(() => {}))
-                );
-            }
+            toMark.forEach(s => {
+                if (window.db && navigator.onLine) {
+                    window.setDoc(window.doc(window.db, "scanned_sims", s.code), s, { merge: true }).catch(() => {
+                        queueCloudOperation({
+                            op: 'set',
+                            collectionName: 'scanned_sims',
+                            docId: String(s.code),
+                            data: { ...s },
+                            merge: true
+                        });
+                    });
+                } else {
+                    queueCloudOperation({
+                        op: 'set',
+                        collectionName: 'scanned_sims',
+                        docId: String(s.code),
+                        data: { ...s },
+                        merge: true
+                    });
+                }
+            });
         }
 
         window.addNewCategory = async function() {
@@ -450,31 +592,69 @@
                 simsList = localSims;
             }
 
-            markOldSimsSilently();
             recalculateUnifiedStock();
             renderDropdowns('AUTO');
             renderTable();
 
             try {
-                if (window.db) {
+                if (window.db && navigator.onLine) {
+                    await flushLocalQueueFallback();
+
                     const configRef = window.doc(window.db, "settings", "app_config");
                     const configSnap = await window.getDoc(configRef);
                     if (configSnap.exists()) {
                         const data = configSnap.data();
-                        categoriesList = data.categoriesList || data.customItems || categoriesList;
-                        durationsList = data.durationsList || durationsList;
-                        ensureRouterCategoryExists();
-                        const merged = { ...JSON.parse(localStorage.getItem('app_config') || '{}'), ...data, categoriesList };
-                        localStorage.setItem('app_config', JSON.stringify(merged));
+                        const currentLocalCfg = JSON.parse(localStorage.getItem('app_config') || '{}');
+                        const localTs = currentLocalCfg.configUpdatedAt || 0;
+                        const cloudTs = data.configUpdatedAt || 0;
+
+                        if (cloudTs >= localTs) {
+                            categoriesList = data.categoriesList || data.customItems || categoriesList;
+                            durationsList = data.durationsList || durationsList;
+                            ensureRouterCategoryExists();
+                            const merged = { ...currentLocalCfg, ...data, categoriesList };
+                            localStorage.setItem('app_config', JSON.stringify(merged));
+                        }
                     }
 
+                    const pendingSimIds = getPendingIdsForCollection("scanned_sims");
+                    const pendingDeleteIds = getPendingDeletesForCollection("scanned_sims");
+                    const localMap = new Map();
+                    simsList.forEach(s => {
+                        if (s.code && !pendingDeleteIds.has(String(s.code))) {
+                            localMap.set(String(s.code), s);
+                        }
+                    });
+
                     const querySnapshot = await window.getDocs(window.collection(window.db, "scanned_sims"));
-                    simsList = [];
+                    const mergedSims = [];
                     querySnapshot.forEach((docSnap) => {
                         const data = docSnap.data();
+                        if (!data.code) data.code = docSnap.id;
                         if (!data.category && data.company) data.category = data.company;
-                        simsList.push(data);
+                        const codeKey = String(data.code);
+
+                        if (pendingDeleteIds.has(codeKey)) return;
+
+                        const locSim = localMap.get(codeKey);
+                        const isCloudReturned = isSimReturned(data);
+                        const isLocalPending = pendingSimIds.has(codeKey);
+
+                        if (locSim && (isLocalPending || (!isCloudReturned && (locSim.updatedAt || 0) > (data.updatedAt || 0)))) {
+                            mergedSims.push(locSim);
+                        } else {
+                            mergedSims.push(data);
+                        }
+                        localMap.delete(codeKey);
                     });
+
+                    localMap.forEach((remSim, codeKey) => {
+                        if (pendingSimIds.has(codeKey)) {
+                            mergedSims.push(remSim);
+                        }
+                    });
+
+                    simsList = mergedSims;
                 }
             } catch (e) {
                 console.log("وضع الأوفلاين مفعل.");
@@ -489,7 +669,7 @@
         };
 
         window.addEventListener('storage', (e) => {
-            if (e.key === 'scanned_sims_offline') {
+            if (e.key === 'scanned_sims_offline' || e.key === 'app_config' || e.key === 'sales_records_offline') {
                 simsList = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
                 recalculateUnifiedStock();
                 renderTable();
@@ -499,19 +679,29 @@
         async function saveConfigAndSync() {
             recalculateUnifiedStock();
             const existingConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+            const configUpdatedAt = Date.now();
             const dataToSave = {
                 ...existingConfig,
                 categoriesList,
                 durationsList,
-                stockInventory
+                stockInventory,
+                configUpdatedAt
             };
             localStorage.setItem('app_config', JSON.stringify(dataToSave));
+            const cloudPayload = { categoriesList, durationsList, stockInventory, configUpdatedAt };
             try {
-                if (window.db) {
-                    const configRef = window.doc(window.db, "settings", "app_config");
-                    await window.setDoc(configRef, { categoriesList, durationsList, stockInventory }, { merge: true });
-                }
-            } catch (e) {}
+                if (!window.db || !navigator.onLine) throw new Error('offline');
+                const configRef = window.doc(window.db, "settings", "app_config");
+                await window.setDoc(configRef, cloudPayload, { merge: true });
+            } catch (e) {
+                queueCloudOperation({
+                    op: 'set',
+                    collectionName: 'settings',
+                    docId: 'app_config',
+                    data: cloudPayload,
+                    merge: true
+                });
+            }
         }
 
         async function applyZoom(val) {
@@ -721,7 +911,8 @@
                 date: inDate,
                 addedBy: currentUser.username,
                 status: '',
-                timestamp: now
+                timestamp: now,
+                updatedAt: now
             };
 
             simsList.push(newSim);
@@ -735,10 +926,17 @@
             renderTable();
 
             try {
-                if (window.db) {
-                    await window.setDoc(window.doc(window.db, "scanned_sims", code), newSim);
-                }
-            } catch (e) {}
+                if (!window.db || !navigator.onLine) throw new Error('offline');
+                await window.setDoc(window.doc(window.db, "scanned_sims", code), newSim);
+            } catch (e) {
+                queueCloudOperation({
+                    op: 'set',
+                    collectionName: 'scanned_sims',
+                    docId: String(code),
+                    data: { ...newSim },
+                    merge: true
+                });
+            }
         }
 
         window.deleteSim = async function(code) {
@@ -754,10 +952,15 @@
                 showMessage(`🗑️ تم حذف (${code}) وتحديث الرصيد.`);
 
                 try {
-                    if (window.db) {
-                        await window.deleteDoc(window.doc(window.db, "scanned_sims", code));
-                    }
-                } catch (e) {}
+                    if (!window.db || !navigator.onLine) throw new Error('offline');
+                    await window.deleteDoc(window.doc(window.db, "scanned_sims", code));
+                } catch (e) {
+                    queueCloudOperation({
+                        op: 'delete',
+                        collectionName: 'scanned_sims',
+                        docId: String(code)
+                    });
+                }
             }
         };
 
@@ -775,7 +978,7 @@
             const tbody = document.getElementById('simTable');
             const search = document.getElementById('searchInput').value.trim().toLowerCase();
             
-            const activeScannedCount = simsList.filter(s => s.status !== 'returned').length;
+            const activeScannedCount = simsList.filter(s => !isSimReturned(s)).length;
             const statsDiv = document.getElementById('dynamicStats');
             let statsHtml = `<span class="stat-badge total">إجمالي الممسوح: ${activeScannedCount}</span>`;
             Object.keys(scannedCountsByGroup).forEach(key => {
@@ -804,10 +1007,10 @@
                 const cat = item.category || item.company || '-';
                 const dur = getFixedDuration(item);
                 let statusMark = '';
-                if (item.status === 'dispatched') {
-                    statusMark = `<span title="تم الصرف">✅</span>`;
-                } else if (item.status === 'returned') {
+                if (isSimReturned(item)) {
                     statusMark = `<span title="مرتجع">❌</span>`;
+                } else if (item.status === 'dispatched') {
+                    statusMark = `<span title="تم الصرف">✅</span>`;
                 }
 
                 return `
