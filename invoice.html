@@ -176,9 +176,14 @@
                     </select>
                 </div>
 
-                <div class="full-width">
+                <div>
                     <label>رقم التليفون *</label>
                     <input type="tel" id="phone" required placeholder="05xxxxxxxx" oninput="saveInvoiceDraft()">
+                </div>
+
+                <div>
+                    <label>تاريخ الفاتورة *</label>
+                    <input type="date" id="invoiceDate" required onchange="saveInvoiceDraft()">
                 </div>
                 
                 <div class="full-width" style="background:#f9fafb; padding:12px; border-radius:10px; border:1px solid #e5e7eb;">
@@ -301,7 +306,133 @@
         let currentPage = 1;
         const itemsPerPage = 5;
 
-        document.getElementById('reminderDate').valueAsDate = new Date();
+        function getTodayLocalStr() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        document.getElementById('invoiceDate').value = getTodayLocalStr();
+        document.getElementById('reminderDate').value = getTodayLocalStr();
+
+        // --- نظام المزامنة التلقائية الموحد (SimAutoSync Bridge) ---
+        const SYNC_QUEUE_KEY = 'sim_offline_sync_queue';
+
+        function queueCloudOperation(entry) {
+            try {
+                if (window.parent && window.parent !== window && window.parent.SimAutoSync) {
+                    window.parent.SimAutoSync.enqueue(entry);
+                    return;
+                }
+            } catch (e) {}
+
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                const key = `${entry.op}::${entry.collectionName}::${entry.docId || ''}`;
+                if ((entry.op === 'set' || entry.op === 'update') && String(entry.docId).startsWith('local_')) {
+                    const addIdx = q.findIndex(i => i.op === 'add' && i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId));
+                    if (addIdx !== -1) {
+                        q[addIdx].data = { ...q[addIdx].data, ...entry.data };
+                        q[addIdx].timestamp = Date.now();
+                        localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(q));
+                        notifyParentQueueUpdated();
+                        return;
+                    }
+                }
+                if (entry.op === 'delete' && String(entry.docId).startsWith('local_')) {
+                    const filtered = q.filter(i => !(i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId)));
+                    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(filtered));
+                    notifyParentQueueUpdated();
+                    return;
+                }
+                const idx = q.findIndex(i => `${i.op}::${i.collectionName}::${i.docId || ''}` === key);
+                const item = { ...entry, timestamp: Date.now() };
+                if (idx !== -1) {
+                    if (entry.merge && q[idx].data && entry.data) item.data = { ...q[idx].data, ...entry.data };
+                    q[idx] = item;
+                } else {
+                    q.push(item);
+                }
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(q));
+                notifyParentQueueUpdated();
+            } catch (e) {}
+        }
+
+        function notifyParentQueueUpdated() {
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'SIM_QUEUE_UPDATED' }, '*');
+                }
+            } catch (e) {}
+        }
+
+        function getPendingIdsForCollection(collectionName) {
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                return new Set(q.filter(i => i.collectionName === collectionName).map(i => String(i.docId)));
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        async function flushLocalQueueFallback() {
+            try {
+                if (window.parent && window.parent !== window && window.parent.SimAutoSync) {
+                    await window.parent.SimAutoSync.flush();
+                    return;
+                }
+                if (!navigator.onLine || !window.db) return;
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                if (q.length === 0) return;
+
+                const remaining = [];
+                for (const item of q) {
+                    try {
+                        if (item.op === 'add') {
+                            const docRef = await window.addDoc(window.collection(window.db, item.collectionName), item.data);
+                            if (item.localStorageKey) {
+                                const arr = JSON.parse(localStorage.getItem(item.localStorageKey) || '[]');
+                                arr.forEach(r => {
+                                    if (String(r[item.idField || 'id']) === String(item.docId)) {
+                                        r[item.idField || 'id'] = docRef.id;
+                                        if (r.id === item.docId) r.id = docRef.id;
+                                        if (r.firebaseId === item.docId) r.firebaseId = docRef.id;
+                                    }
+                                });
+                                localStorage.setItem(item.localStorageKey, JSON.stringify(arr));
+                            }
+                        } else if (item.op === 'set') {
+                            await window.setDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data, item.merge !== false ? { merge: true } : undefined);
+                        } else if (item.op === 'update') {
+                            await window.updateDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data);
+                        } else if (item.op === 'delete') {
+                            await window.deleteDoc(window.doc(window.db, item.collectionName, String(item.docId)));
+                        }
+                    } catch (err) {
+                        remaining.push(item);
+                    }
+                }
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(remaining));
+            } catch (e) {}
+        }
+
+        window.addEventListener('online', async () => {
+            await flushLocalQueueFallback();
+            if (window.loadCloudRecords) await window.loadCloudRecords();
+        });
+
+        window.addEventListener('message', async (e) => {
+            if (e.data && e.data.type === 'SIM_CLOUD_SYNCED') {
+                const updatedLocal = JSON.parse(localStorage.getItem('sales_records_offline') || '[]');
+                if (Array.isArray(updatedLocal)) {
+                    records = updatedLocal;
+                    renderRecords();
+                }
+            }
+        });
+        // --- نهاية نظام المزامنة التلقائية ---
 
         // دالة حساب الشهر المحاسبي الموحدة: الشهر يبدأ من يوم 5 ويمتد حتى يوم 4 من الشهر التالي
         function getAccountingMonth(dateStr, timestampFallback) {
@@ -353,6 +484,7 @@
                 shopName: document.getElementById('shopName').value,
                 marketName: document.getElementById('marketName').value,
                 phone: document.getElementById('phone').value,
+                invoiceDate: document.getElementById('invoiceDate').value,
                 currentItem: document.getElementById('currentItem').value,
                 currentQty: document.getElementById('currentQty').value,
                 currentPrice: document.getElementById('currentPrice').value,
@@ -383,6 +515,7 @@
                 if (draft.clientName !== undefined) document.getElementById('clientName').value = draft.clientName;
                 if (draft.shopName !== undefined) document.getElementById('shopName').value = draft.shopName;
                 if (draft.phone !== undefined) document.getElementById('phone').value = draft.phone;
+                if (draft.invoiceDate) document.getElementById('invoiceDate').value = draft.invoiceDate;
                 if (draft.currentQty !== undefined) document.getElementById('currentQty').value = draft.currentQty;
                 if (draft.currentPrice !== undefined) document.getElementById('currentPrice').value = draft.currentPrice;
                 if (draft.paid !== undefined) document.getElementById('paid').value = draft.paid;
@@ -428,6 +561,8 @@
             if (e.key === 'app_config' || e.key === 'markets_list_offline' || e.key === 'customers_records_offline' || e.key === 'scanned_sims_offline' || e.key === 'sales_records_offline') {
                 loadLocalConfig();
                 loadSavedCustomers();
+                const latestRecords = JSON.parse(localStorage.getItem('sales_records_offline') || 'null');
+                if (Array.isArray(latestRecords)) records = latestRecords;
                 syncLocalMarkets();
                 await calculateStockFromSims();
                 updateMarketSelect();
@@ -486,7 +621,8 @@
             renderRecords();
 
             try {
-                if (window.db) {
+                if (window.db && navigator.onLine) {
+                    await flushLocalQueueFallback();
                     const mergedMarkets = new Set(marketList);
 
                     const configRef = window.doc(window.db, "settings", "app_config");
@@ -513,16 +649,20 @@
                         }
                     }
 
+                    const pendingCustomerIds = getPendingIdsForCollection("customers");
                     const custSnap = await window.getDocs(window.collection(window.db, "customers"));
                     if (!custSnap.empty) {
-                        savedCustomersList = [];
+                        const localUnsyncedCust = savedCustomersList.filter(c => String(c.id).startsWith('local_') || pendingCustomerIds.has(String(c.id)));
+                        const cloudCust = [];
                         custSnap.forEach(d => {
+                            if (pendingCustomerIds.has(String(d.id))) return;
                             const cData = d.data();
-                            savedCustomersList.push({ id: d.id, ...cData });
+                            cloudCust.push({ id: d.id, ...cData });
                             if (cData.marketName && cData.marketName.trim()) {
                                 mergedMarkets.add(cData.marketName.trim());
                             }
                         });
+                        savedCustomersList = [...localUnsyncedCust, ...cloudCust];
                         localStorage.setItem('customers_records_offline', JSON.stringify(savedCustomersList));
                     }
 
@@ -541,12 +681,20 @@
 
         async function calculateStockFromSims() {
             let sims = JSON.parse(localStorage.getItem('scanned_sims_offline')) || [];
-            if (window.db) {
+            if (window.db && navigator.onLine) {
                 try {
+                    const pendingSimIds = getPendingIdsForCollection("scanned_sims");
+                    const localPendingSims = sims.filter(s => pendingSimIds.has(String(s.code)));
                     const simsSnap = await window.getDocs(window.collection(window.db, "scanned_sims"));
                     if (!simsSnap.empty) {
-                        sims = [];
-                        simsSnap.forEach(d => sims.push(d.data()));
+                        const mergedSims = [...localPendingSims];
+                        simsSnap.forEach(d => {
+                            const sData = d.data();
+                            if (!pendingSimIds.has(String(sData.code))) {
+                                mergedSims.push(sData);
+                            }
+                        });
+                        sims = mergedSims;
                         localStorage.setItem('scanned_sims_offline', JSON.stringify(sims));
                     }
                 } catch(err) {}
@@ -554,7 +702,6 @@
 
             autoStockInventory = {};
             sims.forEach(item => {
-                // استبعاد الشرائح المرتجعة (❌) من الرصيد الممسوح والمتاح
                 if (item.status === 'returned') return;
 
                 const cat = item.category || item.company || 'Mobily';
@@ -629,15 +776,21 @@
                 updatedAt: Date.now()
             };
 
+            const tempId = 'local_' + Date.now();
             try {
-                if (window.db) {
-                    const docRef = await window.addDoc(window.collection(window.db, "customers"), newCust);
-                    savedCustomersList.unshift({ id: docRef.id, ...newCust });
-                } else {
-                    savedCustomersList.unshift({ id: 'local_' + Date.now(), ...newCust });
-                }
+                if (!window.db || !navigator.onLine) throw new Error('offline');
+                const docRef = await window.addDoc(window.collection(window.db, "customers"), newCust);
+                savedCustomersList.unshift({ id: docRef.id, ...newCust });
             } catch (e) {
-                savedCustomersList.unshift({ id: 'local_' + Date.now(), ...newCust });
+                savedCustomersList.unshift({ id: tempId, ...newCust });
+                queueCloudOperation({
+                    op: 'add',
+                    collectionName: 'customers',
+                    docId: tempId,
+                    data: newCust,
+                    localStorageKey: 'customers_records_offline',
+                    idField: 'id'
+                });
             }
 
             localStorage.setItem('customers_records_offline', JSON.stringify(savedCustomersList));
@@ -723,11 +876,18 @@
             localStorage.setItem('app_config', JSON.stringify(dataToSave));
             localStorage.setItem('markets_list_offline', JSON.stringify(marketList));
             try {
-                if (window.db) {
-                    const configRef = window.doc(window.db, "settings", "app_config");
-                    await window.setDoc(configRef, dataToSave, { merge: true });
-                }
-            } catch (e) {}
+                if (!window.db || !navigator.onLine) throw new Error('offline');
+                const configRef = window.doc(window.db, "settings", "app_config");
+                await window.setDoc(configRef, dataToSave, { merge: true });
+            } catch (e) {
+                queueCloudOperation({
+                    op: 'set',
+                    collectionName: 'settings',
+                    docId: 'app_config',
+                    data: dataToSave,
+                    merge: true
+                });
+            }
         }
 
         function updateItemSelects() {
@@ -910,11 +1070,18 @@
 
         window.loadCloudRecords = async function() {
             try {
-                if(!window.db) return;
-                const localUnsynced = records.filter(r => r.firebaseId && String(r.firebaseId).startsWith('local_'));
+                if (!window.db || !navigator.onLine) return;
+                await flushLocalQueueFallback();
+
+                const pendingSalesIds = getPendingIdsForCollection("sales_records");
+                const localUnsynced = records.filter(r =>
+                    r.firebaseId && (String(r.firebaseId).startsWith('local_') || pendingSalesIds.has(String(r.firebaseId)))
+                );
+
                 const querySnapshot = await window.getDocs(window.collection(window.db, "sales_records"));
                 const cloudRecords = [];
                 querySnapshot.forEach((docSnap) => {
+                    if (pendingSalesIds.has(String(docSnap.id))) return;
                     const data = docSnap.data();
                     cloudRecords.push({ ...data, firebaseId: docSnap.id });
                     if (data.marketName && data.marketName.trim() && !marketList.includes(data.marketName.trim())) {
@@ -948,15 +1115,14 @@
             const remaining = parseFloat(document.getElementById('remaining').value) || 0;
             const paidNow = parseFloat(document.getElementById('paid').value) || 0;
             const totalVal = parseFloat(document.getElementById('total').value) || 0;
+            const selectedInvoiceDate = document.getElementById('invoiceDate').value || getTodayLocalStr();
 
             let paymentsHistory = [];
-            let originalDate = new Date().toISOString().split('T')[0];
             let originalTimestamp = Date.now();
 
             if (editId) {
                 const oldRec = records.find(r => r.firebaseId === editId);
                 if (oldRec) {
-                    originalDate = oldRec.date || originalDate;
                     originalTimestamp = oldRec.timestamp || originalTimestamp;
                     if (oldRec.paymentsHistory) {
                         paymentsHistory = [...oldRec.paymentsHistory];
@@ -966,7 +1132,7 @@
 
             if (paidNow > 0 && (!editId || paymentsHistory.length === 0)) {
                 paymentsHistory.push({
-                    date: new Date().toISOString().split('T')[0],
+                    date: selectedInvoiceDate,
                     amount: paidNow,
                     employee: currentUser.username
                 });
@@ -977,7 +1143,7 @@
             const phoneVal = document.getElementById('phone').value;
 
             const recordData = {
-                date: originalDate,
+                date: selectedInvoiceDate,
                 timestamp: originalTimestamp,
                 clientName: clientNameVal,
                 shopName: shopNameVal,
@@ -1003,24 +1169,26 @@
                     records = records.map(r => r.firebaseId === editId ? { ...recordData, firebaseId: editId } : r);
                     localStorage.setItem('sales_records_offline', JSON.stringify(records));
 
-                    if (window.db) {
-                        if (editId.startsWith('local_')) {
-                            const docRef = await window.addDoc(window.collection(window.db, "sales_records"), recordData);
-                            records = records.map(r => r.firebaseId === editId ? { ...recordData, firebaseId: docRef.id } : r);
-                            localStorage.setItem('sales_records_offline', JSON.stringify(records));
-                        } else {
-                            await window.setDoc(window.doc(window.db, "sales_records", editId), recordData, { merge: true });
-                        }
+                    if (!window.db || !navigator.onLine) throw new Error('offline');
+
+                    if (editId.startsWith('local_')) {
+                        const docRef = await window.addDoc(window.collection(window.db, "sales_records"), recordData);
+                        records = records.map(r => r.firebaseId === editId ? { ...recordData, firebaseId: docRef.id } : r);
+                        localStorage.setItem('sales_records_offline', JSON.stringify(records));
+                    } else {
+                        await window.setDoc(window.doc(window.db, "sales_records", editId), recordData, { merge: true });
                     }
                     alert('تم تعديل الفاتورة وتحديث المخزون بنجاح!');
                 } else {
-                    if (window.db) {
-                        const docRef = await window.addDoc(window.collection(window.db, "sales_records"), recordData);
-                        records.push({ ...recordData, firebaseId: docRef.id });
-                    } else {
-                        recordData.firebaseId = 'local_' + Date.now();
+                    const tempId = 'local_' + Date.now();
+                    if (!window.db || !navigator.onLine) {
+                        recordData.firebaseId = tempId;
                         records.push(recordData);
+                        localStorage.setItem('sales_records_offline', JSON.stringify(records));
+                        throw new Error('offline');
                     }
+                    const docRef = await window.addDoc(window.collection(window.db, "sales_records"), recordData);
+                    records.push({ ...recordData, firebaseId: docRef.id });
                     localStorage.setItem('sales_records_offline', JSON.stringify(records));
                     alert('تم حفظ الفاتورة بنجاح!');
                 }
@@ -1031,17 +1199,39 @@
                 resetForm();
                 renderRecords();
             } catch (err) {
+                let targetId = editId;
                 if (editId) {
                     records = records.map(r => r.firebaseId === editId ? { ...recordData, firebaseId: editId } : r);
+                    queueCloudOperation({
+                        op: editId.startsWith('local_') ? 'add' : 'set',
+                        collectionName: 'sales_records',
+                        docId: editId,
+                        data: { ...recordData },
+                        merge: true,
+                        localStorageKey: 'sales_records_offline',
+                        idField: 'firebaseId'
+                    });
                 } else {
-                    recordData.firebaseId = 'local_' + Date.now();
-                    records.push(recordData);
+                    const existingLocal = records.find(r => r.timestamp === recordData.timestamp && String(r.firebaseId).startsWith('local_'));
+                    targetId = existingLocal ? existingLocal.firebaseId : ('local_' + Date.now());
+                    if (!existingLocal) {
+                        recordData.firebaseId = targetId;
+                        records.push(recordData);
+                    }
+                    queueCloudOperation({
+                        op: 'add',
+                        collectionName: 'sales_records',
+                        docId: targetId,
+                        data: { ...recordData },
+                        localStorageKey: 'sales_records_offline',
+                        idField: 'firebaseId'
+                    });
                 }
                 localStorage.setItem('sales_records_offline', JSON.stringify(records));
                 await calculateStockFromSims();
                 await saveConfig();
                 updateItemSelects();
-                alert('تم حفظ التعديلات محلياً.');
+                alert('تم الحفظ محلياً وسيتم المزامنة تلقائياً فور عودة الإنترنت.');
                 resetForm();
                 renderRecords();
             }
@@ -1058,7 +1248,8 @@
             currentCart = [];
             tempImageBase64 = '';
             renderCart(false);
-            document.getElementById('reminderDate').valueAsDate = new Date();
+            document.getElementById('invoiceDate').value = getTodayLocalStr();
+            document.getElementById('reminderDate').value = getTodayLocalStr();
             toggleReminderVisibility();
         }
 
@@ -1074,6 +1265,7 @@
             }
             updateMarketSelect(r.marketName || '');
             document.getElementById('phone').value = r.phone || '';
+            document.getElementById('invoiceDate').value = r.date || getTodayLocalStr();
             document.getElementById('paid').value = r.paid || '';
             document.getElementById('reminderDate').value = r.reminderDate || '';
             document.getElementById('reminderTime').value = r.reminderTime || '09:00';
@@ -1105,7 +1297,7 @@
             
             if (!r.paymentsHistory) r.paymentsHistory = [];
             r.paymentsHistory.push({
-                date: new Date().toISOString().split('T')[0],
+                date: getTodayLocalStr(),
                 amount: addPay,
                 employee: currentUser.username
             });
@@ -1115,18 +1307,28 @@
             localStorage.setItem('sales_records_offline', JSON.stringify(records));
             renderRecords();
 
+            const paymentPayload = {
+                paid: r.paid,
+                remaining: r.remaining,
+                paymentsHistory: r.paymentsHistory,
+                notes: r.notes
+            };
+
             try {
-                if (window.db && !firebaseId.startsWith('local_')) {
-                    await window.setDoc(window.doc(window.db, "sales_records", firebaseId), {
-                        paid: r.paid,
-                        remaining: r.remaining,
-                        paymentsHistory: r.paymentsHistory,
-                        notes: r.notes
-                    }, { merge: true });
+                if (!window.db || !navigator.onLine || String(firebaseId).startsWith('local_')) {
+                    throw new Error('offline_or_local');
                 }
-                alert('تم تسجيل الدفعة بنجاح!');
+                await window.setDoc(window.doc(window.db, "sales_records", firebaseId), paymentPayload, { merge: true });
+                alert('تم تسجيل الدفعة ومزامنتها بنجاح!');
             } catch (e) {
-                alert('تم تسجيل الدفعة محلياً.');
+                queueCloudOperation({
+                    op: 'set',
+                    collectionName: 'sales_records',
+                    docId: String(firebaseId),
+                    data: paymentPayload,
+                    merge: true
+                });
+                alert('تم تسجيل الدفعة محلياً وسترتفع تلقائياً للسحابة فور توفر الإنترنت.');
             }
         }
 
@@ -1137,10 +1339,7 @@
             const paginationContainer = document.getElementById('paginationContainer');
             
             const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const todayStr = `${year}-${month}-${day}`;
+            const todayStr = getTodayLocalStr();
             const currentAccountingMonth = getAccountingMonth(todayStr, now.getTime());
             
             const d = new Date(now);
@@ -1248,19 +1447,36 @@
 
         async function deleteRecord(firebaseId) {
             if (confirm('هل أنت متأكد من حذف هذا السجل وإعادة الكميات للمخزون؟')) {
+                records = records.filter(item => item.firebaseId !== firebaseId);
+                localStorage.setItem('sales_records_offline', JSON.stringify(records));
+
                 try {
-                    if (window.db && !firebaseId.startsWith('local_')) {
+                    if (!String(firebaseId).startsWith('local_')) {
+                        if (!window.db || !navigator.onLine) throw new Error('offline');
                         await window.deleteDoc(window.doc(window.db, "sales_records", firebaseId));
+                    } else {
+                        queueCloudOperation({
+                            op: 'delete',
+                            collectionName: 'sales_records',
+                            docId: String(firebaseId)
+                        });
                     }
-                    records = records.filter(item => item.firebaseId !== firebaseId);
-                    localStorage.setItem('sales_records_offline', JSON.stringify(records));
                     await calculateStockFromSims();
                     await saveConfig();
                     updateItemSelects();
                     alert('تم الحذف بنجاح.');
                     renderRecords();
                 } catch (e) {
-                    alert('حدث خطأ أثناء الحذف.');
+                    queueCloudOperation({
+                        op: 'delete',
+                        collectionName: 'sales_records',
+                        docId: String(firebaseId)
+                    });
+                    await calculateStockFromSims();
+                    await saveConfig();
+                    updateItemSelects();
+                    alert('تم الحذف محلياً وسيتم تحديث السحابة تلقائياً عند عودة الإنترنت.');
+                    renderRecords();
                 }
             }
         }
