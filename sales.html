@@ -644,7 +644,7 @@
         .summary-table th, .summary-table td {
             border-bottom: 1px solid #e2e8f0;
             border-left: 1px solid #f1f5f9;
-            padding: 8px 3px;
+            padding: 8px 2px;
             text-align: center;
             white-space: normal;
             word-wrap: break-word;
@@ -657,23 +657,21 @@
             background: #1e293b;
             color: #fff;
             font-weight: 700;
-            font-size: 0.74rem;
+            font-size: 0.72rem;
         }
-
-        .summary-table th:nth-child(1), .summary-table td:nth-child(1) { width: 18%; }
-        .summary-table th:nth-child(2), .summary-table td:nth-child(2) { width: 10%; }
-        .summary-table th:nth-child(3), .summary-table td:nth-child(3) { width: 13%; }
-        .summary-table th:nth-child(4), .summary-table td:nth-child(4) { width: 13%; }
-        .summary-table th:nth-child(5), .summary-table td:nth-child(5) { width: 13%; }
-        .summary-table th:nth-child(6), .summary-table td:nth-child(6) { width: 17%; }
-        .summary-table th:nth-child(7), .summary-table td:nth-child(7) { width: 16%; }
 
         .summary-table tr:last-child td { border-bottom: none; }
 
+        .summary-table tr.summary-total-row td {
+            background: #f8fafc;
+            font-weight: 900;
+            border-top: 2px solid #cbd5e1;
+        }
+
         @media (max-width: 480px) {
-            .summary-table { font-size: 0.72rem; }
-            .summary-table th { font-size: 0.68rem; padding: 7px 2px; }
-            .summary-table td { padding: 7px 2px; }
+            .summary-table { font-size: 0.71rem; }
+            .summary-table th { font-size: 0.63rem; padding: 7px 1px; letter-spacing: -0.2px; }
+            .summary-table td { padding: 7px 1px; }
             .stat-label { font-size: 0.76rem; }
             .stat-value { font-size: 1.08rem; }
         }
@@ -681,7 +679,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDLlNld1YOKrX6uq15aF4BhJjWPwV40osY",
@@ -701,6 +699,9 @@
         window.doc = doc;
         window.getDoc = getDoc;
         window.setDoc = setDoc;
+        window.addDoc = addDoc;
+        window.updateDoc = updateDoc;
+        window.deleteDoc = deleteDoc;
 
         if (window.initSalesDashboard) { window.initSalesDashboard(); }
     </script>
@@ -875,20 +876,10 @@
 
         <!-- جدول الإحصائيات -->
         <div class="table-card" id="statsTableCard">
-            <div class="table-title">📊 الإحصائيات (الأصناف المباعة فقط)</div>
+            <div class="table-title" id="statsTableTitle">📊 الإحصائيات</div>
             <div class="table-wrap">
                 <table class="summary-table">
-                    <thead>
-                        <tr>
-                            <th>الصنف</th>
-                            <th>المدة</th>
-                            <th>المتاح</th>
-                            <th>الممسوح</th>
-                            <th>المباع</th>
-                            <th>المبيعات</th>
-                            <th>الأرباح</th>
-                        </tr>
-                    </thead>
+                    <thead id="summaryTableHead"></thead>
                     <tbody id="companySummaryBody"></tbody>
                 </table>
             </div>
@@ -919,13 +910,128 @@
             'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
         ];
 
+        // --- نظام المزامنة التلقائية الموحد (SimAutoSync Bridge) ---
+        const SYNC_QUEUE_KEY = 'sim_offline_sync_queue';
+
+        function queueCloudOperation(entry) {
+            try {
+                if (window.parent && window.parent !== window && window.parent.SimAutoSync) {
+                    window.parent.SimAutoSync.enqueue(entry);
+                    return;
+                }
+            } catch (e) {}
+
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                const key = `${entry.op}::${entry.collectionName}::${entry.docId || ''}`;
+                if ((entry.op === 'set' || entry.op === 'update') && String(entry.docId).startsWith('local_')) {
+                    const addIdx = q.findIndex(i => i.op === 'add' && i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId));
+                    if (addIdx !== -1) {
+                        q[addIdx].data = { ...q[addIdx].data, ...entry.data };
+                        q[addIdx].timestamp = Date.now();
+                        localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(q));
+                        notifyParentQueueUpdated();
+                        return;
+                    }
+                }
+                if (entry.op === 'delete' && String(entry.docId).startsWith('local_')) {
+                    const filtered = q.filter(i => !(i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId)));
+                    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(filtered));
+                    notifyParentQueueUpdated();
+                    return;
+                }
+                const idx = q.findIndex(i => `${i.op}::${i.collectionName}::${i.docId || ''}` === key);
+                const item = { ...entry, timestamp: Date.now() };
+                if (idx !== -1) {
+                    if (entry.merge && q[idx].data && entry.data) item.data = { ...q[idx].data, ...entry.data };
+                    q[idx] = item;
+                } else {
+                    q.push(item);
+                }
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(q));
+                notifyParentQueueUpdated();
+            } catch (e) {}
+        }
+
+        function notifyParentQueueUpdated() {
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'SIM_QUEUE_UPDATED' }, '*');
+                }
+            } catch (e) {}
+        }
+
+        function getPendingIdsForCollection(collectionName) {
+            try {
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                return new Set(q.filter(i => i.collectionName === collectionName).map(i => String(i.docId)));
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        async function flushLocalQueueFallback() {
+            try {
+                if (window.parent && window.parent !== window && window.parent.SimAutoSync) {
+                    await window.parent.SimAutoSync.flush();
+                    return;
+                }
+                if (!navigator.onLine || !window.db) return;
+                const q = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+                if (q.length === 0) return;
+
+                const remaining = [];
+                for (const item of q) {
+                    try {
+                        if (item.op === 'add') {
+                            const docRef = await window.addDoc(window.collection(window.db, item.collectionName), item.data);
+                            if (item.localStorageKey) {
+                                const arr = JSON.parse(localStorage.getItem(item.localStorageKey) || '[]');
+                                arr.forEach(r => {
+                                    if (String(r[item.idField || 'id']) === String(item.docId)) {
+                                        r[item.idField || 'id'] = docRef.id;
+                                        if (r.id === item.docId) r.id = docRef.id;
+                                        if (r.firebaseId === item.docId) r.firebaseId = docRef.id;
+                                    }
+                                });
+                                localStorage.setItem(item.localStorageKey, JSON.stringify(arr));
+                            }
+                        } else if (item.op === 'set') {
+                            await window.setDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data, item.merge !== false ? { merge: true } : undefined);
+                        } else if (item.op === 'update') {
+                            await window.updateDoc(window.doc(window.db, item.collectionName, String(item.docId)), item.data);
+                        } else if (item.op === 'delete') {
+                            await window.deleteDoc(window.doc(window.db, item.collectionName, String(item.docId)));
+                        }
+                    } catch (err) {
+                        remaining.push(item);
+                    }
+                }
+                localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(remaining));
+            } catch (e) {}
+        }
+
+        window.addEventListener('online', async () => {
+            await flushLocalQueueFallback();
+            if (window.initSalesDashboard) await window.initSalesDashboard();
+        });
+
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'SIM_CLOUD_SYNCED') {
+                loadLocalState();
+                renderBatchesTable();
+                renderDebtsTable();
+                renderDashboard();
+            }
+        });
+        // --- نهاية نظام المزامنة التلقائية ---
+
         function getTodayStr() {
             const d = new Date();
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
         // حساب الشهر المحاسبي: الشهر الجديد يبدأ من يوم 5 ويمتد حتى يوم 4 من الشهر التالي
-        // أي عملية في أيام (1، 2، 3، 4) تُحسب ضمن الشهر السابق، ومن يوم 5 يبدأ الشهر الجديد
         function getAccountingMonth(dateStr, timestampFallback) {
             let year = NaN, month = NaN, day = NaN;
 
@@ -1024,6 +1130,9 @@
             itemSelect.value = activeState.item || '';
             dateInput.value = activeState.month || '';
             dateLabel.textContent = activeState.month ? formatMonthDisplay(activeState.month) : '📅 حدد التاريخ';
+
+            // تحديث الجدول فوراً عند التبديل بين المبيعات والتكلفة والأرباح
+            renderDashboard();
         };
 
         window.onUnifiedFilterChange = function() {
@@ -1101,6 +1210,7 @@
             const groups = [];
 
             invoicesList.forEach(inv => {
+                if (isReturnInvoice(inv)) return;
                 const debt = getInvoiceDebt(inv);
                 if (debt <= 0) return;
 
@@ -1256,23 +1366,39 @@
             renderDebtsTable();
             renderDashboard();
 
-            try {
-                if (window.db) {
-                    for (const inv of updatedInvoicesForCloud) {
-                        const cloudDocId = inv.firebaseId || inv.id;
-                        if (cloudDocId && !String(cloudDocId).startsWith('local_')) {
-                            await window.setDoc(window.doc(window.db, "sales_records", String(cloudDocId)), {
-                                paid: inv.paid,
-                                remaining: inv.remaining,
-                                paymentsHistory: inv.paymentsHistory,
-                                notes: inv.notes
-                            }, { merge: true });
-                        }
+            let queuedAny = false;
+            for (const inv of updatedInvoicesForCloud) {
+                const cloudDocId = inv.firebaseId || inv.id;
+                if (!cloudDocId) continue;
+
+                const paymentPayload = {
+                    paid: inv.paid,
+                    remaining: inv.remaining,
+                    paymentsHistory: inv.paymentsHistory,
+                    notes: inv.notes
+                };
+
+                try {
+                    if (!window.db || !navigator.onLine || String(cloudDocId).startsWith('local_')) {
+                        throw new Error('offline_or_local');
                     }
+                    await window.setDoc(window.doc(window.db, "sales_records", String(cloudDocId)), paymentPayload, { merge: true });
+                } catch (e) {
+                    queuedAny = true;
+                    queueCloudOperation({
+                        op: 'set',
+                        collectionName: 'sales_records',
+                        docId: String(cloudDocId),
+                        data: paymentPayload,
+                        merge: true
+                    });
                 }
+            }
+
+            if (queuedAny) {
+                alert('✅ تم تسجيل الدفعة محلياً وستُرفع تلقائياً للسحابة فور توفر الإنترنت.');
+            } else {
                 alert('✅ تم تسجيل الدفعة وخصمها من مديونية العميل في المبيعات والفواتير بنجاح!');
-            } catch (e) {
-                alert('✅ تم تسجيل الدفعة محلياً وسيتم مزامنتها عند توفر الإنترنت.');
             }
         };
 
@@ -1315,6 +1441,28 @@
             }
         }
 
+        function recalculateFallbackItemCosts() {
+            const updated = { ...itemCosts };
+            const keysWithBatches = new Set(costBatches.map(b => b.key));
+            keysWithBatches.forEach(k => {
+                const matching = costBatches
+                    .filter(b => b.key === k)
+                    .sort((a, b) => {
+                        const d = String(a.date || '').localeCompare(String(b.date || ''));
+                        return d !== 0 ? d : (a.timestamp || 0) - (b.timestamp || 0);
+                    });
+                if (matching.length > 0) {
+                    updated[k] = parseFloat(matching[matching.length - 1].unitCost) || 0;
+                }
+            });
+            Object.keys(updated).forEach(k => {
+                if (!keysWithBatches.has(k) && costBatches.length > 0) {
+                    updated[k] = 0;
+                }
+            });
+            itemCosts = updated;
+        }
+
         async function syncCostsToCloud() {
             const appConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             appConfig.costBatches = costBatches;
@@ -1323,17 +1471,24 @@
             appConfig.configUpdatedAt = Date.now();
             localStorage.setItem('app_config', JSON.stringify(appConfig));
 
+            const costPayload = {
+                costBatches: costBatches,
+                itemCosts: itemCosts,
+                extraGeneralCost: extraGeneralCost,
+                configUpdatedAt: appConfig.configUpdatedAt
+            };
+
             try {
-                if (window.db && window.setDoc) {
-                    await window.setDoc(window.doc(window.db, "settings", "app_config"), {
-                        costBatches: costBatches,
-                        itemCosts: itemCosts,
-                        extraGeneralCost: extraGeneralCost,
-                        configUpdatedAt: appConfig.configUpdatedAt
-                    }, { merge: true });
-                }
+                if (!window.db || !window.setDoc || !navigator.onLine) throw new Error('offline');
+                await window.setDoc(window.doc(window.db, "settings", "app_config"), costPayload, { merge: true });
             } catch (e) {
-                console.error("خطأ في حفظ التكلفة سحابياً:", e);
+                queueCloudOperation({
+                    op: 'set',
+                    collectionName: 'settings',
+                    docId: 'app_config',
+                    data: costPayload,
+                    merge: true
+                });
             }
         }
 
@@ -1383,6 +1538,7 @@
             }
 
             itemCosts[key] = unitCost;
+            recalculateFallbackItemCosts();
             await syncCostsToCloud();
             cancelBatchEdit();
 
@@ -1428,6 +1584,7 @@
             if (document.getElementById('editBatchId').value === batchId) {
                 cancelBatchEdit();
             }
+            recalculateFallbackItemCosts();
             await syncCostsToCloud();
             renderBatchesTable();
             renderDashboard();
@@ -1469,6 +1626,24 @@
                     </tr>
                 `;
             }).join('');
+        }
+
+        // التحقق الشامل من كون الشريحة مرتجعة بجميع الصيغ العربية والإنجليزية
+        function isSimReturned(sim) {
+            if (!sim) return false;
+            if (sim.returned === true || sim.isReturned === true) return true;
+            const st = String(sim.status || '').trim().toLowerCase();
+            return ['returned', 'return', 'مرتجع', 'مرتجعه', 'مرتجعة', 'refunded', 'canceled', 'cancelled'].includes(st);
+        }
+
+        // التحقق من كون الفاتورة فاتورة مرتجع
+        function isReturnInvoice(inv) {
+            if (!inv) return false;
+            if (inv.isReturn === true || inv.returned === true) return true;
+            const type = String(inv.type || inv.invoiceType || '').trim().toLowerCase();
+            const st = String(inv.status || '').trim().toLowerCase();
+            return ['return', 'returned', 'مرتجع', 'مرتجعه', 'مرتجعة', 'refund'].includes(type) ||
+                   ['return', 'returned', 'مرتجع', 'مرتجعه', 'مرتجعة', 'refunded'].includes(st);
         }
 
         function parseCompanyAndDuration(rawStr, explicitDur) {
@@ -1543,7 +1718,7 @@
                     const itemTotal = (it.total !== undefined && it.total !== null && it.total !== '')
                         ? (parseFloat(it.total) || 0)
                         : +(qty * price).toFixed(2);
-                    if (qty > 0) {
+                    if (qty !== 0) {
                         extracted.push({ company, duration, qty, total: itemTotal });
                     }
                 });
@@ -1554,7 +1729,7 @@
             const { company, duration } = parseCompanyAndDuration(rawCat, inv.duration);
             const qty = parseFloat(inv.qty ?? inv.quantity ?? inv.count ?? inv.totalQty ?? 0) || 0;
             const total = parseFloat(inv.total ?? inv.totalAmount ?? 0) || 0;
-            if (qty > 0) {
+            if (qty !== 0) {
                 extracted.push({ company, duration, qty, total });
             }
 
@@ -1562,6 +1737,7 @@
         }
 
         function getInvoiceDebt(inv) {
+            if (isReturnInvoice(inv)) return 0;
             if (inv.remaining !== undefined && inv.remaining !== null && inv.remaining !== '') {
                 return Math.max(0, parseFloat(inv.remaining) || 0);
             }
@@ -1642,6 +1818,7 @@
             const filteredRevenueMap = {};
             const filteredSoldCostMap = {};
             const filteredBatchesCostMap = {};
+            const filteredBatchesQtyMap = {};
 
             const batchQueuesMap = {};
             const fallbackCostMap = {};
@@ -1656,6 +1833,7 @@
                     filteredRevenueMap[key] = 0;
                     filteredSoldCostMap[key] = 0;
                     filteredBatchesCostMap[key] = 0;
+                    filteredBatchesQtyMap[key] = 0;
                     batchQueuesMap[key] = [];
                     fallbackCostMap[key] = parseFloat(itemCosts[key]) || 0;
                 });
@@ -1679,12 +1857,13 @@
                 const bMonth = getAccountingMonth(b.date, b.timestamp);
                 if (!selectedMonth || bMonth === selectedMonth) {
                     filteredBatchesCostMap[b.key] = (filteredBatchesCostMap[b.key] || 0) + bTotal;
+                    filteredBatchesQtyMap[b.key] = (filteredBatchesQtyMap[b.key] || 0) + q;
                 }
             });
 
+            // حساب الممسوح مع استبعاد وخصم جميع الشرائح المرتجعة
             simsList.forEach(sim => {
-                // خصم الشرائح المرتجعة (❌) من الرصيد الممسوح والمتاح في الإحصائيات
-                if (sim.status === 'returned') return;
+                if (isSimReturned(sim)) return;
 
                 const { company, duration } = parseCompanyAndDuration(sim.category || sim.company || '', sim.duration);
                 const key = `${company}_${duration}`;
@@ -1705,24 +1884,32 @@
 
             chronologicalInvoices.forEach(inv => {
                 const items = extractInvoiceItems(inv);
+                const invIsReturn = isReturnInvoice(inv);
                 const invMonth = getAccountingMonth(inv.date, inv.timestamp);
                 const matchesMonth = !selectedMonth || invMonth === selectedMonth;
                 const matchesDebtMonth = !explicitDebtMonth || invMonth === explicitDebtMonth;
                 const matchesItem = !isSpecificItem || items.some(it => `${it.company}_${it.duration}` === selectedItemKey);
 
-                if (matchesDebtMonth && matchesItem) {
+                if (matchesDebtMonth && matchesItem && !invIsReturn) {
                     totalDebtsSum += getInvoiceDebt(inv);
                 }
 
                 items.forEach(it => {
                     const key = `${it.company}_${it.duration}`;
-                    allSoldMap[key] = (allSoldMap[key] || 0) + it.qty;
+                    const isNeg = invIsReturn || it.qty < 0;
+                    const absQty = Math.abs(it.qty);
+                    const signedQty = invIsReturn ? -absQty : it.qty;
+                    const signedTotal = invIsReturn ? -Math.abs(it.total) : it.total;
 
-                    const saleCost = consumeCostFromBatches(batchQueuesMap, fallbackCostMap, key, it.qty);
+                    allSoldMap[key] = (allSoldMap[key] || 0) + signedQty;
+
+                    const saleCost = isNeg
+                        ? -(absQty * (fallbackCostMap[key] || 0))
+                        : consumeCostFromBatches(batchQueuesMap, fallbackCostMap, key, absQty);
 
                     if (matchesMonth) {
-                        filteredSoldMap[key] = (filteredSoldMap[key] || 0) + it.qty;
-                        filteredRevenueMap[key] = (filteredRevenueMap[key] || 0) + it.total;
+                        filteredSoldMap[key] = (filteredSoldMap[key] || 0) + signedQty;
+                        filteredRevenueMap[key] = (filteredRevenueMap[key] || 0) + signedTotal;
                         filteredSoldCostMap[key] = (filteredSoldCostMap[key] || 0) + saleCost;
                     }
                 });
@@ -1765,6 +1952,9 @@
                 filteredSoldMap,
                 filteredRevenueMap,
                 filteredSoldCostMap,
+                filteredBatchesCostMap,
+                filteredBatchesQtyMap,
+                appliedExtraCost,
                 totalSalesSum,
                 displayedTotalCost,
                 totalProfitSum,
@@ -1775,7 +1965,7 @@
         window.renderDashboard = function() {
             const currentMonth = getCurrentMonthStr();
 
-            // 1. حساب المبيعات (للشهر المحاسبي الحالي الذي يبدأ يوم 5)
+            // 1. حساب المبيعات
             const salesItemKey = filterState.sales.item;
             const salesMonthInput = filterState.sales.month;
             const effectiveSalesMonth = salesMonthInput || currentMonth;
@@ -1803,7 +1993,8 @@
             document.getElementById('salesSubLabel').textContent = formatSubBadgeText(salesItemKey, salesMonthInput);
             document.getElementById('costSubLabel').textContent = formatSubBadgeText(costItemKey, costMonthInput);
             document.getElementById('profitSubLabel').textContent = formatSubBadgeText(profitItemKey, profitMonthInput);
-            document.getElementById('debtSubLabel').textContent = (!salesItemKey && !salesMonthInput) ? 'الإجمالي القائم' : formatSubBadgeText(salesItemKey, salesMonthInput);
+            const isDebtDefaultScope = (!salesItemKey || salesItemKey === 'ALL') && !salesMonthInput;
+            document.getElementById('debtSubLabel').textContent = isDebtDefaultScope ? 'الإجمالي القائم' : formatSubBadgeText(salesItemKey, salesMonthInput);
 
             // تحديث جدول الإحصائيات بناءً على الاختيار النشط في الفلتر الموحد
             const currentTarget = document.getElementById('filterTargetSelect').value;
@@ -1817,9 +2008,226 @@
             }
 
             statsTableCard.style.display = 'block';
+            const tableTitleEl = document.getElementById('statsTableTitle');
+            const tableHeadEl = document.getElementById('summaryTableHead');
             const summaryBody = document.getElementById('companySummaryBody');
 
-            // إظهار الأصناف التي تم بيعها فقط في الجدول (المباع > 0)
+            const getAvailableStock = (item) => {
+                const baseAuto = (activeMetricsForTable.allScannedMap[item.key] || 0) - (activeMetricsForTable.allSoldMap[item.key] || 0);
+                const offset = (stockOffsets && stockOffsets[item.invKey] !== undefined) ? parseFloat(stockOffsets[item.invKey]) : 0;
+                return Math.max(0, baseAuto + offset);
+            };
+
+            // 1) وضع فلتر إجمالي التكلفة
+            if (currentTarget === 'cost') {
+                tableTitleEl.textContent = '💵 إحصائيات التكلفة (الدفعات وتكلفة المباع)';
+                tableHeadEl.innerHTML = `
+                    <tr>
+                        <th style="width:18%;">الصنف</th>
+                        <th style="width:10%;">المدة</th>
+                        <th style="width:12%;">المتاح</th>
+                        <th style="width:14%;">كمية الدفعات</th>
+                        <th style="width:12%;">المباع</th>
+                        <th style="width:17%;">تكلفة الدفعات</th>
+                        <th style="width:17%;">تكلفة المباع</th>
+                    </tr>
+                `;
+
+                const costItems = activeMetricsForTable.activeKeys.filter(item => {
+                    const bQty = activeMetricsForTable.filteredBatchesQtyMap[item.key] || 0;
+                    const bCost = activeMetricsForTable.filteredBatchesCostMap[item.key] || 0;
+                    const sold = activeMetricsForTable.filteredSoldMap[item.key] || 0;
+                    const sCost = activeMetricsForTable.filteredSoldCostMap[item.key] || 0;
+                    return bQty > 0 || bCost > 0 || sold > 0 || sCost > 0;
+                });
+
+                if (costItems.length === 0 && activeMetricsForTable.appliedExtraCost <= 0) {
+                    summaryBody.innerHTML = `<tr><td colspan="7" style="padding:16px; color:#64748b; font-weight:bold; text-align:center;">لا توجد تكاليف أو دفعات مسجلة في هذه الفترة.</td></tr>`;
+                    return;
+                }
+
+                let totalBatchQty = 0;
+                let totalSoldQty = 0;
+                let totalBatchCostSum = 0;
+                let totalSoldCostSum = 0;
+
+                let rowsHtml = costItems.map(item => {
+                    const availableStock = getAvailableStock(item);
+                    const batchQty = activeMetricsForTable.filteredBatchesQtyMap[item.key] || 0;
+                    const sold = activeMetricsForTable.filteredSoldMap[item.key] || 0;
+                    const batchCost = +(activeMetricsForTable.filteredBatchesCostMap[item.key] || 0).toFixed(2);
+                    const soldCost = +(activeMetricsForTable.filteredSoldCostMap[item.key] || 0).toFixed(2);
+
+                    totalBatchQty += batchQty;
+                    totalSoldQty += sold;
+                    totalBatchCostSum += batchCost;
+                    totalSoldCostSum += soldCost;
+
+                    return `
+                        <tr>
+                            <td style="font-weight:800; color:#1e3a8a;">${item.company}</td>
+                            <td style="font-weight:700; color:#b45309;">${item.duration}</td>
+                            <td style="font-weight:700;">${availableStock}</td>
+                            <td style="font-weight:700; color:#0f172a;">${batchQty}</td>
+                            <td style="font-weight:800; color:#2563eb;">${sold}</td>
+                            <td style="font-weight:800; color:#b45309;">${batchCost.toLocaleString('en-US')}</td>
+                            <td style="font-weight:800; color:#d97706;">${soldCost.toLocaleString('en-US')}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                if (activeMetricsForTable.appliedExtraCost > 0) {
+                    const extra = activeMetricsForTable.appliedExtraCost;
+                    totalBatchCostSum += extra;
+                    totalSoldCostSum += extra;
+                    rowsHtml += `
+                        <tr style="background:#fffbeb;">
+                            <td colspan="5" style="font-weight:800; color:#b45309; text-align:right; padding-right:8px;">💸 مصروفات إضافية عامة</td>
+                            <td style="font-weight:800; color:#b45309;">${extra.toLocaleString('en-US')}</td>
+                            <td style="font-weight:800; color:#b45309;">${extra.toLocaleString('en-US')}</td>
+                        </tr>
+                    `;
+                }
+
+                rowsHtml += `
+                    <tr class="summary-total-row">
+                        <td colspan="3" style="color:#1e293b;">الإجمالي</td>
+                        <td style="color:#0f172a;">${totalBatchQty}</td>
+                        <td style="color:#2563eb;">${totalSoldQty}</td>
+                        <td style="color:#b45309;">${(+totalBatchCostSum.toFixed(2)).toLocaleString('en-US')}</td>
+                        <td style="color:#d97706;">${(+totalSoldCostSum.toFixed(2)).toLocaleString('en-US')}</td>
+                    </tr>
+                `;
+
+                summaryBody.innerHTML = rowsHtml;
+                return;
+            }
+
+            // 2) وضع فلتر إجمالي الأرباح
+            if (currentTarget === 'profit') {
+                tableTitleEl.textContent = '📈 إحصائيات الأرباح (الأصناف المباعة)';
+                tableHeadEl.innerHTML = `
+                    <tr>
+                        <th style="width:20%;">الصنف</th>
+                        <th style="width:12%;">المدة</th>
+                        <th style="width:14%;">المباع</th>
+                        <th style="width:18%;">المبيعات</th>
+                        <th style="width:18%;">التكلفة</th>
+                        <th style="width:18%;">الأرباح</th>
+                    </tr>
+                `;
+
+                const soldItemsOnly = activeMetricsForTable.activeKeys.filter(item => (activeMetricsForTable.filteredSoldMap[item.key] || 0) > 0);
+
+                if (soldItemsOnly.length === 0) {
+                    summaryBody.innerHTML = `<tr><td colspan="6" style="padding:16px; color:#64748b; font-weight:bold; text-align:center;">لا توجد مبيعات أو أرباح مسجلة في هذه الفترة.</td></tr>`;
+                    return;
+                }
+
+                let sumSold = 0, sumRev = 0, sumCost = 0, sumProf = 0;
+                let rowsHtml = soldItemsOnly.map(item => {
+                    const sold = activeMetricsForTable.filteredSoldMap[item.key] || 0;
+                    const rev = +(activeMetricsForTable.filteredRevenueMap[item.key] || 0).toFixed(2);
+                    const cost = +(activeMetricsForTable.filteredSoldCostMap[item.key] || 0).toFixed(2);
+                    const itemProfit = +(rev - cost).toFixed(2);
+
+                    sumSold += sold;
+                    sumRev += rev;
+                    sumCost += cost;
+                    sumProf += itemProfit;
+
+                    return `
+                        <tr>
+                            <td style="font-weight:800; color:#1e3a8a;">${item.company}</td>
+                            <td style="font-weight:700; color:#b45309;">${item.duration}</td>
+                            <td style="font-weight:800; color:#2563eb;">${sold}</td>
+                            <td style="font-weight:700; color:#15803d;">${rev.toLocaleString('en-US')}</td>
+                            <td style="font-weight:700; color:#b45309;">${cost.toLocaleString('en-US')}</td>
+                            <td style="font-weight:800; color:${itemProfit >= 0 ? '#1d4ed8' : '#dc2626'};">${itemProfit.toLocaleString('en-US')}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                rowsHtml += `
+                    <tr class="summary-total-row">
+                        <td colspan="2">الإجمالي</td>
+                        <td style="color:#2563eb;">${sumSold}</td>
+                        <td style="color:#15803d;">${(+sumRev.toFixed(2)).toLocaleString('en-US')}</td>
+                        <td style="color:#b45309;">${(+sumCost.toFixed(2)).toLocaleString('en-US')}</td>
+                        <td style="color:${sumProf >= 0 ? '#1d4ed8' : '#dc2626'};">${(+sumProf.toFixed(2)).toLocaleString('en-US')}</td>
+                    </tr>
+                `;
+
+                summaryBody.innerHTML = rowsHtml;
+                return;
+            }
+
+            // 3) وضع فلتر الكل معاً
+            if (currentTarget === 'all') {
+                tableTitleEl.textContent = '📊 الإحصائيات الشاملة (المبيعات والتكلفة والأرباح)';
+                tableHeadEl.innerHTML = `
+                    <tr>
+                        <th style="width:16%;">الصنف</th>
+                        <th style="width:9%;">المدة</th>
+                        <th style="width:10%;">المتاح</th>
+                        <th style="width:12%;">الممسوح</th>
+                        <th style="width:11%;">المباع</th>
+                        <th style="width:14%;">المبيعات</th>
+                        <th style="width:14%;">التكلفة</th>
+                        <th style="width:14%;">الأرباح</th>
+                    </tr>
+                `;
+
+                const activeItems = activeMetricsForTable.activeKeys.filter(item => {
+                    return (activeMetricsForTable.filteredSoldMap[item.key] || 0) > 0 ||
+                           (activeMetricsForTable.filteredBatchesCostMap[item.key] || 0) > 0;
+                });
+
+                if (activeItems.length === 0) {
+                    summaryBody.innerHTML = `<tr><td colspan="8" style="padding:16px; color:#64748b; font-weight:bold; text-align:center;">لا توجد بيانات مسجلة في هذه الفترة.</td></tr>`;
+                    return;
+                }
+
+                let rowsHtml = activeItems.map(item => {
+                    const availableStock = getAvailableStock(item);
+                    const scanned = activeMetricsForTable.filteredScannedMap[item.key] || 0;
+                    const sold = activeMetricsForTable.filteredSoldMap[item.key] || 0;
+                    const rev = +(activeMetricsForTable.filteredRevenueMap[item.key] || 0).toFixed(2);
+                    const cost = +(activeMetricsForTable.filteredSoldCostMap[item.key] || 0).toFixed(2);
+                    const itemProfit = +(rev - cost).toFixed(2);
+
+                    return `
+                        <tr>
+                            <td style="font-weight:800; color:#1e3a8a;">${item.company}</td>
+                            <td style="font-weight:700; color:#b45309;">${item.duration}</td>
+                            <td style="font-weight:700;">${availableStock}</td>
+                            <td>${scanned}</td>
+                            <td style="font-weight:800; color:#2563eb;">${sold}</td>
+                            <td style="font-weight:700; color:#15803d;">${rev.toLocaleString('en-US')}</td>
+                            <td style="font-weight:700; color:#b45309;">${cost.toLocaleString('en-US')}</td>
+                            <td style="font-weight:800; color:${itemProfit >= 0 ? '#1d4ed8' : '#dc2626'};">${itemProfit.toLocaleString('en-US')}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                summaryBody.innerHTML = rowsHtml;
+                return;
+            }
+
+            // 4) وضع فلتر إجمالي المبيعات (الافتراضي)
+            tableTitleEl.textContent = '📊 الإحصائيات (الأصناف المباعة فقط)';
+            tableHeadEl.innerHTML = `
+                <tr>
+                    <th style="width:17%;">الصنف</th>
+                    <th style="width:10%;">المدة</th>
+                    <th style="width:11%;">المتاح</th>
+                    <th style="width:14%;">الممسوح</th>
+                    <th style="width:12%;">المباع</th>
+                    <th style="width:18%;">المبيعات</th>
+                    <th style="width:18%;">الأرباح</th>
+                </tr>
+            `;
+
             const soldItemsOnly = activeMetricsForTable.activeKeys.filter(item => {
                 const sold = activeMetricsForTable.filteredSoldMap[item.key] || 0;
                 return sold > 0;
@@ -1831,14 +2239,11 @@
             }
 
             summaryBody.innerHTML = soldItemsOnly.map(item => {
-                const baseAuto = (activeMetricsForTable.allScannedMap[item.key] || 0) - (activeMetricsForTable.allSoldMap[item.key] || 0);
-                const offset = (stockOffsets && stockOffsets[item.invKey] !== undefined) ? parseFloat(stockOffsets[item.invKey]) : 0;
-                const availableStock = Math.max(0, baseAuto + offset);
-
+                const availableStock = getAvailableStock(item);
                 const scanned = activeMetricsForTable.filteredScannedMap[item.key] || 0;
                 const sold = activeMetricsForTable.filteredSoldMap[item.key] || 0;
-                const rev = activeMetricsForTable.filteredRevenueMap[item.key] || 0;
-                const cost = activeMetricsForTable.filteredSoldCostMap[item.key] || 0;
+                const rev = +(activeMetricsForTable.filteredRevenueMap[item.key] || 0).toFixed(2);
+                const cost = +(activeMetricsForTable.filteredSoldCostMap[item.key] || 0).toFixed(2);
                 const itemProfit = +(rev - cost).toFixed(2);
 
                 return `
@@ -1887,40 +2292,67 @@
             renderDashboard();
 
             try {
-                if (window.db) {
+                if (window.db && navigator.onLine) {
+                    await flushLocalQueueFallback();
+
                     const configSnap = await window.getDoc(window.doc(window.db, "settings", "app_config"));
                     if (configSnap.exists()) {
                         const cData = configSnap.data();
-                        categoriesList = cData.categoriesList || cData.customItems || categoriesList;
-                        durationsList = cData.durationsList || durationsList;
-                        stockOffsets = cData.stockOffsets || stockOffsets;
-                        deletedStockItems = cData.deletedStockItems || deletedStockItems;
-                        itemCosts = cData.itemCosts || itemCosts;
-                        if (Array.isArray(cData.costBatches)) costBatches = cData.costBatches;
-                        extraGeneralCost = cData.extraGeneralCost !== undefined ? cData.extraGeneralCost : extraGeneralCost;
+                        const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+                        const localTs = localConfig.configUpdatedAt || 0;
+                        const cloudTs = cData.configUpdatedAt || 0;
 
-                        const mergedConfig = {
-                            ...JSON.parse(localStorage.getItem('app_config') || '{}'),
-                            categoriesList,
-                            durationsList,
-                            stockOffsets,
-                            deletedStockItems,
-                            itemCosts,
-                            costBatches,
-                            extraGeneralCost
-                        };
-                        localStorage.setItem('app_config', JSON.stringify(mergedConfig));
+                        if (cloudTs >= localTs) {
+                            categoriesList = cData.categoriesList || cData.customItems || categoriesList;
+                            durationsList = cData.durationsList || durationsList;
+                            stockOffsets = cData.stockOffsets || stockOffsets;
+                            deletedStockItems = cData.deletedStockItems || deletedStockItems;
+                            itemCosts = cData.itemCosts || itemCosts;
+                            if (Array.isArray(cData.costBatches)) costBatches = cData.costBatches;
+                            extraGeneralCost = cData.extraGeneralCost !== undefined ? cData.extraGeneralCost : extraGeneralCost;
+
+                            const mergedConfig = {
+                                ...localConfig,
+                                categoriesList,
+                                durationsList,
+                                stockOffsets,
+                                deletedStockItems,
+                                itemCosts,
+                                costBatches,
+                                extraGeneralCost,
+                                configUpdatedAt: cloudTs
+                            };
+                            localStorage.setItem('app_config', JSON.stringify(mergedConfig));
+                        }
                     }
 
+                    const pendingSimIds = getPendingIdsForCollection("scanned_sims");
+                    const localPendingSims = simsList.filter(s => pendingSimIds.has(String(s.code)) || pendingSimIds.has(String(s.id || '')));
                     const simsSnap = await window.getDocs(window.collection(window.db, "scanned_sims"));
-                    simsList = [];
-                    simsSnap.forEach(d => simsList.push(d.data()));
+                    const mergedSims = [...localPendingSims];
+                    simsSnap.forEach(d => {
+                        const sData = d.data();
+                        if (!pendingSimIds.has(String(d.id)) && !pendingSimIds.has(String(sData.code))) {
+                            mergedSims.push({ id: d.id, ...sData });
+                        }
+                    });
+                    simsList = mergedSims;
                     localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-                    const recordsSnap = await window.getDocs(window.collection(window.db, "sales_records"));
+                    const pendingSalesIds = getPendingIdsForCollection("sales_records");
                     const uniqueRecordsMap = new Map();
+                    invoicesList.forEach(inv => {
+                        const invId = String(inv.firebaseId || inv.id || '');
+                        if (invId.startsWith('local_') || pendingSalesIds.has(invId)) {
+                            uniqueRecordsMap.set(invId, inv);
+                        }
+                    });
+
+                    const recordsSnap = await window.getDocs(window.collection(window.db, "sales_records"));
                     recordsSnap.forEach(docSnap => {
-                        uniqueRecordsMap.set(docSnap.id, { id: docSnap.id, firebaseId: docSnap.id, ...docSnap.data() });
+                        if (!pendingSalesIds.has(String(docSnap.id))) {
+                            uniqueRecordsMap.set(docSnap.id, { id: docSnap.id, firebaseId: docSnap.id, ...docSnap.data() });
+                        }
                     });
                     invoicesList = Array.from(uniqueRecordsMap.values());
                     localStorage.setItem('sales_records_offline', JSON.stringify(invoicesList));
