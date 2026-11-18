@@ -685,6 +685,7 @@
                     const configSnap = await window.getDoc(configRef);
                     if (configSnap.exists()) {
                         const data = configSnap.data();
+                        const existingLocalCfg = JSON.parse(localStorage.getItem('app_config') || '{}');
                         if (Array.isArray(data.marketList)) {
                             data.marketList.forEach(m => { if (m && m.trim()) mergedMarkets.add(m.trim()); });
                         }
@@ -694,6 +695,18 @@
                             stockOffsets = data.stockOffsets || stockOffsets;
                             cleanPhantomKeysFromObj(stockOffsets);
                             configUpdatedAt = cloudUpdatedAt;
+                            localStorage.setItem('app_config', JSON.stringify({
+                                ...existingLocalCfg,
+                                ...data,
+                                deletedStockItems,
+                                stockOffsets,
+                                configUpdatedAt
+                            }));
+                        } else {
+                            localStorage.setItem('app_config', JSON.stringify({
+                                ...data,
+                                ...existingLocalCfg
+                            }));
                         }
                     }
 
@@ -791,13 +804,14 @@
 
             autoStockInventory = {};
             sims.forEach(item => {
-                if (isSimReturned(item)) return;
-
                 const cat = item.category || item.company || 'Mobily';
                 let dur = item.duration;
-                if (!dur || dur === '-' || dur === 'غير محدد' || dur === '') {
+                if (dur === undefined || dur === null || dur === '-' || dur === 'غير محدد' || String(dur).trim() === '') {
                     dur = (cat === 'Redbull') ? '30' : '60';
+                } else {
+                    dur = String(dur).trim();
                 }
+                if (dur === '0') return;
                 const itemKey = `${cat} (${dur})`;
                 autoStockInventory[itemKey] = (autoStockInventory[itemKey] || 0) + 1;
             });
@@ -806,7 +820,7 @@
                 const sign = isReturnInvoice(r) ? -1 : 1;
                 if (r.cartItems && Array.isArray(r.cartItems)) {
                     r.cartItems.forEach(ci => {
-                        if (!ci.item || !ci.item.includes('(')) return;
+                        if (!ci.item || !ci.item.includes('(') || ci.item.endsWith('(0)')) return;
                         if (autoStockInventory[ci.item] === undefined) {
                             autoStockInventory[ci.item] = 0;
                         }
@@ -824,7 +838,7 @@
             ]);
 
             allKeys.forEach(key => {
-                if (!key.includes('(')) return;
+                if (!key.includes('(') || key.endsWith('(0)')) return;
                 const base = autoStockInventory[key] || 0;
                 const offset = (stockOffsets && stockOffsets[key] !== undefined) ? parseFloat(stockOffsets[key]) : 0;
                 const finalQty = base + offset;
