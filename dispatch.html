@@ -460,17 +460,6 @@
         </div>
     </div>
 
-    <div class="stats-grid">
-        <div class="stat-box dispatched">
-            <span class="stat-title">✅ إجمالي المنصرف:</span>
-            <span class="stat-val" id="statDispatchedCount">0</span>
-        </div>
-        <div class="stat-box returned">
-            <span class="stat-title">❌ إجمالي المرتجع:</span>
-            <span class="stat-val" id="statReturnedCount">0</span>
-        </div>
-    </div>
-
     <div class="card">
         <div class="card-title">
             <span>📋 السجل</span>
@@ -2372,9 +2361,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
             const activeSims = simsList.filter(s => s.status === 'dispatched' || s.status === 'returned');
 
-            const filtered = activeSims.filter(s => {
-                if (statusVal !== 'ALL' && s.status !== statusVal) return false;
-
+            const baseFiltered = activeSims.filter(s => {
                 if (itemTypeVal === 'sim' && isRouterRecord(s)) return false;
                 if (itemTypeVal === 'router' && !isRouterRecord(s)) return false;
 
@@ -2403,10 +2390,18 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                        catStr.includes(searchLower);
             });
 
-            const dispCount = filtered.filter(s => s.status === 'dispatched').length;
-            const retCount = filtered.filter(s => s.status === 'returned').length;
-            document.getElementById('statDispatchedCount').innerText = dispCount;
-            document.getElementById('statReturnedCount').innerText = retCount;
+            const filtered = baseFiltered.filter(s => {
+                if (statusVal !== 'ALL' && s.status !== statusVal) return false;
+                return true;
+            });
+
+            const dispCount = baseFiltered.filter(s => s.status === 'dispatched').length;
+            const retCount = baseFiltered.filter(s => s.status === 'returned').length;
+
+            const statDispEl = document.getElementById('statDispatchedCount');
+            const statRetEl = document.getElementById('statReturnedCount');
+            if (statDispEl) statDispEl.innerText = dispCount;
+            if (statRetEl) statRetEl.innerText = retCount;
 
             const filterLabelEl = document.getElementById('historyFilterLabel');
             const filterCountersEl = document.getElementById('historyFilterCounters');
@@ -2417,19 +2412,10 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     ? `👤 ${custVal} • ${typeText} (${periodText})`
                     : `📊 ${typeText} (${periodText})`;
 
-                let pillsHtml = '';
-                if (statusVal === 'dispatched') {
-                    pillsHtml = `<span class="counter-pill-disp">✅ عداد الصرف: ${dispCount}</span>`;
-                } else if (statusVal === 'returned') {
-                    pillsHtml = `<span class="counter-pill-ret">❌ عداد المرتجع: ${retCount}</span>`;
-                } else {
-                    pillsHtml = `
-                        <span class="counter-pill-disp">✅ الصرف: ${dispCount}</span>
-                        <span class="counter-pill-ret">❌ المرتجع: ${retCount}</span>
-                        <span class="counter-pill-total">الإجمالي: ${filtered.length}</span>
-                    `;
-                }
-                filterCountersEl.innerHTML = pillsHtml;
+                filterCountersEl.innerHTML = `
+                    <span class="counter-pill-disp">✅ إجمالي الصرف: ${dispCount}</span>
+                    <span class="counter-pill-ret">❌ إجمالي المرتجع: ${retCount}</span>
+                `;
             }
 
             const tagSummaryBox = document.getElementById('tagSummaryBox');
