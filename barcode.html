@@ -168,7 +168,15 @@
         let currentUser = JSON.parse(localStorage.getItem('logged_user')) || { username: 'مجهول', role: 'employee' };
         let simsList = [];
         let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull', 'روتر زين'];
-        let durationsList = ['30', '60'];
+        let durationsList = ['0', '30', '60'];
+
+        function ensureBaseDurations() {
+            ['0', '30', '60'].forEach(d => {
+                if (!durationsList.map(String).includes(d)) {
+                    durationsList.unshift(d);
+                }
+            });
+        }
         let stockInventory = {};
         let scannedCountsByGroup = {};
         let currentScanMode = 'sim'; // 'sim' أو 'router'
@@ -189,7 +197,9 @@
                 const key = `${entry.op}::${entry.collectionName}::${entry.docId || ''}`;
                 if (entry.op === 'delete') {
                     const withoutPrior = q.filter(i => !(i.collectionName === entry.collectionName && String(i.docId) === String(entry.docId)));
-                    withoutPrior.push({ ...entry, timestamp: Date.now() });
+                    if (!String(entry.docId).startsWith('local_')) {
+                        withoutPrior.push({ ...entry, timestamp: Date.now() });
+                    }
                     localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(withoutPrior));
                     notifyParentQueueUpdated();
                     return;
@@ -393,6 +403,7 @@
         function onCategoryChange() {
             const catSelect = document.getElementById('categorySelect').value;
             const durSelect = document.getElementById('durationSelect');
+            if (String(durSelect.value).trim() === '0') return;
             
             if (catSelect === 'STC' || catSelect === 'Mobily' || catSelect === 'Zain') {
                 if (!durationsList.includes('60')) durationsList.push('60');
@@ -415,11 +426,13 @@
                 catSelect.value = prevCat;
             }
 
+            ensureBaseDurations();
             const durSelect = document.getElementById('durationSelect');
             const prevDur = selectedDur !== null ? selectedDur : durSelect.value;
             let durHtml = `<option value="">-- اختر المدة --</option>`;
             durationsList.forEach(d => {
-                durHtml += `<option value="${d}">${d}</option>`;
+                const label = String(d) === '0' ? '0 (بدل تالف)' : d;
+                durHtml += `<option value="${d}">${label}</option>`;
             });
             durSelect.innerHTML = durHtml;
             if (prevDur && [...durSelect.options].some(o => o.value === prevDur)) {
@@ -439,15 +452,20 @@
             simsList.forEach(item => {
                 const cat = item.category || item.company || 'Mobily';
                 let dur = item.duration;
-                if (!dur || dur === '-' || dur === 'غير محدد' || dur === '') {
+                if (dur === undefined || dur === null || dur === '-' || dur === 'غير محدد' || String(dur).trim() === '') {
                     dur = (cat === 'Redbull') ? '30' : '60';
                     item.duration = dur;
+                } else {
+                    dur = String(dur).trim();
                 }
-                // استبعاد وخصم الشرائح المرتجعة من الممسوح والمخزون
-                if (isSimReturned(item)) return;
 
                 const itemKey = `${cat} (${dur})`;
-                scannedCountsByGroup[itemKey] = (scannedCountsByGroup[itemKey] || 0) + 1;
+                if (!isSimReturned(item)) {
+                    scannedCountsByGroup[itemKey] = (scannedCountsByGroup[itemKey] || 0) + 1;
+                }
+
+                // شرائح بدل التالف بمدة (0) لا تُضاف لرصيد البيع، والشرائح المرتجعة لا تخصم من المخزون الأساسي
+                if (dur === '0') return;
                 autoStock[itemKey] = (autoStock[itemKey] || 0) + 1;
             });
 
@@ -455,7 +473,7 @@
                 const sign = isReturnInvoice(r) ? -1 : 1;
                 if (r.cartItems && Array.isArray(r.cartItems)) {
                     r.cartItems.forEach(ci => {
-                        if (!ci.item || !ci.item.includes('(')) return;
+                        if (!ci.item || !ci.item.includes('(') || ci.item.endsWith('(0)')) return;
                         if (autoStock[ci.item] === undefined) autoStock[ci.item] = 0;
                         autoStock[ci.item] -= sign * (parseFloat(ci.qty) || 0);
                     });
@@ -465,7 +483,7 @@
             stockInventory = {};
             const allKeys = new Set([...Object.keys(autoStock), ...Object.keys(stockOffsets)]);
             allKeys.forEach(key => {
-                if (!key.includes('(')) return;
+                if (!key.includes('(') || key.endsWith('(0)')) return;
                 const base = autoStock[key] || 0;
                 const offset = stockOffsets[key] !== undefined ? parseFloat(stockOffsets[key]) : 0;
                 const finalQty = base + offset;
@@ -592,7 +610,8 @@
             const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
             if (localConfig) {
                 categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
-                durationsList = localConfig.durationsList || ['30', '60'];
+                durationsList = localConfig.durationsList || ['0', '30', '60'];
+            ensureBaseDurations();
             }
             ensureRouterCategoryExists();
 
@@ -620,6 +639,7 @@
                         if (cloudTs >= localTs) {
                             categoriesList = data.categoriesList || data.customItems || categoriesList;
                             durationsList = data.durationsList || durationsList;
+                            ensureBaseDurations();
                             ensureRouterCategoryExists();
                             const merged = { ...currentLocalCfg, ...data, categoriesList };
                             localStorage.setItem('app_config', JSON.stringify(merged));
@@ -993,10 +1013,10 @@
         function getFixedDuration(item) {
             let dur = item.duration;
             const cat = item.category || item.company || '';
-            if (!dur || dur === '-' || dur === 'غير محدد' || dur === '') {
+            if (dur === undefined || dur === null || dur === '-' || dur === 'غير محدد' || String(dur).trim() === '') {
                 return (cat === 'Redbull') ? '30' : '60';
             }
-            return dur;
+            return String(dur).trim();
         }
 
         window.renderTable = function() {
