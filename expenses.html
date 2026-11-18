@@ -165,6 +165,18 @@
             font-size: 0.82rem;
             font-weight: 700;
         }
+        .btn-edit-row {
+            background: #fef3c7;
+            color: #d97706;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 4px;
+        }
+        .btn-edit-row:hover { background: #d97706; color: white; }
         .btn-del-row {
             background: #fee2e2;
             color: var(--danger);
@@ -221,8 +233,9 @@
         <input type="month" id="monthPicker" class="month-input" onchange="renderAll()">
     </div>
 
-    <div class="card">
-        <h2>➕ إضافة مصروف جديد</h2>
+    <div class="card" id="expenseFormCard">
+        <h2 id="expenseFormTitle">➕ إضافة مصروف جديد</h2>
+        <input type="hidden" id="editExpenseId" value="">
         <div class="form-grid">
             <div class="form-group">
                 <label>المبلغ</label>
@@ -252,6 +265,7 @@
 
             <div class="form-group full-width">
                 <button type="button" class="btn-submit" id="submitExpenseBtn" onclick="saveExpense()">💾 إضافة</button>
+                <button type="button" id="cancelExpenseEditBtn" onclick="cancelExpenseEdit()" style="display:none; width:100%; margin-top:8px; padding:10px; border:none; border-radius:8px; background:#e5e7eb; color:#374151; font-weight:bold; cursor:pointer;">إلغاء التعديل</button>
             </div>
         </div>
     </div>
@@ -267,7 +281,7 @@
                         <th>الوصف</th>
                         <th>القائم بالصرف</th>
                         <th>التاريخ</th>
-                        <th>حذف</th>
+                        <th>إجراء</th>
                     </tr>
                 </thead>
                 <tbody id="expensesTableBody"></tbody>
@@ -540,26 +554,39 @@
 
                 const pendingExpIds = getPendingIdsForCollection("expenses");
                 const pendingExpDeletes = getPendingDeletesForCollection("expenses");
-                const localUnsynced = expenses.filter(e =>
-                    !pendingExpDeletes.has(String(e.id)) &&
-                    (String(e.id).startsWith('local_') || pendingExpIds.has(String(e.id)))
-                );
+                const localMap = new Map();
+                expenses.forEach(e => {
+                    if (e.id && !pendingExpDeletes.has(String(e.id))) {
+                        localMap.set(String(e.id), e);
+                    }
+                });
 
                 const querySnapshot = await window.getDocs(window.collection(window.db, "expenses"));
-                const cloudExpenses = [];
+                const mergedExpenses = [];
                 querySnapshot.forEach((docSnap) => {
-                    if (pendingExpIds.has(String(docSnap.id)) || pendingExpDeletes.has(String(docSnap.id))) return;
-                    const data = docSnap.data();
-                    cloudExpenses.push({ ...data, id: docSnap.id });
+                    const docId = String(docSnap.id);
+                    if (pendingExpDeletes.has(docId)) return;
+                    const data = { ...docSnap.data(), id: docId };
                     if (data.spender && data.spender.trim()) {
                         mergedSpenders.add(data.spender.trim());
+                    }
+                    const locExp = localMap.get(docId);
+                    if (locExp && (pendingExpIds.has(docId) || (locExp.updatedAt || 0) > (data.updatedAt || 0))) {
+                        mergedExpenses.push(locExp);
+                    } else {
+                        mergedExpenses.push(data);
+                    }
+                    localMap.delete(docId);
+                });
+
+                localMap.forEach((remExp, idKey) => {
+                    if (String(idKey).startsWith('local_') || pendingExpIds.has(String(idKey))) {
+                        mergedExpenses.push(remExp);
                     }
                 });
 
                 spendersList = Array.from(mergedSpenders);
                 localStorage.setItem('expenses_spenders_offline', JSON.stringify(spendersList));
-
-                const mergedExpenses = [...localUnsynced, ...cloudExpenses];
                 mergedExpenses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 expenses = mergedExpenses;
                 localStorage.setItem('expenses_records_offline', JSON.stringify(expenses));
@@ -643,7 +670,36 @@
             });
         }
 
+        function editExpense(id) {
+            const item = expenses.find(e => String(e.id) === String(id));
+            if (!item) return;
+            document.getElementById('editExpenseId').value = item.id;
+            document.getElementById('expAmount').value = item.amount;
+            if (item.spender && !spendersList.includes(item.spender)) {
+                spendersList.push(item.spender);
+            }
+            renderSpendersDropdown(item.spender || '');
+            document.getElementById('expDate').value = item.date || getTodayStr();
+            document.getElementById('expDesc').value = item.description || '';
+            document.getElementById('expenseFormTitle').textContent = '✏️ تعديل المصروف';
+            document.getElementById('submitExpenseBtn').textContent = '💾 حفظ التعديل';
+            document.getElementById('cancelExpenseEditBtn').style.display = 'block';
+            document.getElementById('expenseFormCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelExpenseEdit() {
+            document.getElementById('editExpenseId').value = '';
+            document.getElementById('expAmount').value = '';
+            document.getElementById('expDesc').value = '';
+            document.getElementById('expDate').value = getTodayStr();
+            document.getElementById('expenseFormTitle').textContent = '➕ إضافة مصروف جديد';
+            document.getElementById('submitExpenseBtn').textContent = '💾 إضافة';
+            document.getElementById('cancelExpenseEditBtn').style.display = 'none';
+            saveDraft();
+        }
+
         async function saveExpense() {
+            const editId = document.getElementById('editExpenseId').value;
             const amountEl = document.getElementById('expAmount');
             const spenderEl = document.getElementById('expSpender');
             const dateEl = document.getElementById('expDate');
@@ -677,7 +733,8 @@
             btn.disabled = true;
             btn.textContent = '⏳ جاري الحفظ...';
 
-            const cycleMonth = getAccountingMonth(date, Date.now());
+            const nowTs = Date.now();
+            const cycleMonth = getAccountingMonth(date, nowTs);
 
             const expenseData = {
                 amount: amount,
@@ -686,10 +743,46 @@
                 description: description,
                 cycleMonth: cycleMonth,
                 addedBy: currentUser.username || 'admin',
-                createdAt: Date.now()
+                createdAt: nowTs,
+                updatedAt: nowTs
             };
 
-            const tempId = 'local_' + Date.now();
+            if (editId) {
+                const idx = expenses.findIndex(e => String(e.id) === String(editId));
+                if (idx !== -1) {
+                    expenseData.createdAt = expenses[idx].createdAt || nowTs;
+                    expenses[idx] = { ...expenses[idx], ...expenseData, id: editId };
+                }
+                localStorage.setItem('expenses_records_offline', JSON.stringify(expenses));
+
+                try {
+                    if (!window.db || !navigator.onLine) throw new Error('offline');
+                    if (String(editId).startsWith('local_')) {
+                        const docRef = await window.addDoc(window.collection(window.db, "expenses"), expenseData);
+                        if (idx !== -1) expenses[idx].id = docRef.id;
+                        localStorage.setItem('expenses_records_offline', JSON.stringify(expenses));
+                    } else {
+                        await window.setDoc(window.doc(window.db, "expenses", String(editId)), expenseData, { merge: true });
+                    }
+                } catch (e) {
+                    queueCloudOperation({
+                        op: String(editId).startsWith('local_') ? 'add' : 'set',
+                        collectionName: 'expenses',
+                        docId: String(editId),
+                        data: { ...expenseData },
+                        merge: true,
+                        localStorageKey: 'expenses_records_offline',
+                        idField: 'id'
+                    });
+                } finally {
+                    btn.disabled = false;
+                    cancelExpenseEdit();
+                    renderAll();
+                }
+                return;
+            }
+
+            const tempId = 'local_' + nowTs;
             try {
                 if (!window.db || !navigator.onLine) {
                     expenses.unshift({ id: tempId, ...expenseData });
@@ -711,12 +804,8 @@
                 });
             } finally {
                 localStorage.setItem('expenses_records_offline', JSON.stringify(expenses));
-                amountEl.value = '';
-                descEl.value = '';
-                dateEl.value = getTodayStr();
-                saveDraft();
                 btn.disabled = false;
-                btn.textContent = '💾 إضافة';
+                cancelExpenseEdit();
                 renderAll();
             }
         }
@@ -788,6 +877,7 @@
                     <td><span class="person-badge">${item.spender}</span></td>
                     <td><strong>${item.date}</strong></td>
                     <td>
+                        <button type="button" class="btn-edit-row" onclick="editExpense('${item.id}')">✏️ تعديل</button>
                         <button type="button" class="btn-del-row" onclick="deleteExpense('${item.id}')">🗑️ حذف</button>
                     </td>
                 </tr>
