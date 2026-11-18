@@ -495,23 +495,24 @@
             });
         }
 
-        function markOldSimsSilently() {
-            const toMark = simsList.filter(s => s.status === undefined);
-            if (toMark.length === 0) return;
+        function resetUnassignedDispatchedSims() {
+            const toReset = simsList.filter(s => s.status === 'dispatched' && (!s.clientName || !String(s.clientName).trim()));
+            if (toReset.length === 0) return;
 
             const now = Date.now();
-            toMark.forEach(s => {
-                s.status = 'dispatched';
-                if (!s.dispatchDate) s.dispatchDate = s.date || getTodayStr();
-                if (!s.actionDate) s.actionDate = s.date || getTodayStr();
+            toReset.forEach(s => {
+                s.status = '';
+                s.dispatchDate = '';
+                s.actionDate = '';
+                s.dispatchTimestamp = 0;
                 s.updatedAt = now;
             });
 
             localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
 
-            toMark.forEach(s => {
+            toReset.forEach(s => {
                 if (window.db && navigator.onLine) {
-                    window.setDoc(window.doc(window.db, "scanned_sims", s.code), s, { merge: true }).catch(() => {
+                    window.setDoc(window.doc(window.db, "scanned_sims", String(s.code)), s, { merge: true }).catch(() => {
                         queueCloudOperation({
                             op: 'set',
                             collectionName: 'scanned_sims',
@@ -706,7 +707,7 @@
                 console.log("وضع الأوفلاين مفعل.");
             }
 
-            markOldSimsSilently();
+            resetUnassignedDispatchedSims();
             localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
             recalculateUnifiedStock();
             await saveConfigAndSync();
