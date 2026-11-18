@@ -145,7 +145,7 @@
     </div>
 
     <div class="card">
-        <input type="text" id="searchInput" placeholder="🔍 البحث بالباركود، التصنيف، المدة، التاريخ، أو اسم اليوزر..." oninput="renderTable()">
+        <input type="text" id="searchInput" placeholder="🔍 البحث بالباركود، التصنيف، المدة، التاريخ، الرمز، العميل، أو اسم اليوزر..." oninput="renderTable()">
         <div class="table-wrap">
             <table>
                 <thead>
@@ -271,8 +271,15 @@
 
         window.addEventListener('message', (e) => {
             if (e.data && e.data.type === 'SIM_CLOUD_SYNCED') {
+                const localConfig = JSON.parse(localStorage.getItem('app_config') || '{}');
+                if (localConfig) {
+                    categoriesList = localConfig.categoriesList || localConfig.customItems || categoriesList;
+                    durationsList = localConfig.durationsList || durationsList;
+                }
+                ensureRouterCategoryExists();
                 simsList = JSON.parse(localStorage.getItem('scanned_sims_offline') || '[]');
                 recalculateUnifiedStock();
+                renderDropdowns();
                 renderTable();
             }
         });
@@ -448,6 +455,7 @@
                 const sign = isReturnInvoice(r) ? -1 : 1;
                 if (r.cartItems && Array.isArray(r.cartItems)) {
                     r.cartItems.forEach(ci => {
+                        if (!ci.item || !ci.item.includes('(')) return;
                         if (autoStock[ci.item] === undefined) autoStock[ci.item] = 0;
                         autoStock[ci.item] -= sign * (parseFloat(ci.qty) || 0);
                     });
@@ -457,6 +465,7 @@
             stockInventory = {};
             const allKeys = new Set([...Object.keys(autoStock), ...Object.keys(stockOffsets)]);
             allKeys.forEach(key => {
+                if (!key.includes('(')) return;
                 const base = autoStock[key] || 0;
                 const offset = stockOffsets[key] !== undefined ? parseFloat(stockOffsets[key]) : 0;
                 const finalQty = base + offset;
@@ -628,6 +637,8 @@
 
                     const querySnapshot = await window.getDocs(window.collection(window.db, "scanned_sims"));
                     const mergedSims = [];
+                    const pendingCloudUpdates = [];
+
                     querySnapshot.forEach((docSnap) => {
                         const data = docSnap.data();
                         if (!data.code) data.code = docSnap.id;
@@ -637,11 +648,11 @@
                         if (pendingDeleteIds.has(codeKey)) return;
 
                         const locSim = localMap.get(codeKey);
-                        const isCloudReturned = isSimReturned(data);
                         const isLocalPending = pendingSimIds.has(codeKey);
 
-                        if (locSim && (isLocalPending || (!isCloudReturned && (locSim.updatedAt || 0) > (data.updatedAt || 0)))) {
+                        if (locSim && (isLocalPending || (locSim.updatedAt || 0) > (data.updatedAt || 0))) {
                             mergedSims.push(locSim);
+                            pendingCloudUpdates.push(locSim);
                         } else {
                             mergedSims.push(data);
                         }
@@ -651,10 +662,25 @@
                     localMap.forEach((remSim, codeKey) => {
                         if (pendingSimIds.has(codeKey)) {
                             mergedSims.push(remSim);
+                            pendingCloudUpdates.push(remSim);
                         }
                     });
 
                     simsList = mergedSims;
+
+                    for (const upSim of pendingCloudUpdates) {
+                        try {
+                            await window.setDoc(window.doc(window.db, "scanned_sims", String(upSim.code)), upSim, { merge: true });
+                        } catch (err) {
+                            queueCloudOperation({
+                                op: 'set',
+                                collectionName: 'scanned_sims',
+                                docId: String(upSim.code),
+                                data: { ...upSim },
+                                merge: true
+                            });
+                        }
+                    }
                 }
             } catch (e) {
                 console.log("وضع الأوفلاين مفعل.");
@@ -991,11 +1017,16 @@
                 const cat = item.category || item.company || '';
                 const dur = getFixedDuration(item);
                 if (!search) return true;
-                return (item.code && item.code.toLowerCase().includes(search)) ||
+                return (item.code && String(item.code).toLowerCase().includes(search)) ||
                        (cat.toLowerCase().includes(search)) ||
-                       (dur.toLowerCase().includes(search)) ||
-                       (item.date && item.date.toLowerCase().includes(search)) ||
-                       (item.addedBy && item.addedBy.toLowerCase().includes(search));
+                       (String(dur).toLowerCase().includes(search)) ||
+                       (item.date && String(item.date).toLowerCase().includes(search)) ||
+                       (item.dispatchDate && String(item.dispatchDate).toLowerCase().includes(search)) ||
+                       (item.returnDate && String(item.returnDate).toLowerCase().includes(search)) ||
+                       (item.tagCode && String(item.tagCode).toLowerCase().includes(search)) ||
+                       (item.clientName && String(item.clientName).toLowerCase().includes(search)) ||
+                       (item.shopName && String(item.shopName).toLowerCase().includes(search)) ||
+                       (item.addedBy && String(item.addedBy).toLowerCase().includes(search));
             });
 
             if (filtered.length === 0) {
