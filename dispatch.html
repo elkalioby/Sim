@@ -169,18 +169,18 @@
         #msg { padding: 12px; border-radius: 8px; text-align: center; font-weight: 800; display: none; margin-bottom: 10px; font-size: 0.9rem; line-height: 1.5; }
 
         .filters-bar {
-            display: grid; grid-template-columns: 1.12fr 0.88fr; gap: 8px;
-            margin-bottom: 12px; background: #f1f5f9; padding: 10px; border-radius: 10px; align-items: end;
+            display: grid; grid-template-columns: 0.82fr 1.18fr; gap: 6px;
+            margin-bottom: 12px; background: #f1f5f9; padding: 9px; border-radius: 10px; align-items: end;
         }
         .filter-item { display: flex; flex-direction: column; min-width: 0; }
-        .filter-item select { height: 40px; padding: 6px 8px; font-weight: 700; font-size: 0.86rem; width: 100%; }
+        .filter-item select { height: 40px; padding: 6px 8px; font-weight: 700; font-size: 0.85rem; width: 100%; }
         .filter-row-flex { display: flex; gap: 4px; align-items: center; min-width: 0; }
         .filter-row-flex input[type="month"] {
             flex: 1; min-width: 0; height: 40px; margin: 0;
-            padding: 4px 4px; font-size: 0.78rem; font-weight: 700; text-align: center;
+            padding: 4px 6px; font-size: 0.82rem; font-weight: 700; text-align: center;
         }
         .filter-row-flex button {
-            width: auto; height: 40px; padding: 0 9px; font-size: 0.78rem;
+            width: auto; height: 40px; padding: 0 8px; font-size: 0.78rem;
             white-space: nowrap; margin: 0; flex-shrink: 0;
         }
 
@@ -236,7 +236,7 @@
         }
 
         .modal-box { background: #fff; padding: 18px; border-radius: 14px; width: 100%; max-width: 420px; }
-
+    
         .fixed-tag-box {
             margin-top: 10px;
             background: #f8fafc;
@@ -310,6 +310,7 @@
             font-weight: 900;
             font-size: 0.84rem;
         }
+
     </style>
 
     <script type="module">
@@ -480,8 +481,8 @@
                 <label style="margin-top:0;">نوع الحركة:</label>
                 <select id="statusFilter" onchange="saveDispatchDraft(); renderHistoryTable();">
                     <option value="ALL">الكل</option>
-                    <option value="dispatched">صرف فقط (✅)</option>
-                    <option value="returned">مرتجع فقط (❌)</option>
+                    <option value="dispatched">صرف (✅)</option>
+                    <option value="returned">مرتجع (❌)</option>
                 </select>
             </div>
             <div class="filter-item">
@@ -495,9 +496,20 @@
                 <label style="margin-top:0;">👤 العميل:</label>
                 <div class="filter-row-flex">
                     <select id="historyCustomerFilter" onchange="saveDispatchDraft(); renderHistoryTable();">
-                        <option value="">-- كل العملاء --</option>
+                        <option value="">الكل</option>
                     </select>
                     <button type="button" class="btn-sm btn-sm-blue" onclick="document.getElementById('historyCustomerFilter').value=''; saveDispatchDraft(); renderHistoryTable();">الكل</button>
+                </div>
+            </div>
+            <div class="filter-item" style="grid-column: 1 / -1;">
+                <label style="margin-top:0;">📦 النوع:</label>
+                <div class="filter-row-flex">
+                    <select id="historyItemTypeFilter" onchange="saveDispatchDraft(); renderHistoryTable();">
+                        <option value="sim" selected>📱 شريحة</option>
+                        <option value="router">📡 راوتر</option>
+                        <option value="ALL">الكل</option>
+                    </select>
+                    <button type="button" class="btn-sm btn-sm-blue" onclick="document.getElementById('historyItemTypeFilter').value='ALL'; saveDispatchDraft(); renderHistoryTable();">الكل</button>
                 </div>
             </div>
         </div>
@@ -971,7 +983,7 @@
             });
 
             const sortedEntries = Array.from(custMap.entries()).sort((a, b) => a[0].localeCompare(b[0], 'ar'));
-            let html = `<option value="">-- كل العملاء (${sortedEntries.length}) --</option>`;
+            let html = `<option value="">الكل</option>`;
             sortedEntries.forEach(([val, label]) => {
                 const escapedVal = val.replace(/"/g, '&quot;');
                 html += `<option value="${escapedVal}">${label}</option>`;
@@ -981,6 +993,31 @@
             if (targetVal && custMap.has(targetVal)) {
                 selectEl.value = targetVal;
             }
+        }
+
+        function isRouterRecord(sim) {
+            if (!sim) return false;
+            const cat = String(resolveSimCategory(sim) || '').trim();
+            if (/روتر|راوتر|router/i.test(cat)) return true;
+            const code = String(sim.code || '').trim();
+            if (code && !code.startsWith('89966') && code.length >= 14 && code.length <= 16) return true;
+            return false;
+        }
+
+        function formatArabicMonthLabel(ymStr) {
+            if (!ymStr) return 'كل الفترات';
+            const parts = String(ymStr).split('-');
+            if (parts.length !== 2) return ymStr;
+            const monthsAr = [
+                'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+                'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+            ];
+            const y = parts[0];
+            const mIdx = parseInt(parts[1], 10) - 1;
+            if (mIdx >= 0 && mIdx < 12) {
+                return `${monthsAr[mIdx]} ${y}`;
+            }
+            return `${parts[1]}/${y}`;
         }
 
         function saveDispatchDraft() {
@@ -995,6 +1032,7 @@
                 monthFilter: document.getElementById('monthFilter').value,
                 statusFilter: document.getElementById('statusFilter').value,
                 historyCustomerFilter: document.getElementById('historyCustomerFilter') ? document.getElementById('historyCustomerFilter').value : '',
+                historyItemTypeFilter: document.getElementById('historyItemTypeFilter') ? document.getElementById('historyItemTypeFilter').value : 'sim',
                 mainSearchInput: document.getElementById('mainSearchInput').value
             };
             localStorage.setItem('sim_dispatch_draft', JSON.stringify(draft));
@@ -1041,6 +1079,9 @@
                 }
                 if (draft.historyCustomerFilter !== undefined && document.getElementById('historyCustomerFilter')) {
                     document.getElementById('historyCustomerFilter').value = draft.historyCustomerFilter;
+                }
+                if (draft.historyItemTypeFilter !== undefined && document.getElementById('historyItemTypeFilter')) {
+                    document.getElementById('historyItemTypeFilter').value = draft.historyItemTypeFilter;
                 }
                 if (draft.mainSearchInput !== undefined) {
                     document.getElementById('mainSearchInput').value = draft.mainSearchInput;
@@ -2324,6 +2365,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             const statusVal = document.getElementById('statusFilter').value;
             const custSelectEl = document.getElementById('historyCustomerFilter');
             const custVal = custSelectEl ? custSelectEl.value.trim() : '';
+            const itemTypeEl = document.getElementById('historyItemTypeFilter');
+            const itemTypeVal = itemTypeEl ? itemTypeEl.value : 'sim';
             const rawSearch = normalizeDigits((document.getElementById('mainSearchInput').value || '').trim());
             const searchLower = rawSearch.toLowerCase();
 
@@ -2331,6 +2374,9 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
             const filtered = activeSims.filter(s => {
                 if (statusVal !== 'ALL' && s.status !== statusVal) return false;
+
+                if (itemTypeVal === 'sim' && isRouterRecord(s)) return false;
+                if (itemTypeVal === 'router' && !isRouterRecord(s)) return false;
 
                 if (custVal && String(s.clientName || '').trim() !== custVal) return false;
 
@@ -2365,10 +2411,11 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             const filterLabelEl = document.getElementById('historyFilterLabel');
             const filterCountersEl = document.getElementById('historyFilterCounters');
             if (filterLabelEl && filterCountersEl) {
-                const periodText = monthVal ? `📅 ${monthVal}` : '📅 كل الفترات';
+                const periodText = monthVal ? `📅 ${formatArabicMonthLabel(monthVal)}` : '📅 كل الفترات';
+                const typeText = itemTypeVal === 'sim' ? '📱 شرائح' : (itemTypeVal === 'router' ? '📡 راوترات' : '📦 الكل');
                 filterLabelEl.innerText = custVal
-                    ? `👤 العميل: ${custVal} (${periodText})`
-                    : `📊 جميع العملاء (${periodText})`;
+                    ? `👤 ${custVal} • ${typeText} (${periodText})`
+                    : `📊 ${typeText} (${periodText})`;
 
                 let pillsHtml = '';
                 if (statusVal === 'dispatched') {
@@ -2447,8 +2494,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                         <td>${clientDisplay}</td>
                         <td><span class="cat-badge">${cat}</span></td>
                         <td><span class="dur-badge">${dur}</span></td>
-                        <td>${s.dispatchDate || s.date || '-'}</td>
-                        <td style="color:#dc2626; font-weight:700;">${s.returnDate || '-'}</td>
+                        <td style="direction:ltr;">${s.dispatchDate || s.date || '-'}</td>
+                        <td style="color:#dc2626; font-weight:700; direction:ltr;">${s.returnDate || '-'}</td>
                         <td>
                             <div class="action-btns-wrap">
                                 <button type="button" class="icon-action-btn icon-edit-btn" onclick="openEditSimModal('${s.code}')" title="تعديل">✏️</button>
