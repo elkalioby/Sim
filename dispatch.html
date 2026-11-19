@@ -202,6 +202,10 @@
         table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
         th, td { border: 1px solid var(--border); padding: 8px 6px; text-align: center; white-space: nowrap; }
         th { background: #1e293b; color: white; font-weight: 700; }
+        @media (max-width: 600px) {
+            table { font-size: 0.76rem; }
+            th, td { padding: 6px 4px; }
+        }
         .serial-cell { font-family: monospace; font-weight: 800; font-size: 0.86rem; letter-spacing: 0.4px; }
         .tag-badge { background: #ede9fe; color: #5b21b6; padding: 3px 9px; border-radius: 6px; font-weight: 900; font-family: monospace; font-size: 0.85rem; }
         .cat-badge { background: #dbeafe; color: var(--primary); padding: 3px 9px; border-radius: 6px; font-weight: 800; }
@@ -624,7 +628,7 @@
         let stagingList = [];
         let tempImageUrls = [];
         let pendingFilesAfterKey = null;
-        let currentScanMode = 'sim'; // 'sim' أو 'router'
+        let currentScanMode = 'sim';
 
         // --- نظام المزامنة التلقائية الموحد (SimAutoSync Bridge) ---
         const SYNC_QUEUE_KEY = 'sim_offline_sync_queue';
@@ -833,7 +837,7 @@
         function getAccountingMonth(dateStr, timestampFallback) {
             let year = NaN, month = NaN, day = NaN;
             if (dateStr) {
-                const clean = String(dateStr).trim();
+                const clean = String(dateStr).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).trim();
                 const isoMatch = clean.match(/^(\d{4})[-/](\d{1,2})(?:[-/](\d{1,2}))?/);
                 const dmyMatch = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
                 if (isoMatch) {
@@ -890,6 +894,10 @@
             }
             const cat = catFallback || resolveSimCategory(sim);
             return (cat === 'Redbull') ? '30' : '60';
+        }
+
+        function isZeroDuration(s) {
+            return String(resolveSimDuration(s)).trim() === '0';
         }
 
         function renderDurationDropdowns() {
@@ -1702,7 +1710,7 @@
 
             const fallbackItems = [];
             const iccidRegex = /89966\d{12,15}/g;
-            const tagRegex = /\b([A-Za-z]\s*\d{1,4})\b/g;
+            const tagRegex = /([A-Za-z]\s*\d{1,4})/g;
             const codes = cleaned.match(iccidRegex) || [];
             const tags = (cleaned.match(tagRegex) || []).map(t => t.toUpperCase().replace(/\s+/g, ''));
             codes.forEach((c, idx) => {
@@ -1801,7 +1809,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     }
 
                     const result = await resp.json();
-                    const rawText = result?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('\n') || '';
+                    const rawText = result?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('
+') || '';
                     const extracted = parseGeminiResponseText(rawText);
                     if (extracted.length > 0) {
                         return extracted;
@@ -2462,18 +2471,34 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
             const activeSims = simsList.filter(s => (s.status === 'dispatched' && s.clientName && String(s.clientName).trim() !== '') || isSimReturned(s));
 
+            const matchesMonthForStatus = (s, targetStatus) => {
+                if (!monthVal) return true;
+                const isRet = isSimReturned(s);
+                if (targetStatus === 'returned') {
+                    if (!isRet) return false;
+                    const rDate = s.returnDate || s.actionDate || s.date;
+                    const rTs = s.returnTimestamp || s.timestamp;
+                    return getAccountingMonth(rDate, rTs) === monthVal;
+                }
+                if (targetStatus === 'dispatched') {
+                    if (isRet || s.status !== 'dispatched') return false;
+                    const dDate = s.dispatchDate || s.actionDate || s.date;
+                    const dTs = s.dispatchTimestamp || s.timestamp;
+                    return getAccountingMonth(dDate, dTs) === monthVal;
+                }
+                const effectiveDate = (isRet ? s.returnDate : s.dispatchDate) || s.actionDate || s.date;
+                const effectiveTs = (isRet ? s.returnTimestamp : s.dispatchTimestamp) || s.timestamp;
+                return getAccountingMonth(effectiveDate, effectiveTs) === monthVal;
+            };
+
             const baseFiltered = activeSims.filter(s => {
                 if (itemTypeVal === 'sim' && isRouterRecord(s)) return false;
                 if (itemTypeVal === 'router' && !isRouterRecord(s)) return false;
 
                 if (custVal && String(s.clientName || '').trim() !== custVal) return false;
 
-                if ((!searchLower || custVal) && monthVal) {
-                    const isRet = isSimReturned(s);
-                    const effectiveDate = (isRet ? s.returnDate : s.dispatchDate) || s.actionDate || s.date;
-                    const effectiveTs = (isRet ? s.returnTimestamp : s.dispatchTimestamp) || s.timestamp;
-                    const recMonth = getAccountingMonth(effectiveDate, effectiveTs);
-                    if (recMonth !== monthVal) return false;
+                if (!searchLower || custVal) {
+                    if (!matchesMonthForStatus(s, statusVal)) return false;
                 }
 
                 if (!searchLower) return true;
@@ -2498,7 +2523,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 return s.status === statusVal && !isSimReturned(s);
             });
 
-            const dispCount = baseFiltered.filter(s => s.status === 'dispatched' && !isSimReturned(s)).length;
+            // استبعاد المدة (0) من إجمالي المنصرف لأنها بدل مرتجع
+            const dispCount = baseFiltered.filter(s => s.status === 'dispatched' && !isSimReturned(s) && !isZeroDuration(s)).length;
             const retCount = baseFiltered.filter(s => isSimReturned(s)).length;
 
             const statDispEl = document.getElementById('statDispatchedCount');
@@ -2530,7 +2556,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                         clientsMap[cKey] = { shop: s.shopName || '', dispatched: 0, returned: 0, tags: new Set() };
                     }
                     if (isSimReturned(s)) clientsMap[cKey].returned++;
-                    else if (s.status === 'dispatched') clientsMap[cKey].dispatched++;
+                    else if (s.status === 'dispatched' && !isZeroDuration(s)) clientsMap[cKey].dispatched++;
                     if (s.tagCode) clientsMap[cKey].tags.add(s.tagCode);
                 });
 
