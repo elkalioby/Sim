@@ -178,7 +178,16 @@
     </div>
 
     <div class="card">
-        <input type="text" id="searchInput" placeholder="🔍 البحث بالباركود، التصنيف، المدة، التاريخ، الرمز، العميل، أو اسم اليوزر..." oninput="renderTable()">
+        <div class="row-group" style="margin-bottom: 8px;">
+            <input type="text" id="searchInput" style="flex: 1.4;" placeholder="🔍 البحث بالباركود، التصنيف، المدة، التاريخ، الرمز، العميل..." oninput="renderTable()">
+            <select id="statusFilterSelect" style="flex: 0.6; font-weight: bold;" onchange="renderTable()">
+                <option value="ALL">📋 كل الحالات</option>
+                <option value="dispatched">✅ منصرف</option>
+                <option value="returned">❌ مرتجع</option>
+                <option value="available">⬜ بالمخزون (متاح)</option>
+            </select>
+        </div>
+        <div id="tableResultCount" style="font-size: 12px; font-weight: bold; color: #1e3a8a; margin-bottom: 6px;"></div>
         <div class="table-wrap">
             <table class="main-table">
                 <thead>
@@ -1300,13 +1309,28 @@
 
             const tbody = document.getElementById('simTable');
             const search = document.getElementById('searchInput').value.trim().toLowerCase();
+            const statusFilter = document.getElementById('statusFilterSelect') ? document.getElementById('statusFilterSelect').value : 'ALL';
 
             const sorted = [...simsList].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
             const filtered = sorted.filter(item => {
+                const isRet = isSimReturned(item);
+                const isDisp = (!isRet && item.status === 'dispatched');
+
+                // فلترة حسب الحالة المختارة من القائمة المنسدلة
+                if (statusFilter === 'dispatched' && !isDisp) return false;
+                if (statusFilter === 'returned' && !isRet) return false;
+                if (statusFilter === 'available' && (isDisp || isRet)) return false;
+
                 const cat = item.category || item.company || '';
                 const dur = getFixedDuration(item);
                 const pkgCombo = `${cat} ${dur}`.toLowerCase();
                 if (!search) return true;
+
+                // دعم البحث النصي بكلمة الحالة أيضاً
+                if (search === 'منصرف' && isDisp) return true;
+                if (search === 'مرتجع' && isRet) return true;
+                if ((search === 'متاح' || search === 'بالمخزون') && !isDisp && !isRet) return true;
+
                 return (item.code && String(item.code).toLowerCase().includes(search)) ||
                        (cat.toLowerCase().includes(search)) ||
                        (String(dur).toLowerCase().includes(search)) ||
@@ -1320,8 +1344,13 @@
                        (item.addedBy && String(item.addedBy).toLowerCase().includes(search));
             });
 
+            const countEl = document.getElementById('tableResultCount');
+            if (countEl) {
+                countEl.innerText = `📊 عدد النتائج المعروضة: ${filtered.length}`;
+            }
+
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="padding:15px; color:#64748b; font-weight:bold;">لا توجد شرائح مسجلة</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="padding:15px; color:#64748b; font-weight:bold;">لا توجد شرائح مطابقة</td></tr>`;
                 return;
             }
 
