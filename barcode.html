@@ -203,9 +203,43 @@
         let categoriesList = ['Mobily', 'STC', 'Zain', 'Redbull', 'روتر زين'];
         let durationsList = ['0', '30', '60'];
 
+        // دالة حساب الشهر المحاسبي الموحدة: الشهر يبدأ يوم 5 وينتهي يوم 4 من الشهر التالي
+        function getAccountingMonth(dateStr, timestampFallback) {
+            let year = NaN, month = NaN, day = NaN;
+            if (dateStr) {
+                const clean = String(dateStr).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).trim();
+                const isoMatch = clean.match(/^(\d{4})[-/](\d{1,2})(?:[-/](\d{1,2}))?/);
+                const dmyMatch = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+                if (isoMatch) {
+                    year = parseInt(isoMatch[1], 10);
+                    month = parseInt(isoMatch[2], 10);
+                    day = isoMatch[3] ? parseInt(isoMatch[3], 10) : 5;
+                } else if (dmyMatch) {
+                    day = parseInt(dmyMatch[1], 10);
+                    month = parseInt(dmyMatch[2], 10);
+                    year = parseInt(dmyMatch[3], 10);
+                }
+            }
+            if ((isNaN(year) || isNaN(month)) && timestampFallback) {
+                const d = new Date(Number(timestampFallback));
+                if (!isNaN(d.getTime())) {
+                    year = d.getFullYear();
+                    month = d.getMonth() + 1;
+                    day = d.getDate();
+                }
+            }
+            if (isNaN(year) || isNaN(month)) return '';
+            if (!isNaN(day) && day < 5) {
+                month -= 1;
+                if (month < 1) { month = 12; year -= 1; }
+            }
+            return `${year}-${String(month).padStart(2, '0')}`;
+        }
+
         function getCurrentYearMonth() {
             const d = new Date();
-            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            return getAccountingMonth(todayStr, d.getTime());
         }
         let selectedStatsMonth = getCurrentYearMonth();
 
@@ -356,27 +390,10 @@
         }
 
         function extractYearMonthFromRecord(item, fieldName) {
-            const rawDate = item[fieldName];
-            if (rawDate && typeof rawDate === 'string' && rawDate.length >= 7) {
-                const normalized = rawDate.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
-                const match = normalized.match(/(\d{4})[-\/](\d{1,2})/);
-                if (match) {
-                    return `${match[1]}-${String(match[2]).padStart(2, '0')}`;
-                }
-            }
-            if (fieldName === 'date' && item.timestamp) {
-                const d = new Date(item.timestamp);
-                if (!isNaN(d.getTime())) {
-                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                }
-            }
-            if (fieldName === 'dispatchDate' && item.dispatchTimestamp) {
-                const d = new Date(item.dispatchTimestamp);
-                if (!isNaN(d.getTime())) {
-                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                }
-            }
-            return '';
+            const tsField = fieldName === 'dispatchDate'
+                ? item.dispatchTimestamp
+                : (fieldName === 'returnDate' ? item.returnTimestamp : item.timestamp);
+            return getAccountingMonth(item[fieldName], tsField);
         }
 
         function populateMonthSelector() {
@@ -465,6 +482,7 @@
             simsList.forEach(item => {
                 const cat = item.category || item.company || 'Mobily';
                 const dur = getFixedDuration(item);
+                const isZeroDur = String(dur).trim() === '0';
 
                 const inYm = extractYearMonthFromRecord(item, 'date');
                 const dispYm = extractYearMonthFromRecord(item, 'dispatchDate') || extractYearMonthFromRecord(item, 'actionDate') || inYm;
@@ -479,8 +497,8 @@
                     totalScanned += 1;
                 }
 
-                // 2. المنصرف (المصروف خلال الشهر المحدد)
-                if (item.status === 'dispatched' && !isSimReturned(item)) {
+                // 2. المنصرف (المصروف خلال الشهر المحدد - مع استبعاد المدة 0 لأنها بدل مرتجع)
+                if (item.status === 'dispatched' && !isSimReturned(item) && !isZeroDur) {
                     if (isAll || dispYm === selectedStatsMonth) {
                         const grp = ensureGroup(cat, dur);
                         grp.dispatched += 1;
