@@ -1354,6 +1354,33 @@
                 console.log("وضع الأوفلاين مفعل.");
             }
 
+            const orphanDispatched = simsList.filter(s => s.status === 'dispatched' && (!s.clientName || !String(s.clientName).trim()));
+            if (orphanDispatched.length > 0) {
+                const nowReset = Date.now();
+                orphanDispatched.forEach(s => {
+                    s.status = '';
+                    s.dispatchDate = '';
+                    s.actionDate = '';
+                    s.dispatchTimestamp = 0;
+                    s.updatedAt = nowReset;
+                });
+                localStorage.setItem('scanned_sims_offline', JSON.stringify(simsList));
+                for (const s of orphanDispatched) {
+                    try {
+                        if (!window.db || !navigator.onLine) throw new Error('offline');
+                        await window.setDoc(window.doc(window.db, "scanned_sims", String(s.code)), s, { merge: true });
+                    } catch (err) {
+                        queueCloudOperation({
+                            op: 'set',
+                            collectionName: 'scanned_sims',
+                            docId: String(s.code),
+                            data: { ...s },
+                            merge: true
+                        });
+                    }
+                }
+            }
+
             await recalculateAndSyncGlobalStock();
             populateHistoryCustomerFilter();
             renderStagingTable();
@@ -2230,12 +2257,12 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             }
 
             if (mode === 'dispatch') {
-                if (sim.status === 'dispatched') {
+                if (sim.status === 'dispatched' && sim.clientName && String(sim.clientName).trim() !== '') {
                     return {
                         valid: false,
                         category: category,
                         duration: duration,
-                        html: `<span class="warn-pill">🚫 مصروفة مسبقاً للعميل: ${sim.clientName || 'مسجل سابقاً'} (${sim.tagCode || '-'})</span>`
+                        html: `<span class="warn-pill">🚫 مصروفة مسبقاً للعميل: ${sim.clientName} (${sim.tagCode || '-'})</span>`
                     };
                 }
                 if (isSimReturned(sim)) {
@@ -2433,7 +2460,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
             const rawSearch = normalizeDigits((document.getElementById('mainSearchInput').value || '').trim());
             const searchLower = rawSearch.toLowerCase();
 
-            const activeSims = simsList.filter(s => s.status === 'dispatched' || isSimReturned(s));
+            const activeSims = simsList.filter(s => (s.status === 'dispatched' && s.clientName && String(s.clientName).trim() !== '') || isSimReturned(s));
 
             const baseFiltered = activeSims.filter(s => {
                 if (itemTypeVal === 'sim' && isRouterRecord(s)) return false;
