@@ -305,16 +305,6 @@
             font-weight: 900;
             font-size: 0.84rem;
         }
-        .counter-pill-total {
-            background: #e0e7ff;
-            color: #1e3a8a;
-            border: 1px solid #a5b4fc;
-            padding: 4px 10px;
-            border-radius: 8px;
-            font-weight: 900;
-            font-size: 0.84rem;
-        }
-
     </style>
 
     <script type="module">
@@ -550,7 +540,6 @@
         </div>
     </div>
 
-    <!-- نافذة تكبير الصورة مع زر إغلاق (✕) على اليمين -->
     <div class="modal-overlay" id="imgModal" onclick="closeImgModal(event)">
         <div class="modal-content-wrap">
             <button type="button" class="modal-close-btn" onclick="closeImgModal(null)">✕</button>
@@ -558,12 +547,11 @@
         </div>
     </div>
 
-    <!-- نافذة إعداد مفتاح Gemini API -->
     <div class="modal-overlay" id="geminiKeyModal">
         <div class="modal-box">
             <h3 style="color:var(--primary); margin-bottom:8px; font-size:1.05rem;">✨ إعداد مفتاح تحليل الصور (Gemini AI)</h3>
             <p style="font-size:0.82rem; color:#475569; margin-bottom:10px; line-height:1.5;">
-                لتحليل صور الشرائح واستخراج الـ 6 سريالات والرموز المكتوبة بخط اليد بدقة 100% عبر Gemini، الصق مفتاح Gemini API المجاني هنا (يُحفظ تلقائياً في السحابة لكل أجهزتك):
+                لتحليل صور الشرائح واستخراج الـ 6 سريالات والرموز المكتوبة بخط اليد بدقة 100% عبر Gemini، الصق مفتاح Gemini API المجاني هنا:
             </p>
             <input type="text" id="geminiApiKeyInput" placeholder="AIzaSy..." style="font-family:monospace; direction:ltr; text-align:left;">
             <div style="margin-top:6px; font-size:0.78rem;">
@@ -576,7 +564,6 @@
         </div>
     </div>
 
-    <!-- نافذة تعديل بيانات الشريحة -->
     <div class="modal-overlay" id="editSimModal">
         <div class="modal-box">
             <h3 style="color:var(--primary); margin-bottom:12px; font-size:1.05rem;">✏️ تعديل بيانات الشريحة</h3>
@@ -630,7 +617,6 @@
         let pendingFilesAfterKey = null;
         let currentScanMode = 'sim';
 
-        // --- نظام المزامنة التلقائية الموحد (SimAutoSync Bridge) ---
         const SYNC_QUEUE_KEY = 'sim_offline_sync_queue';
 
         function queueCloudOperation(entry) {
@@ -746,7 +732,6 @@
                 renderHistoryTable();
             }
         });
-        // --- نهاية نظام المزامنة التلقائية ---
 
         function extractCleanApiKey(rawInput) {
             const str = String(rawInput || '').trim();
@@ -833,7 +818,7 @@
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        // دالة حساب الشهر المحاسبي الموحدة: الشهر يبدأ يوم 5 وينتهي يوم 4 من الشهر التالي
+        // الشهر المحاسبي: يبدأ يوم 5 وينتهي يوم 4 من الشهر التالي
         function getAccountingMonth(dateStr, timestampFallback) {
             let year = NaN, month = NaN, day = NaN;
             if (dateStr) {
@@ -1710,7 +1695,7 @@
 
             const fallbackItems = [];
             const iccidRegex = /89966\d{12,15}/g;
-            const tagRegex = /([A-Za-z]\s*\d{1,4})/g;
+            const tagRegex = /\b([A-Za-z]\s*\d{1,4})\b/g;
             const codes = cleaned.match(iccidRegex) || [];
             const tags = (cleaned.match(tagRegex) || []).map(t => t.toUpperCase().replace(/\s+/g, ''));
             codes.forEach((c, idx) => {
@@ -1809,8 +1794,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     }
 
                     const result = await resp.json();
-                    const rawText = result?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('
-') || '';
+                    const rawText = result?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('\n') || '';
                     const extracted = parseGeminiResponseText(rawText);
                     if (extracted.length > 0) {
                         return extracted;
@@ -1840,7 +1824,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
         async function processFilesWithGemini(files) {
             const progressBox = document.getElementById('ocrProgressBox');
-            progressBox.innerText = `⏳ جاري التحليل...`;
+            progressBox.innerText = '⏳ جاري التحليل...';
             progressBox.style.display = 'block';
 
             const strip = document.getElementById('tempImagesStrip');
@@ -1852,7 +1836,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                progressBox.innerText = `⏳ جاري التحليل...`;
+                progressBox.innerText = '⏳ جاري التحليل...';
 
                 const objUrl = URL.createObjectURL(file);
                 if (!tempImageUrls.includes(objUrl)) {
@@ -1874,7 +1858,6 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
 
                     if (geminiResult.status === 'rejected') {
                         const err = geminiResult.reason;
-                        console.warn("خطأ Gemini:", err);
                         if (err && err.isKeyError) {
                             progressBox.style.display = 'none';
                             pendingFilesAfterKey = files.slice(i);
@@ -1912,7 +1895,6 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     });
 
                 } catch (err) {
-                    console.warn("خطأ غير متوقع في معالجة الصورة:", err);
                     lastErrorText = err.message || '';
                 }
             }
@@ -2481,7 +2463,7 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     return getAccountingMonth(rDate, rTs) === monthVal;
                 }
                 if (targetStatus === 'dispatched') {
-                    if (isRet || s.status !== 'dispatched') return false;
+                    if (isRet || s.status !== 'dispatched' || isZeroDuration(s)) return false;
                     const dDate = s.dispatchDate || s.actionDate || s.date;
                     const dTs = s.dispatchTimestamp || s.timestamp;
                     return getAccountingMonth(dDate, dTs) === monthVal;
@@ -2523,7 +2505,6 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 return s.status === statusVal && !isSimReturned(s);
             });
 
-            // استبعاد المدة (0) من إجمالي المنصرف لأنها بدل مرتجع
             const dispCount = baseFiltered.filter(s => s.status === 'dispatched' && !isSimReturned(s) && !isZeroDuration(s)).length;
             const retCount = baseFiltered.filter(s => isSimReturned(s)).length;
 
