@@ -2463,7 +2463,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                     return getAccountingMonth(rDate, rTs) === monthVal;
                 }
                 if (targetStatus === 'dispatched') {
-                    if (isRet || s.status !== 'dispatched' || isZeroDuration(s)) return false;
+                    // تم السماح باحتساب الشرائح ذات المدة 0 ضمن المنصرف
+                    if (isRet || s.status !== 'dispatched') return false;
                     const dDate = s.dispatchDate || s.actionDate || s.date;
                     const dTs = s.dispatchTimestamp || s.timestamp;
                     return getAccountingMonth(dDate, dTs) === monthVal;
@@ -2505,7 +2506,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                 return s.status === statusVal && !isSimReturned(s);
             });
 
-            const dispCount = baseFiltered.filter(s => s.status === 'dispatched' && !isSimReturned(s) && !isZeroDuration(s)).length;
+            // حساب إجمالي المنصرف شاملاً شرائح مدة 0
+            const dispCount = baseFiltered.filter(s => s.status === 'dispatched' && !isSimReturned(s)).length;
             const retCount = baseFiltered.filter(s => isSimReturned(s)).length;
 
             const statDispEl = document.getElementById('statDispatchedCount');
@@ -2537,7 +2539,8 @@ Return ONLY a JSON array of objects, where each object has "code" and "tagCode",
                         clientsMap[cKey] = { shop: s.shopName || '', dispatched: 0, returned: 0, tags: new Set() };
                     }
                     if (isSimReturned(s)) clientsMap[cKey].returned++;
-                    else if (s.status === 'dispatched' && !isZeroDuration(s)) clientsMap[cKey].dispatched++;
+                    // احتساب شرائح مدة 0 في ملخص البحث أيضاً
+                    else if (s.status === 'dispatched') clientsMap[cKey].dispatched++;
                     if (s.tagCode) clientsMap[cKey].tags.add(s.tagCode);
                 });
 
