@@ -766,9 +766,9 @@
             }
         };
 
-        async function calculateStockFromSims() {
+        async function calculateStockFromSims(fetchFromCloud = false) {
             let sims = JSON.parse(localStorage.getItem('scanned_sims_offline')) || [];
-            if (window.db && navigator.onLine) {
+            if (fetchFromCloud && window.db && navigator.onLine) {
                 try {
                     const pendingSimIds = getPendingIdsForCollection("scanned_sims");
                     const pendingSimDeletes = getPendingDeletesForCollection("scanned_sims");
@@ -794,7 +794,8 @@
                             localMap.delete(codeKey);
                         });
                         localMap.forEach((remSim, codeKey) => {
-                            if (pendingSimIds.has(codeKey)) mergedSims.push(remSim);
+                            const isRecent = remSim.timestamp && (Date.now() - remSim.timestamp < 60000);
+                            if (pendingSimIds.has(codeKey) || isRecent) mergedSims.push(remSim);
                         });
                         sims = mergedSims;
                         localStorage.setItem('scanned_sims_offline', JSON.stringify(sims));
@@ -804,6 +805,8 @@
 
             autoStockInventory = {};
             sims.forEach(item => {
+                if (isSimReturned(item)) return;
+
                 const cat = item.category || item.company || 'Mobily';
                 let dur = item.duration;
                 if (dur === undefined || dur === null || dur === '-' || dur === 'غير محدد' || String(dur).trim() === '') {
@@ -846,7 +849,9 @@
             });
 
             deletedStockItems.forEach(delItem => {
-                delete stockInventory[delItem];
+                if (!autoStockInventory[delItem] || autoStockInventory[delItem] <= 0) {
+                    delete stockInventory[delItem];
+                }
             });
         }
 
@@ -1039,11 +1044,34 @@
             }
         }
 
+        let lastItemsDropdownSignature = '';
+        let pendingDropdownUpdate = false;
+
         function updateItemSelects() {
             const select = document.getElementById('currentItem');
-            const prevVal = select.value;
+            if (!select) return;
+
+            if (document.activeElement === select) {
+                if (!pendingDropdownUpdate) {
+                    pendingDropdownUpdate = true;
+                    select.addEventListener('blur', function onBlurOnce() {
+                        pendingDropdownUpdate = false;
+                        updateItemSelects();
+                    }, { once: true });
+                }
+                return;
+            }
+
             const itemKeys = Object.keys(stockInventory).filter(k => k.includes('('));
-            
+            const newSignature = itemKeys.map(k => `${k}:${stockInventory[k] ?? 0}`).join('|');
+
+            if (newSignature === lastItemsDropdownSignature && select.options.length > 0) {
+                return;
+            }
+            lastItemsDropdownSignature = newSignature;
+
+            const prevVal = select.value;
+
             if (itemKeys.length === 0) {
                 select.innerHTML = `<option value="">-- لا توجد أصناف متاحة في المخزون --</option>`;
                 return;
@@ -1275,7 +1303,7 @@
                 records = mergedRecords;
                 localStorage.setItem('sales_records_offline', JSON.stringify(records));
                 updateMarketSelect();
-                await calculateStockFromSims();
+                await calculateStockFromSims(true);
                 updateItemSelects();
                 renderModalStockList();
                 renderRecords();
