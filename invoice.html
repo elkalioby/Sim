@@ -803,9 +803,11 @@
                 } catch(err) {}
             }
 
+            // حساب الرصيد المتاح فعلياً في المخزون (نفس فلتر "بالمخزون (متاح)" في barcode.html بالظبط)
             autoStockInventory = {};
             sims.forEach(item => {
                 if (isSimReturned(item)) return;
+                if (item.status === 'dispatched') return;
 
                 const cat = item.category || item.company || 'Mobily';
                 let dur = item.duration;
@@ -819,38 +821,11 @@
                 autoStockInventory[itemKey] = (autoStockInventory[itemKey] || 0) + 1;
             });
 
-            records.forEach(r => {
-                const sign = isReturnInvoice(r) ? -1 : 1;
-                if (r.cartItems && Array.isArray(r.cartItems)) {
-                    r.cartItems.forEach(ci => {
-                        if (!ci.item || !ci.item.includes('(') || ci.item.endsWith('(0)')) return;
-                        if (autoStockInventory[ci.item] === undefined) {
-                            autoStockInventory[ci.item] = 0;
-                        }
-                        autoStockInventory[ci.item] -= sign * (parseFloat(ci.qty) || 0);
-                    });
-                }
-            });
-
-            cleanPhantomKeysFromObj(stockOffsets);
-
             stockInventory = {};
-            const allKeys = new Set([
-                ...Object.keys(autoStockInventory),
-                ...Object.keys(stockOffsets || {})
-            ]);
-
-            allKeys.forEach(key => {
+            Object.keys(autoStockInventory).forEach(key => {
                 if (!key.includes('(') || key.endsWith('(0)')) return;
-                const base = autoStockInventory[key] || 0;
-                const offset = (stockOffsets && stockOffsets[key] !== undefined) ? parseFloat(stockOffsets[key]) : 0;
-                const finalQty = base + offset;
-                stockInventory[key] = finalQty >= 0 ? finalQty : 0;
-            });
-
-            deletedStockItems.forEach(delItem => {
-                if (!autoStockInventory[delItem] || autoStockInventory[delItem] <= 0) {
-                    delete stockInventory[delItem];
+                if (autoStockInventory[key] > 0) {
+                    stockInventory[key] = autoStockInventory[key];
                 }
             });
         }
